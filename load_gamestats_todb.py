@@ -4,6 +4,7 @@ code to load NHL game data
 into postgres db MADS_NHL
 """
 
+import opendatasets as od
 import pandas as pd
 import os
 
@@ -31,7 +32,7 @@ DBAPI = os.getenv("DBAPI")
 ENDPOINT = os.getenv("ENDPOINT")
 USER = os.getenv("USER")
 PASSWORD = os.getenv("PASSWORD")
-PORT = int(os.getenv("PORT", 5433))  # Provide default value if not set
+PORT = int(os.getenv("PORT", 5432))  # Provide default value if not set
 DATABASE = os.getenv("DATABASE")
 
 # Create the connection string
@@ -41,7 +42,15 @@ connection_string = (
 
 engine = create_engine(connection_string)
 
-directory = [r"C:\Users\eric\Documents\cost_of_cup\Kaggle_Big_stats"]
+base_url='https://www.kaggle.com/ericwiniecke/nhl-game-data/{}'
+file_names = ['game.csv', 'game_skater_stats.csv', 'game_plays.csv', 'game_shifts.csv']
+
+datasets = {}
+for file_name in file_names:
+    file_url = base_url.format(file_name)
+    datasets[file_name] = pd.read_csv(file_url)
+
+#directory = [r"C:\Users\eric\Documents\cost_of_cup\Kaggle_Big_stats"]
 
 metadata = MetaData()
 
