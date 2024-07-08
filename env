@@ -1,0 +1,16 @@
+
+DB_NAME=MADS_NHL
+DB_USER=postgres
+DB_PASSPHRASE=MADS_593*
+DB_HOST=localhost
+DB_PORT=5432
+
+
+DATABASE_TYPE = postgresql
+DBAPI = psycopg2
+ENDPOINT = localhost
+USER = postgres
+PASSWORD = MADS_593*
+PORT = '5432'
+DATABASE = MADS_NHL
+port_str = os.getenv('PORT', '5432')
