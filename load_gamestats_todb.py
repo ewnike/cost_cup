@@ -4,7 +4,6 @@ code to load NHL game data
 into postgres db MADS_NHL
 """
 
-import opendatasets as od
 import pandas as pd
 import os
 
