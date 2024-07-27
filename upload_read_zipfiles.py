@@ -130,7 +130,6 @@ def insert_data_from_csv(session, table, csv_file_path, column_mapping):
 # Define table schemas
 metadata = MetaData()
 
-
 game = Table(
     "game",
     metadata,
