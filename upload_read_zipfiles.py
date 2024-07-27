@@ -11,7 +11,10 @@ import zipfile
 
 import boto3
 import pandas as pd
+import psycopg2
+from botocore.exceptions import ClientError
 from dotenv import load_dotenv
+from psycopg2 import sql
 from sqlalchemy import (
     BigInteger,
     Column,
@@ -36,13 +39,14 @@ ENDPOINT = os.getenv("ENDPOINT")
 USER = os.getenv("USER")
 PASSWORD = os.getenv("PASSWORD")
 PORT = int(os.getenv("PORT", 5432))  # Provide default value if not set
-DATABASE = os.getenv("DATABASE")
+DATABASE = os.getenv(
+    "DATABASE", "hockey_stats"
+)  # Use hockey_stats as your actual database name
 
 # Create the connection string
 connection_string = (
     f"{DATABASE_TYPE}+{DBAPI}://{USER}:{PASSWORD}@{ENDPOINT}:{PORT}/{DATABASE}"
 )
-engine = create_engine(connection_string)
 
 # S3 Configuration
 aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
@@ -70,9 +74,33 @@ s3 = boto3.client(
 )
 
 
+# Function to create the database if it does not exist
+def create_database_if_not_exists(db_name):
+    conn = psycopg2.connect(
+        dbname="postgres",  # Connect to the default 'postgres' database
+        user=USER,
+        password=PASSWORD,
+        host=ENDPOINT,
+        port=PORT,
+    )
+    conn.autocommit = True
+    cur = conn.cursor()
+    cur.execute(sql.SQL("SELECT 1 FROM pg_database WHERE datname = %s"), [db_name])
+    exists = cur.fetchone()
+    if not exists:
+        cur.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(db_name)))
+    cur.close()
+    conn.close()
+
+
 # Function to download a zip file from S3
 def download_zip_from_s3(bucket_name, s3_key, local_path):
-    s3.download_file(bucket_name, s3_key, local_path)
+    try:
+        print(f"Downloading {s3_key} from bucket {bucket_name} to {local_path}")
+        s3.download_file(bucket_name, s3_key, local_path)
+    except ClientError as e:
+        print(f"Failed to download {s3_key} from bucket {bucket_name}: {e}")
+        raise
 
 
 # Function to extract a zip file
@@ -101,6 +129,7 @@ def insert_data_from_csv(session, table, csv_file_path, column_mapping):
 
 # Define table schemas
 metadata = MetaData()
+
 
 game = Table(
     "game",
@@ -183,6 +212,12 @@ game_skater_stats = Table(
 )
 
 tables = [game, game_plays, game_shifts, game_skater_stats]
+
+# Initialize database
+create_database_if_not_exists(DATABASE)
+
+# Create the database engine
+engine = create_engine(connection_string)
 metadata.create_all(engine)
 
 Session = sessionmaker(bind=engine)
@@ -277,11 +312,6 @@ csv_files_and_mappings = [
 def main():
     local_dir = "/path/to/local/directory"
     extract_to_path = "/path/to/extracted/files"
-
-    # Create the database engine
-    db_engine = create_engine(
-        f"postgresql://{USER}:{PASSWORD}@{ENDPOINT}:{PORT}/{DATABASE}"
-    )
 
     for s3_key in S3_File_Keys:
         local_zip_path = os.path.join(local_dir, os.path.basename(s3_key))
