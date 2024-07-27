@@ -307,8 +307,14 @@ csv_files_and_mappings = [
 
 # Main function to handle the workflow
 def main():
-    local_dir = "/path/to/local/directory"
-    extract_to_path = "/path/to/extracted/files"
+    # Get the current script directory
+    project_root = os.path.dirname(os.path.abspath(__file__))
+    local_dir = os.path.join(project_root, "data", "downloads")
+    extract_to_path = os.path.join(project_root, "data", "extracted")
+
+    # Ensure the local directory exists
+    os.makedirs(local_dir, exist_ok=True)
+    os.makedirs(extract_to_path, exist_ok=True)
 
     for s3_key in S3_File_Keys:
         local_zip_path = os.path.join(local_dir, os.path.basename(s3_key))
