@@ -28,6 +28,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
+from tqdm import tqdm
 
 # Load environment variables from .env file
 load_dotenv()
@@ -39,9 +40,7 @@ ENDPOINT = os.getenv("ENDPOINT")
 USER = os.getenv("USER")
 PASSWORD = os.getenv("PASSWORD")
 PORT = int(os.getenv("PORT", 5432))  # Provide default value if not set
-DATABASE = os.getenv(
-    "DATABASE", "hockey_stats"
-)  # Use hockey_stats as your actual database name
+DATABASE = os.getenv("DATABASE", "hockey_stats")
 
 # Create the connection string
 connection_string = (
@@ -111,7 +110,11 @@ def extract_zip(file_path, extract_to):
 def insert_data_from_csv(session, table, csv_file_path, column_mapping):
     try:
         df = pd.read_csv(csv_file_path)
-        for index, row in df.iterrows():
+        for _, row in tqdm(
+            df.iterrows(),
+            total=len(df),
+            desc=f"Inserting {os.path.basename(csv_file_path)}",
+        ):
             data = {
                 column: row[csv_column] for column, csv_column in column_mapping.items()
             }
@@ -161,8 +164,8 @@ game_plays = Table(
     Column("y", Float, nullable=True),
     Column("period", Integer),
     Column("periodType", String(50)),
-    Column("periodTime", BigInteger),
-    Column("periodTimeRemaining", BigInteger),
+    Column("periodTime", Float),  # Changed from BigInteger to Float
+    Column("periodTimeRemaining", Float, nullable=True),
     Column("dateTime", DateTime(timezone=False)),
     Column("goals_away", Integer, nullable=True),
     Column("goals_home", Integer, nullable=True),
@@ -215,6 +218,15 @@ create_database_if_not_exists(DATABASE)
 
 # Create the database engine
 engine = create_engine(connection_string)
+
+# Drop tables if they exist
+tables_to_drop = ["game", "game_plays", "game_shifts", "game_skater_stats"]
+
+with engine.connect() as connection:
+    for table in tables_to_drop:
+        connection.execute(f"DROP TABLE IF EXISTS {table};")
+
+# Create tables with the updated schema
 metadata.create_all(engine)
 
 Session = sessionmaker(bind=engine)
