@@ -8,6 +8,7 @@ zip and csv file.
 
 import os
 import zipfile
+from multiprocessing import Pool, cpu_count
 
 import boto3
 import pandas as pd
@@ -25,22 +26,20 @@ from sqlalchemy import (
     String,
     Table,
     create_engine,
-    text,
 )
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
-from tqdm import tqdm
 
 # Load environment variables from .env file
 load_dotenv()
 
-# Retrieve database connection parameters from environment variables
+# Database connection parameters
 DATABASE_TYPE = os.getenv("DATABASE_TYPE")
 DBAPI = os.getenv("DBAPI")
 ENDPOINT = os.getenv("ENDPOINT")
 USER = os.getenv("USER")
 PASSWORD = os.getenv("PASSWORD")
-PORT = int(os.getenv("PORT", 5432))  # Provide default value if not set
+PORT = int(os.getenv("PORT", 5432))
 DATABASE = os.getenv("DATABASE", "hockey_stats")
 
 # Create the connection string
@@ -105,28 +104,6 @@ def download_zip_from_s3(bucket_name, s3_key, local_path):
 def extract_zip(file_path, extract_to):
     with zipfile.ZipFile(file_path, "r") as zip_ref:
         zip_ref.extractall(extract_to)
-
-
-# Function to insert data from CSV into PostgreSQL
-def insert_data_from_csv(session, table, csv_file_path, column_mapping):
-    try:
-        df = pd.read_csv(csv_file_path).drop_duplicates(ignore_index=True)
-        for _, row in tqdm(
-            df.iterrows(),
-            total=len(df),
-            desc=f"Inserting {os.path.basename(csv_file_path)}",
-        ):
-            data = {
-                column: row[csv_column] for column, csv_column in column_mapping.items()
-            }
-            session.execute(table.insert().values(**data))
-        session.commit()
-        print(f"Data inserted successfully into {table.name}")
-    except SQLAlchemyError as e:
-        session.rollback()
-        print(f"Error inserting data into {table.name}: {e}")
-    except FileNotFoundError as e:
-        print(f"File not found: {csv_file_path} - {e}")
 
 
 # Define table schemas
@@ -225,126 +202,144 @@ tables_to_drop = ["game", "game_plays", "game_shifts", "game_skater_stats"]
 
 with engine.connect() as connection:
     for table in tables_to_drop:
-        connection.execute(text(f"DROP TABLE IF EXISTS public.{table};"))
+        connection.execute(f"DROP TABLE IF EXISTS public.{table}")
 
 # Create tables with the updated schema
 metadata.create_all(engine)
 
 Session = sessionmaker(bind=engine)
 
-# Define the column mappings for each CSV file
-csv_files_and_mappings = [
-    (
-        "game.csv",
-        game,
-        {
-            "game_id": "game_id",
-            "season": "season",
-            "type": "type",
-            "date_time_GMT": "date_time_GMT",
-            "away_team_id": "away_team_id",
-            "home_team_id": "home_team_id",
-            "away_goals": "away_goals",
-            "home_goals": "home_goals",
-            "outcome": "outcome",
-            "home_rink_side_start": "home_rink_side_start",
-            "venue": "venue",
-            "venue_link": "venue_link",
-            "venue_time_zone_id": "venue_time_zone_id",
-            "venue_time_zone_offset": "venue_time_zone_offset",
-            "venue_time_zone_tz": "venue_time_zone_tz",
-        },
-    ),
-    (
-        "game_plays.csv",
-        game_plays,
-        {
-            "play_id": "play_id",
-            "game_id": "game_id",
-            "team_id_for": "team_id_for",
-            "team_id_against": "team_id_against",
-            "event": "event",
-            "secondaryType": "secondaryType",
-            "x": "x",
-            "y": "y",
-            "period": "period",
-            "periodType": "periodType",
-            "periodTime": "periodTime",
-            "periodTimeRemaining": "periodTimeRemaining",
-            "dateTime": "dateTime",
-            "goals_away": "goals_away",
-            "goals_home": "goals_home",
-        },
-    ),
-    (
-        "game_shifts.csv",
-        game_shifts,
-        {
-            "game_id": "game_id",
-            "player_id": "player_id",
-            "period": "period",
-            "shift_start": "shift_start",
-            "shift_end": "shift_end",
-        },
-    ),
-    (
-        "game_skater_stats.csv",
-        game_skater_stats,
-        {
-            "player_id": "player_id",
-            "game_id": "game_id",
-            "team_id": "team_id",
-            "timeOnIce": "timeOnIce",
-            "assists": "assists",
-            "goals": "goals",
-            "shots": "shots",
-            "hits": "hits",
-            "powerPlayGoals": "powerPlayGoals",
-            "powerPlayAssists": "powerPlayAssists",
-            "penaltyMinutes": "penaltyMinutes",
-            "faceOffWins": "faceOffWins",
-            "faceoffTaken": "faceoffTaken",
-            "takeaways": "takeaways",
-            "giveaways": "giveaways",
-            "shortHandedGoals": "shortHandedGoals",
-            "shortHandedAssists": "shortHandedAssists",
-            "blocked": "blocked",
-            "plusMinus": "plusMinus",
-            "evenTimeOnIce": "evenTimeOnIce",
-            "shortHandedTimeOnIce": "shortHandedTimeOnIce",
-            "powerPlayTimeOnIce": "powerPlayTimeOnIce",
-        },
-    ),
-]
+
+# Function to insert data in batches
+def insert_data_in_batches(data_batch):
+    with Session() as session:
+        try:
+            session.execute(game_plays.insert(), data_batch)
+            session.commit()
+            print("Batch inserted successfully")
+        except SQLAlchemyError as e:
+            session.rollback()
+            print(f"Error inserting data: {e}")
+
+
+# Function to process and insert data from a CSV file
+def process_and_insert_csv(csv_file_path, table, column_mapping):
+    try:
+        df = pd.read_csv(csv_file_path).drop_duplicates(ignore_index=True)
+        data = df.to_dict(orient="records")
+
+        num_processes = cpu_count()
+        batch_size = len(data) // num_processes
+        batches = [data[i : i + batch_size] for i in range(0, len(data), batch_size)]
+
+        with Pool(processes=num_processes) as pool:
+            pool.map(insert_data_in_batches, batches)
+
+    except FileNotFoundError as e:
+        print(f"File not found: {csv_file_path} - {e}")
 
 
 # Main function to handle the workflow
 def main():
-    # Get the current script directory
     project_root = os.path.dirname(os.path.abspath(__file__))
     local_dir = os.path.join(project_root, "data", "downloads")
     extract_to_path = os.path.join(project_root, "data", "extracted")
 
-    # Ensure the local directory exists
     os.makedirs(local_dir, exist_ok=True)
     os.makedirs(extract_to_path, exist_ok=True)
 
     for s3_key in S3_File_Keys:
         local_zip_path = os.path.join(local_dir, os.path.basename(s3_key))
 
-        # Download the zip file from S3
         download_zip_from_s3(bucket_name, s3_key, local_zip_path)
-
-        # Extract the zip file
         extract_zip(local_zip_path, extract_to_path)
 
-        # Process each CSV file in the extracted directory
-        for csv_file, table, column_mapping in csv_files_and_mappings:
+        for csv_file, table, column_mapping in [
+            (
+                "game.csv",
+                game,
+                {
+                    "game_id": "game_id",
+                    "season": "season",
+                    "type": "type",
+                    "date_time_GMT": "date_time_GMT",
+                    "away_team_id": "away_team_id",
+                    "home_team_id": "home_team_id",
+                    "away_goals": "away_goals",
+                    "home_goals": "home_goals",
+                    "outcome": "outcome",
+                    "home_rink_side_start": "home_rink_side_start",
+                    "venue": "venue",
+                    "venue_link": "venue_link",
+                    "venue_time_zone_id": "venue_time_zone_id",
+                    "venue_time_zone_offset": "venue_time_zone_offset",
+                    "venue_time_zone_tz": "venue_time_zone_tz",
+                },
+            ),
+            (
+                "game_plays.csv",
+                game_plays,
+                {
+                    "play_id": "play_id",
+                    "game_id": "game_id",
+                    "team_id_for": "team_id_for",
+                    "team_id_against": "team_id_against",
+                    "event": "event",
+                    "secondaryType": "secondaryType",
+                    "x": "x",
+                    "y": "y",
+                    "period": "period",
+                    "periodType": "periodType",
+                    "periodTime": "periodTime",
+                    "periodTimeRemaining": "periodTimeRemaining",
+                    "dateTime": "dateTime",
+                    "goals_away": "goals_away",
+                    "goals_home": "goals_home",
+                },
+            ),
+            (
+                "game_shifts.csv",
+                game_shifts,
+                {
+                    "game_id": "game_id",
+                    "player_id": "player_id",
+                    "period": "period",
+                    "shift_start": "shift_start",
+                    "shift_end": "shift_end",
+                },
+            ),
+            (
+                "game_skater_stats.csv",
+                game_skater_stats,
+                {
+                    "player_id": "player_id",
+                    "game_id": "game_id",
+                    "team_id": "team_id",
+                    "timeOnIce": "timeOnIce",
+                    "assists": "assists",
+                    "goals": "goals",
+                    "shots": "shots",
+                    "hits": "hits",
+                    "powerPlayGoals": "powerPlayGoals",
+                    "powerPlayAssists": "powerPlayAssists",
+                    "penaltyMinutes": "penaltyMinutes",
+                    "faceOffWins": "faceOffWins",
+                    "faceoffTaken": "faceoffTaken",
+                    "takeaways": "takeaways",
+                    "giveaways": "giveaways",
+                    "shortHandedGoals": "shortHandedGoals",
+                    "shortHandedAssists": "shortHandedAssists",
+                    "blocked": "blocked",
+                    "plusMinus": "plusMinus",
+                    "evenTimeOnIce": "evenTimeOnIce",
+                    "shortHandedTimeOnIce": "shortHandedTimeOnIce",
+                    "powerPlayTimeOnIce": "powerPlayTimeOnIce",
+                },
+            ),
+        ]:
             csv_file_path = os.path.join(extract_to_path, csv_file)
-            with Session() as session:
-                insert_data_from_csv(session, table, csv_file_path, column_mapping)
+            process_and_insert_csv(csv_file_path, table, column_mapping)
 
-        # Clean up the zip file
         os.remove(local_zip_path)
 
 
