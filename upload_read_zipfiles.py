@@ -25,6 +25,7 @@ from sqlalchemy import (
     String,
     Table,
     create_engine,
+    text,
 )
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
@@ -109,7 +110,7 @@ def extract_zip(file_path, extract_to):
 # Function to insert data from CSV into PostgreSQL
 def insert_data_from_csv(session, table, csv_file_path, column_mapping):
     try:
-        df = pd.read_csv(csv_file_path)
+        df = pd.read_csv(csv_file_path).drop_duplicates(ignore_index=True)
         for _, row in tqdm(
             df.iterrows(),
             total=len(df),
@@ -224,7 +225,7 @@ tables_to_drop = ["game", "game_plays", "game_shifts", "game_skater_stats"]
 
 with engine.connect() as connection:
     for table in tables_to_drop:
-        connection.execute(f"DROP TABLE IF EXISTS {table};")
+        connection.execute(text(f"DROP TABLE IF EXISTS public.{table};"))
 
 # Create tables with the updated schema
 metadata.create_all(engine)
