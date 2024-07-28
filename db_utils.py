@@ -4,9 +4,8 @@ import zipfile
 import boto3
 import pandas as pd
 from dotenv import load_dotenv
-from sqlalchemy import MetaData, Table, create_engine, text
+from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import sessionmaker
 
 
 def load_env_variables():
