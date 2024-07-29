@@ -16,7 +16,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 
 
-# load environment variables
 def load_env_variables():
     """
     load env variables.
@@ -36,7 +35,7 @@ def load_env_variables():
         "LOCAL_EXTRACT_PATH": os.getenv("LOCAL_EXTRACT_PATH", "data/extracted"),
     }
 
-"""Build connection string"""
+
 def get_db_engine(env_vars):
     """
     Create a SQLAlchemy engine using the provided environment variables.
