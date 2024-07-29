@@ -8,6 +8,7 @@ keep track of NHL statistics during the season.
 """
 
 import os
+import shutil
 import zipfile
 
 import boto3
@@ -218,6 +219,21 @@ def process_and_insert_csv(csv_file_path, table, column_mapping, session):
         print(f"File not found: {csv_file_path} - {e}")
 
 
+def remove_files_from_directory(directory):
+    """
+    Function to remove all files from a specified directory
+    """
+    for filename in os.listdir(directory):
+        file_path = os.path.join(directory, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception as e:
+            print(f"Failed to delete {file_path}. Reason: {e}")
+
+
 def main():
     """
     put it all together.
@@ -308,6 +324,11 @@ def main():
             Column("powerPlayTimeOnIce", Integer),
         ),
     }
+
+    # Drop existing tables if needed
+    with engine.connect() as connection:
+        for table_name in tables.keys():
+            connection.execute(text(f"DROP TABLE IF EXISTS public.{table_name};"))
 
     # Create tables if they do not exist
     create_table(metadata, engine, tables.values())
@@ -422,6 +443,9 @@ def main():
             )
         else:
             print(f"CSV file {info['file_path']} not found")
+
+    # Remove all files from the data/download directory
+    remove_files_from_directory(local_extract_path)
 
 
 if __name__ == "__main__":
