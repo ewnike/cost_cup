@@ -1,3 +1,11 @@
+"""
+July 28, 2024
+This is a db_utils file that holds information
+to connect to the database. It also has the connection
+information for AWS to retrieve zip files
+from an S3 bucket.
+"""
+
 import os
 import zipfile
 
@@ -8,6 +16,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 
 
+# load environment variables
 def load_env_variables():
     load_dotenv()
     return {
@@ -25,11 +34,13 @@ def load_env_variables():
     }
 
 
+# Build connection string
 def get_db_engine(env_vars):
     connection_string = f"{env_vars['DATABASE_TYPE']}+{env_vars['DBAPI']}://{env_vars['USER']}:{env_vars['PASSWORD']}@{env_vars['ENDPOINT']}:{env_vars['PORT']}/{env_vars['DATABASE']}"
     return create_engine(connection_string)
 
 
+# function to clean extracted data
 def clean_data(df, column_mapping):
     df = df.where(pd.notnull(df), None)
     for column, dtype in df.dtypes.items():
@@ -85,11 +96,13 @@ def clean_data(df, column_mapping):
     return df
 
 
+# function for creating database tables
 def create_table(metadata, engine, table_definitions):
     for table_def in table_definitions:
         table_def.create(engine)
 
 
+# function to insert_data into the data tables
 def insert_data(df, table, session):
     data = df.to_dict(orient="records")
     try:
@@ -101,6 +114,7 @@ def insert_data(df, table, session):
         print(f"Error inserting data into {table.name}: {e}")
 
 
+# Messages to follow process
 def process_and_insert_csv(csv_file_path, table, column_mapping, session):
     try:
         print(f"Processing {csv_file_path} for table {table.name}")
@@ -119,6 +133,7 @@ def process_and_insert_csv(csv_file_path, table, column_mapping, session):
         print(f"File not found: {csv_file_path} - {e}")
 
 
+# function to connect to S3 bucket, download, and extract data
 def download_and_extract_zip_from_s3(
     bucket_name, s3_key, local_extract_path, aws_access_key_id, aws_secret_access_key
 ):
