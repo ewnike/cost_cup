@@ -1,3 +1,12 @@
+"""
+July 28, 2024
+main.py function that is for uploading zip files from s3,
+extracting data, cleaning data, and finally inserting into 
+a postgres database and data tables needed fro the project.
+The database and s3 buckets will be used going forward to 
+keep track of NHL statistics during the season.
+"""
+
 import os
 import zipfile
 
