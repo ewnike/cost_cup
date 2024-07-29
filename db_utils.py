@@ -36,7 +36,7 @@ def load_env_variables():
         "LOCAL_EXTRACT_PATH": os.getenv("LOCAL_EXTRACT_PATH", "data/extracted"),
     }
 
-
+"""Build connection string"""
 def get_db_engine(env_vars):
     """
     Create a SQLAlchemy engine using the provided environment variables.
