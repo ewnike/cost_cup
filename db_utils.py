@@ -34,14 +34,19 @@ def load_env_variables():
     }
 
 
-# Build connection string
 def get_db_engine(env_vars):
-    connection_string = f"{env_vars['DATABASE_TYPE']}+{env_vars['DBAPI']}://{env_vars['USER']}:{env_vars['PASSWORD']}@{env_vars['ENDPOINT']}:{env_vars['PORT']}/{env_vars['DATABASE']}"
+    # Build connection string
+    connection_string = (
+        f"{env_vars['DATABASE_TYPE']}+{env_vars['DBAPI']}://"
+        f"{env_vars['USER']}:{env_vars['PASSWORD']}@"
+        f"{env_vars['ENDPOINT']}:{env_vars['PORT']}/"
+        f"{env_vars['DATABASE']}"
+    )
     return create_engine(connection_string)
 
 
-# function to clean extracted data
 def clean_data(df, column_mapping):
+    # function to clean extracted data
     df = df.where(pd.notnull(df), None)
     for column, dtype in df.dtypes.items():
         if dtype == "object":
@@ -96,14 +101,14 @@ def clean_data(df, column_mapping):
     return df
 
 
-# function for creating database tables
 def create_table(metadata, engine, table_definitions):
+    # function for creating database tables
     for table_def in table_definitions:
         table_def.create(engine)
 
 
-# function to insert_data into the data tables
 def insert_data(df, table, session):
+    # function to insert_data into the data tables
     data = df.to_dict(orient="records")
     try:
         session.execute(table.insert(), data)
@@ -114,8 +119,8 @@ def insert_data(df, table, session):
         print(f"Error inserting data into {table.name}: {e}")
 
 
-# Messages to follow process
 def process_and_insert_csv(csv_file_path, table, column_mapping, session):
+    # Messages to follow process
     try:
         print(f"Processing {csv_file_path} for table {table.name}")
         df = pd.read_csv(csv_file_path)
@@ -133,10 +138,10 @@ def process_and_insert_csv(csv_file_path, table, column_mapping, session):
         print(f"File not found: {csv_file_path} - {e}")
 
 
-# function to connect to S3 bucket, download, and extract data
 def download_and_extract_zip_from_s3(
     bucket_name, s3_key, local_extract_path, aws_access_key_id, aws_secret_access_key
 ):
+    # function to connect to S3 bucket, download, and extract data
     s3 = boto3.client(
         "s3",
         aws_access_key_id=aws_access_key_id,
