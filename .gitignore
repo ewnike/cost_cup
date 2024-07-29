@@ -1,5 +1,6 @@
 # Ignored files
 *.csv
+*.zip
 
 # VS Code
 *.code-workspace
