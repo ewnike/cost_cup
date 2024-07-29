@@ -1,0 +1,4 @@
+{
+    "python.pythonPath": "${workspaceFolder}/cost_cup_env/bin/python"
+  }
+  
