@@ -41,7 +41,7 @@ def get_db_engine(env_vars):
     Create a SQLAlchemy engine using the provided environment variables.
 
     Args:
-        env_vars (dict): A dictionary containing the environment variables for the database connection.
+        env_vars (dict): A dictionary containing the env variables for the database connection.
 
     Returns:
         sqlalchemy.engine.Engine: A SQLAlchemy engine object.
