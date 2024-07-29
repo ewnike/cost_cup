@@ -18,6 +18,9 @@ from sqlalchemy.exc import SQLAlchemyError
 
 # load environment variables
 def load_env_variables():
+    """
+    load env variables.
+    """
     load_dotenv()
     return {
         "DATABASE_TYPE": os.getenv("DATABASE_TYPE"),
@@ -35,7 +38,15 @@ def load_env_variables():
 
 
 def get_db_engine(env_vars):
-    # Build connection string
+    """
+    Create a SQLAlchemy engine using the provided environment variables.
+
+    Args:
+        env_vars (dict): A dictionary containing the environment variables for the database connection.
+
+    Returns:
+        sqlalchemy.engine.Engine: A SQLAlchemy engine object.
+    """
     connection_string = (
         f"{env_vars['DATABASE_TYPE']}+{env_vars['DBAPI']}://"
         f"{env_vars['USER']}:{env_vars['PASSWORD']}@"
@@ -46,7 +57,10 @@ def get_db_engine(env_vars):
 
 
 def clean_data(df, column_mapping):
-    # function to clean extracted data
+    """
+    code for cleaning all 4 data files
+    needed for the project.
+    """
     df = df.where(pd.notnull(df), None)
     for column, dtype in df.dtypes.items():
         if dtype == "object":
@@ -102,13 +116,17 @@ def clean_data(df, column_mapping):
 
 
 def create_table(metadata, engine, table_definitions):
-    # function for creating database tables
+    """
+    function to create data tables.
+    """
     for table_def in table_definitions:
         table_def.create(engine)
 
 
 def insert_data(df, table, session):
-    # function to insert_data into the data tables
+    """
+    function to insert_data into the data tables
+    """
     data = df.to_dict(orient="records")
     try:
         session.execute(table.insert(), data)
@@ -120,7 +138,9 @@ def insert_data(df, table, session):
 
 
 def process_and_insert_csv(csv_file_path, table, column_mapping, session):
-    # Messages to follow process
+    """
+    Messages to follow process and make sure all is working
+    """
     try:
         print(f"Processing {csv_file_path} for table {table.name}")
         df = pd.read_csv(csv_file_path)
@@ -141,7 +161,9 @@ def process_and_insert_csv(csv_file_path, table, column_mapping, session):
 def download_and_extract_zip_from_s3(
     bucket_name, s3_key, local_extract_path, aws_access_key_id, aws_secret_access_key
 ):
-    # function to connect to S3 bucket, download, and extract data
+    """
+    function to connect to S3 bucket, download, and extract data
+    """
     s3 = boto3.client(
         "s3",
         aws_access_key_id=aws_access_key_id,
