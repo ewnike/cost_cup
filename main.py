@@ -1,9 +1,9 @@
 """
 July 28, 2024
 main.py function that is for uploading zip files from s3,
-extracting data, cleaning data, and finally inserting into 
+extracting data, cleaning data, and finally inserting into
 a postgres database and data tables needed fro the project.
-The database and s3 buckets will be used going forward to 
+The database and s3 buckets will be used going forward to
 keep track of NHL statistics during the season.
 """
 
@@ -73,8 +73,10 @@ s3 = boto3.client(
 )
 
 
-# Function to create the database if it does not exist
 def create_database_if_not_exists(db_name):
+    """
+    Function to create the database if it does not exist
+    """
     conn = psycopg2.connect(
         dbname="postgres",  # Connect to the default 'postgres' database
         user=USER,
@@ -92,8 +94,10 @@ def create_database_if_not_exists(db_name):
     conn.close()
 
 
-# Function to download a zip file from S3
 def download_zip_from_s3(bucket_name, s3_key, local_path):
+    """
+    Function to download a zip file from S3
+    """
     try:
         print(f"Downloading {s3_key} from bucket {bucket_name} to {local_path}")
         s3.download_file(bucket_name, s3_key, local_path)
@@ -102,14 +106,18 @@ def download_zip_from_s3(bucket_name, s3_key, local_path):
         raise
 
 
-# Function to extract a zip file
 def extract_zip(file_path, extract_to):
+    """
+    Function to extract a zip file
+    """
     with zipfile.ZipFile(file_path, "r") as zip_ref:
         zip_ref.extractall(extract_to)
 
 
-# Function to clean data
 def clean_data(df, column_mapping):
+    """
+    Function to clean data
+    """
     df = df.where(pd.notnull(df), None)
     for column, dtype in df.dtypes.items():
         if dtype == "object":
@@ -164,14 +172,18 @@ def clean_data(df, column_mapping):
     return df
 
 
-# Function to create tables
 def create_table(metadata, engine, table_definitions):
+    """
+    Function to create tables
+    """
     for table_def in table_definitions:
         table_def.create(engine)
 
 
-# Function to insert data with progress bar
 def insert_data(df, table, session):
+    """
+    Function to insert data with progress bar
+    """
     data = df.to_dict(orient="records")
     try:
         with tqdm(total=len(data), desc=f"Inserting data into {table.name}") as pbar:
@@ -185,8 +197,10 @@ def insert_data(df, table, session):
         print(f"Error inserting data into {table.name}: {e}")
 
 
-# Function to process and insert CSV data
 def process_and_insert_csv(csv_file_path, table, column_mapping, session):
+    """
+    Function to process and insert CSV data
+    """
     try:
         print(f"Processing {csv_file_path} for table {table.name}")
         df = pd.read_csv(csv_file_path)
@@ -204,8 +218,10 @@ def process_and_insert_csv(csv_file_path, table, column_mapping, session):
         print(f"File not found: {csv_file_path} - {e}")
 
 
-# Main function
 def main():
+    """
+    put it all together.
+    """
     # Create the database if it does not exist
     create_database_if_not_exists(DATABASE)
 
