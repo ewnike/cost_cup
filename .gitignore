@@ -3,7 +3,7 @@
 
 # VS Code
 *.code-workspace
-.vscode/
+
 
 # macOS files
 .DS_Store
