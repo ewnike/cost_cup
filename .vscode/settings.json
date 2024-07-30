@@ -2,5 +2,7 @@
   "python.pythonPath": "${workspaceFolder}/cost_cup_env/bin/python",
   "python.linting.pylintEnabled": true,
   "python.linting.enabled": true,
-  "python.analysis.extraPaths": ["./cost_cup_env/lib/python3.x/site-packages"]
+  "python.analysis.extraPaths": ["${workspaceFolder}/cost_cup_env/lib/python3.12.4/site-packages"],
+  "python.autoComplete.extraPaths": ["${workspaceFolder}/cost_cup_env/lib/python3.12.4/site-packages"]
 }
+

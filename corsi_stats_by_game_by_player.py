@@ -4,10 +4,11 @@ Current edition of corsi code.
 Eric Winiecke
 """
 
+import os
 from time import perf_counter
+
 import numpy as np
 import pandas as pd
-import os
 
 
 # Reads in Kaggle .csv file of NHL stats and performs initial cleaning
