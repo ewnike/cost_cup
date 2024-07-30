@@ -1,13 +1,3 @@
-"""
-July 28, 2024
-main.py function that is for uploading zip files from s3,
-extracting data, cleaning data, and finally inserting into
-a postgres database and data tables needed fro the project.
-The database and s3 buckets will be used going forward to
-keep track of NHL statistics during the season.
-Eric Winiecke
-"""
-
 import os
 import shutil
 import zipfile
@@ -114,12 +104,16 @@ def extract_zip(file_path, extract_to):
     """
     with zipfile.ZipFile(file_path, "r") as zip_ref:
         zip_ref.extractall(extract_to)
+    extracted_files = zip_ref.namelist()
+    print(f"Extracted files: {extracted_files}")
+    return extracted_files
 
 
 def clean_data(df, column_mapping):
     """
-    Function to clean data
+    Function to clean data.
     """
+    print(f"Original DataFrame shape: {df.shape}")
     df = df.where(pd.notnull(df), None)
     for column, dtype in df.dtypes.items():
         if dtype == "object":
@@ -167,10 +161,7 @@ def clean_data(df, column_mapping):
         elif db_column == "dateTime":
             df[csv_column] = pd.to_datetime(df[csv_column], errors="coerce")
     df = df.drop_duplicates(ignore_index=True)
-    for column in df.select_dtypes(include=["Int64"]).columns:
-        if df[column].max() > 2147483647 or df[column].min() < -2147483648:
-            print(f"Rows with out of range values in column '{column}':")
-            print(df[(df[column] > 2147483647) | (df[column] < -2147483648)])
+    print(f"Cleaned DataFrame shape: {df.shape}")
     return df
 
 
@@ -237,7 +228,7 @@ def remove_files_from_directory(directory):
 
 def main():
     """
-    put it all together.
+    Put it all together.
     """
     # Create the database if it does not exist
     create_database_if_not_exists(DATABASE)
@@ -329,6 +320,7 @@ def main():
     # Drop existing tables if needed
     with engine.connect() as connection:
         for table_name in tables.keys():
+            print(f"Dropping table {table_name} if it exists")
             connection.execute(text(f"DROP TABLE IF EXISTS public.{table_name};"))
 
     # Create tables if they do not exist
@@ -338,14 +330,18 @@ def main():
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    # Download and extract zip files from S3
+    # Remove the extracted folder and recreate it
     local_extract_path = os.getenv("LOCAL_EXTRACT_PATH", "data/download")
+    if os.path.exists(local_extract_path):
+        shutil.rmtree(local_extract_path)
     os.makedirs(local_extract_path, exist_ok=True)
 
+    # Download and extract zip files from S3
     for s3_key in S3_File_Keys:
         local_zip_path = os.path.join(local_extract_path, s3_key)
         download_zip_from_s3(bucket_name, s3_key, local_zip_path)
-        extract_zip(local_zip_path, local_extract_path)
+        extracted_files = extract_zip(local_zip_path, local_extract_path)
+        print(f"Extracted files from {s3_key}: {extracted_files}")
 
     # Define CSV file paths and column mappings
     csv_files = {

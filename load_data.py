@@ -1,3 +1,11 @@
+"""
+July 30, 2024
+Code to load data from databas into workin env
+so that code can access data, calculate corsi,
+aggregate data, and insert data back into data table.
+Eric Winiecke
+"""
+
 import os
 from time import perf_counter
 
@@ -7,6 +15,9 @@ from sqlalchemy import create_engine, text
 
 
 def get_db_engine(env_vars):
+    """
+    get info to create connection string to database.
+    """
     connection_string = (
         f"{env_vars['DATABASE_TYPE']}+{env_vars['DBAPI']}://"
         f"{env_vars['USER']}:{env_vars['PASSWORD']}@"
@@ -17,12 +28,18 @@ def get_db_engine(env_vars):
 
 
 def load_data_from_db(table_name, env_vars):
+    """
+    read in data
+    """
     engine = get_db_engine(env_vars)
     query = text(f"SELECT * FROM {table_name}")
     return pd.read_sql(query, engine)
 
 
 def load_data(env_vars):
+    """
+    loading data into a dictionary
+    """
     names = ["game_skater_stats", "game_plays", "game_shifts", "game"]
     t2 = perf_counter()
     df = {}
@@ -37,6 +54,9 @@ def load_data(env_vars):
 
 
 def get_env_vars():
+    """
+    log into database
+    """
     load_dotenv()
     env_vars = {
         "DATABASE_TYPE": os.getenv("DATABASE_TYPE"),
