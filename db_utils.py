@@ -4,6 +4,7 @@ This is a db_utils file that holds information
 to connect to the database. It also has the connection
 information for AWS to retrieve zip files
 from an S3 bucket.
+Eric Winiecke
 """
 
 import os
