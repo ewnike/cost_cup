@@ -5,6 +5,7 @@ extracting data, cleaning data, and finally inserting into
 a postgres database and data tables needed fro the project.
 The database and s3 buckets will be used going forward to
 keep track of NHL statistics during the season.
+Eric Winiecke
 """
 
 import os
