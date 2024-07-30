@@ -9,12 +9,8 @@ from time import perf_counter
 
 import numpy as np
 import pandas as pd
-from sqlalchemy import create_engine
 
-from load_data import load_data  # Importing the load_data function
-
-# Add your database connection details here
-# DATABASE_URI = 'your_database_uri'
+from load_data import get_env_vars, load_data
 
 
 def get_num_players(shift_df):
@@ -80,8 +76,14 @@ def organize_by_season(seasons, df):
     df_orig = df
     nhl_dfs = []
     for season in seasons:
+        print(f"Processing season: {season}")
         df = df_orig.copy()
         df["game"] = df["game"].query(f"season == {season}")
+
+        # Debugging: Print game data for the current season
+        print(f"Games for season {season}:")
+        print(df["game"].head())
+
         for name in ["game_skater_stats", "game_plays", "game_shifts"]:
             df[name] = pd.merge(
                 df[name], df["game"][["game_id"]], on="game_id"
@@ -89,6 +91,11 @@ def organize_by_season(seasons, df):
 
             for key, val in df.items():
                 print(f"{key:>25}: {len(val)}")
+
+        # Debugging: Print data before filtering game_plays
+        print("game_plays before filtering events:")
+        print(df["game_plays"].head())
+
         cols = ["play_id", "game_id", "team_id_for", "event", "time"]
         events = ["Shot", "Blocked Shot", "Missed Shot", "Goal"]
         df["game_plays"] = df["game_plays"].loc[df["game_plays"]["event"].isin(events)]
@@ -98,30 +105,53 @@ def organize_by_season(seasons, df):
         df["game_plays"] = df["game_plays"][cols]
 
         print(f"reduced game_plays num rows: {len(df['game_plays'])}")
+        print(df["game_plays"].head())  # Print first few rows for debugging
+
+        # Debugging: Print game_skater_stats and game_shifts before merging
+        print("game_skater_stats before merging with game_shifts:")
+        print(df["game_skater_stats"].head())
+        print("game_shifts before merging with game_skater_stats:")
+        print(df["game_shifts"].head())
+
         df["game_skater_stats"] = pd.merge(
             df["game_skater_stats"], df["game_shifts"][["game_id"]], on="game_id"
         ).drop_duplicates(ignore_index=True)
+
+        print("Merged game_skater_stats:")
+        print(df["game_skater_stats"].head())
 
         df_corsi = df["game_skater_stats"].sort_values(
             ["game_id", "player_id"], ignore_index=True
         )[["game_id", "player_id", "team_id"]]
 
+        print(f"df_corsi for season {season}:")
+        print(df_corsi.head())
+
+        print(f"Calling create_corsi_stats for season: {season}")
         nhl_dfs.append([season, create_corsi_stats(df_corsi, df)])
+        print(f"Completed create_corsi_stats for season: {season}")
 
     return nhl_dfs
 
 
 def create_corsi_stats(df_corsi, df):
+    print("Entered create_corsi_stats")
     df_corsi[["corsi_for", "corsi_against", "corsi"]] = np.nan
 
     game_id_prev = None
     shifts_game, plays_game = None, None
     t1 = perf_counter()
+
     for i, row in df_corsi.iterrows():
         game_id, player_id, team_id = row.iloc[:3]
 
         if i % 1000 == 0:
             print(f"{i:>6}/{len(df_corsi)}, {perf_counter() - t1:.2f} s")
+
+        if pd.isna(game_id):
+            print(f"Skipping row with NaN game_id: {row}")
+            continue
+
         if game_id != game_id_prev:
             game_id_prev = game_id
             shifts_game = df["game_shifts"].query(f"game_id == {game_id}")
@@ -131,6 +161,7 @@ def create_corsi_stats(df_corsi, df):
             if 0 in [len(shifts_game), len(gss)]:
                 print(f"game_id: {game_id}")
                 print("Empty DF before Merge.")
+                continue  # Skip to the next iteration if there's an empty DataFrame
 
             df_num_players = get_penalty_exclude_times(shifts_game, gss).reset_index(
                 drop=True
@@ -158,11 +189,16 @@ def create_corsi_stats(df_corsi, df):
         df_corsi["corsi_for"] + df_corsi["corsi_against"]
     )
 
+    print(df_corsi.head())  # Print first few rows of df_corsi for debugging
+
+    if game_id_prev is not None:
+        print(f"Processed Corsi stats for game {game_id_prev}")
+
     return df_corsi
 
 
 def write_csv(dfs):
-    relative_directory = "cost_cup"
+    relative_directory = "corsi_stats"
 
     if not os.path.exists(relative_directory):
         os.makedirs(relative_directory)
@@ -170,24 +206,25 @@ def write_csv(dfs):
     for df in dfs:
         file_path = f"{relative_directory}/corsi_{df[0]}.csv"
         df[1].to_csv(file_path, index=False)
-
-    print("Files saved successfully.")
-
-
-# def insert_data_to_db(dfs, table_name):
-#     engine = create_engine(DATABASE_URI)
-
-#     for df in dfs:
-#         df[1].to_sql(table_name, engine, if_exists='append', index=False)
-#         print(f"Data inserted into table {table_name} successfully.")
+        print(f"Written to {file_path}")
 
 
 def calculate_and_save_corsi_stats():
-    df_master = load_data()
+    # Get environment variables using the get_env_vars function from load_data.py
+    env_vars = get_env_vars()
+    df_master = load_data(env_vars)
+    print("Data loaded successfully")
+
+    # Print out the first few rows of each DataFrame to verify data loading
+    for name, df in df_master.items():
+        print(f"{name}:")
+        print(df.head())
+
     seasons = [20152016, 20162017, 20172018]
     nhl_dfs = organize_by_season(seasons, df_master)
+    print("Data organized by season")
+
     write_csv(nhl_dfs)
-    # insert_data_to_db(nhl_dfs, 'new_corsi_table')
 
 
 if __name__ == "__main__":
