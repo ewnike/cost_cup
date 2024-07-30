@@ -338,11 +338,6 @@ def main():
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    # Drop existing tables if needed
-    with engine.connect() as connection:
-        for table_name in tables.keys():
-            connection.execute(text(f"DROP TABLE IF EXISTS public.{table_name};"))
-
     # Download and extract zip files from S3
     local_extract_path = os.getenv("LOCAL_EXTRACT_PATH", "data/download")
     os.makedirs(local_extract_path, exist_ok=True)
