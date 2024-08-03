@@ -6,7 +6,16 @@ import boto3
 import botocore
 import pandas as pd
 from dotenv import load_dotenv
-from sqlalchemy import BigInteger, Column, Integer, MetaData, Table, create_engine
+from sqlalchemy import (
+    BigInteger,
+    Column,
+    DateTime,
+    Integer,
+    MetaData,
+    String,
+    Table,
+    create_engine,
+)
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 from tqdm import tqdm
@@ -35,17 +44,27 @@ connection_string = (
     f"{DATABASE_TYPE}+{DBAPI}://{USER}:{PASSWORD}@{ENDPOINT}:{PORT}/{DATABASE}"
 )
 
-# Define table schema for game_shifts
+# Define table schemas
 metadata = MetaData()
 
-game_shifts = Table(
-    "game_shifts",
+game = Table(
+    "game",
     metadata,
-    Column("game_id", BigInteger),
-    Column("player_id", BigInteger),
-    Column("period", Integer),
-    Column("shift_start", Integer),
-    Column("shift_end", Integer),
+    Column("game_id", BigInteger, primary_key=True),
+    Column("season", Integer),
+    Column("type", String(50)),
+    Column("date_time_GMT", DateTime(timezone=True)),
+    Column("away_team_id", Integer),
+    Column("home_team_id", Integer),
+    Column("away_goals", Integer),
+    Column("home_goals", Integer),
+    Column("outcome", String(100)),
+    Column("home_rink_side_start", String(100)),
+    Column("venue", String(100)),
+    Column("venue_link", String(100)),
+    Column("venue_time_zone_id", String(50)),
+    Column("venue_time_zone_offset", Integer),
+    Column("venue_time_zone_tz", String(25)),
 )
 
 # Create the database engine
@@ -58,23 +77,26 @@ def clean_data(df, column_mapping):
     # Replace NaN with None for all columns
     df = df.where(pd.notnull(df), None)
 
+    # Truncate long strings and remove whitespace
+    for column, dtype in df.dtypes.items():
+        if dtype == "object":
+            df[column] = df[column].apply(
+                lambda x: str(x).strip()[:255] if isinstance(x, str) else x
+            )
+
     # Convert columns to appropriate data types based on column_mapping
     for db_column, csv_column in column_mapping.items():
-        if db_column in ["game_id", "player_id", "period", "shift_start", "shift_end"]:
-            df[csv_column] = (
-                pd.to_numeric(df[csv_column], errors="coerce")
-                .fillna(pd.NA)
-                .astype(pd.Int64Dtype())  # Ensures the type is integer with NA support
+        if "int" in str(df[csv_column].dtype):
+            df[csv_column] = pd.to_numeric(
+                df[csv_column], downcast="integer", errors="coerce"
             )
+        elif "float" in str(df[csv_column].dtype):
+            df[csv_column] = pd.to_numeric(df[csv_column], errors="coerce")
+        elif "date_time" in csv_column:
+            df[csv_column] = pd.to_datetime(df[csv_column], errors="coerce")
 
     # Remove duplicates
     df = df.drop_duplicates(ignore_index=True)
-
-    # Print rows where integer values are out of range
-    for column in df.select_dtypes(include=["Int64"]).columns:
-        if df[column].max() > 2147483647 or df[column].min() < -2147483648:
-            logging.warning(f"Rows with out of range values in column '{column}':")
-            logging.warning(df[(df[column] > 2147483647) | (df[column] < -2147483648)])
 
     return df
 
@@ -114,10 +136,11 @@ def insert_data(df, table):
 def inspect_data(df):
     # Check unique values in critical columns
     logging.info(f"Unique values in 'game_id': {df['game_id'].unique()}")
-    logging.info(f"Unique values in 'player_id': {df['player_id'].unique()}")
+    logging.info(f"Unique values in 'away_team_id': {df['away_team_id'].unique()}")
+    logging.info(f"Unique values in 'home_team_id': {df['home_team_id'].unique()}")
 
     # Convert columns to numeric and identify problematic rows
-    for column in ["game_id", "player_id", "period", "shift_start", "shift_end"]:
+    for column in ["game_id", "away_team_id", "home_team_id"]:
         df[column] = pd.to_numeric(df[column], errors="coerce")
         logging.warning(f"Rows with large values in {column}:")
         logging.warning(df[df[column] > 1000])
@@ -161,23 +184,33 @@ def process_and_insert_csv(csv_file_path, table, column_mapping):
         logging.error(f"File not found: {csv_file_path} - {e}")
 
 
-# Define the column mapping for game_shifts.csv
-game_shifts_column_mapping = {
+# Define the column mapping for game.csv
+column_mapping = {
     "game_id": "game_id",
-    "player_id": "player_id",
-    "period": "period",
-    "shift_start": "shift_start",
-    "shift_end": "shift_end",
+    "season": "season",
+    "type": "type",
+    "date_time_GMT": "date_time_GMT",
+    "away_team_id": "away_team_id",
+    "home_team_id": "home_team_id",
+    "away_goals": "away_goals",
+    "home_goals": "home_goals",
+    "outcome": "outcome",
+    "home_rink_side_start": "home_rink_side_start",
+    "venue": "venue",
+    "venue_link": "venue_link",
+    "venue_time_zone_id": "venue_time_zone_id",
+    "venue_time_zone_offset": "venue_time_zone_offset",
+    "venue_time_zone_tz": "venue_time_zone_tz",
 }
 
 # S3 client
 s3_client = boto3.client("s3")
 bucket_name = os.getenv("S3_BUCKET_NAME")
-s3_file_key = os.getenv("S3_FILE_KEY", "game_shifts.csv.zip")
+s3_file_key = os.getenv("S3_FILE_KEY", "game.csv.zip")
 
 # Local paths
 local_extract_path = os.getenv("LOCAL_EXTRACT_PATH", "data/download")
-local_zip_path = os.path.join(local_extract_path, "game_shifts.zip")
+local_zip_path = os.path.join(local_extract_path, "game.zip")
 data_path = os.getenv("DATA_PATH", "data")  # Path to the data folder
 
 
@@ -220,19 +253,17 @@ def main():
     extracted_files = extract_zip(local_zip_path, local_extract_path)
     logging.info(f"Extracted files: {extracted_files}")
 
-    # Path to game_shifts.csv file
-    game_shifts_csv_file_path = os.path.join(local_extract_path, "game_shifts.csv")
+    # Path to game.csv file
+    game_csv_file_path = os.path.join(local_extract_path, "game.csv")
 
     # Create the table if it does not exist
     create_table(engine)
 
-    # Process and insert game_shifts.csv
-    if os.path.exists(game_shifts_csv_file_path):
-        process_and_insert_csv(
-            game_shifts_csv_file_path, game_shifts, game_shifts_column_mapping
-        )
+    # Process and insert game.csv
+    if os.path.exists(game_csv_file_path):
+        process_and_insert_csv(game_csv_file_path, game, column_mapping)
     else:
-        logging.error(f"CSV file {game_shifts_csv_file_path} not found")
+        logging.error(f"CSV file {game_csv_file_path} not found")
 
     # Clear the data and extracted folders after processing
     clear_directory(data_path)
