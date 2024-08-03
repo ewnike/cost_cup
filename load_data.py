@@ -1,6 +1,6 @@
 """
 July 30, 2024
-Code to load data from databas into workin env
+Code to load data from database into working env
 so that code can access data, calculate corsi,
 aggregate data, and insert data back into data table.
 Eric Winiecke
