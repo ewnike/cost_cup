@@ -2,8 +2,12 @@ import subprocess
 import logging
 
 # Configure logging
-logging.basicConfig(filename='data_processing.log', level=logging.INFO, 
-                    format='%(asctime)s:%(levelname)s:%(message)s')
+logging.basicConfig(
+    filename="data_processing.log",
+    level=logging.INFO,
+    format="%(asctime)s:%(levelname)s:%(message)s",
+)
+
 
 def run_script(script_name):
     try:
@@ -17,11 +21,18 @@ def run_script(script_name):
         logging.error(f"Failed to run {script_name}: {e}")
         print(f"Failed to run {script_name}: {e}")
 
+
 def main():
-    scripts = ["game.py", "game_shifts_processor.py", "game_skater_stats.py", "game_plays.py"]
+    scripts = [
+        "game_processor.py",
+        "game_shifts_processor.py",
+        "game_skater_stats_processor.py",
+        "game_plays_processor.py",
+    ]
 
     for script in scripts:
         run_script(script)
+
 
 if __name__ == "__main__":
     main()
