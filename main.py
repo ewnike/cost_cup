@@ -18,7 +18,7 @@ def run_script(script_name):
         print(f"Failed to run {script_name}: {e}")
 
 def main():
-    scripts = ["game.py", "game_shifts.py", "game_skater_stats.py", "game_plays.py"]
+    scripts = ["game.py", "game_shifts_processor.py", "game_skater_stats.py", "game_plays.py"]
 
     for script in scripts:
         run_script(script)
