@@ -54,7 +54,6 @@ def create_aggregated_table(table_name):
         Column("timeOnIce", Float),
         Column("game_count", Integer),
         Column("CAP_HIT", Float),
-        Column("SALARY", Float),
     )
     metadata.create_all(engine)
 
