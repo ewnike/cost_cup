@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
 from sqlalchemy import (
@@ -53,7 +54,7 @@ def create_aggregated_table(table_name):
         Column("CF_Percent", Float),
         Column("timeOnIce", Float),
         Column("game_count", Integer),
-        Column("Cap_Hit", String(50)),
+        Column("Cap_Hit", Float),
     )
     metadata.create_all(engine)
 
@@ -61,15 +62,17 @@ def create_aggregated_table(table_name):
 for season in ["20152016", "20162017", "20172018"]:
     # Get corsi data
     corsi_query = f"SELECT * FROM raw_corsi_{season}"
-    df_corsi = get_data_from_db(corsi_query).drop(columns=["Unnamed: 0"])
+    df_corsi = get_data_from_db(corsi_query)
+    if "Unnamed: 0" in df_corsi.columns:
+        df_corsi = df_corsi.drop(columns=["Unnamed: 0"])
 
     # Get game skater stats
-    gss_toi_query = "SELECT game_id, player_id, timeOnIce FROM gss_toi"
+    gss_toi_query = 'SELECT game_id, player_id, "timeOnIce" FROM game_skater_stats'  # Adjust the column name to match your DB schema
     df_gss_toi = get_data_from_db(gss_toi_query)
 
     # Get player info
     player_info_query = (
-        "SELECT player_id, firstName, lastName, primaryPosition FROM player_info"
+        'SELECT player_id, "firstName", "lastName", "primaryPosition" FROM player_info'
     )
     df_player_info = get_data_from_db(player_info_query)
 
@@ -97,33 +100,63 @@ for season in ["20152016", "20162017", "20172018"]:
     )
 
     # Get player salary data
+    # player_salary_query = (
+    #     f"SELECT 'firstName', 'lastName', 'capHit' FROM player_cap_hit_{season}"
+    # )
+    # df_player_salary = get_data_from_db(player_salary_query)
+    # player_salary_query = (
+    # f"SELECT firstName, lastName, capHit FROM player_cap_hit_{season}"
+    # )
     player_salary_query = (
-        f"SELECT firstName, lastName, capHit FROM player_cap_hit_{season}"
+        f'SELECT "firstName", "lastName", "capHit" FROM player_cap_hit_{season}'
     )
+
     df_player_salary = get_data_from_db(player_salary_query)
+    print(df_player_salary.head())
 
-    # Merge aggregated stats with salary info
-    df_grouped_all = pd.merge(
-        df_grouped_all, df_player_salary, on=["firstName", "lastName"]
+    # Convert capHit from string to float
+    df_player_salary["capHit"] = (
+        df_player_salary["capHit"].replace(r"[\$,]", "", regex=True).astype(float)
     )
 
-    # Post-processing
-    df_grouped_all["CF_Percent"] = df_grouped_all["CF_Percent"].round(4) * 100
-    threshold = 82 * 0.32
-    df_grouped_all = df_grouped_all.query(f"game_count >= {threshold}")
-    df_grouped_all = df_grouped_all.sort_values("CF_Percent", ascending=False)
+# Merge aggregated stats with salary info
+df_grouped_all = pd.merge(
+    df_grouped_all, df_player_salary, on=["firstName", "lastName"]
+)
 
-    # Define table name for aggregated data
-    aggregated_table_name = f"aggregated_corsi_{season}"
+# Post-processing
+# Round CF_Percent to four decimal places, then multiply by 100
+df_grouped_all["CF_Percent"] = (df_grouped_all["CF_Percent"].round(4) * 100).round(4)
 
-    # Create new table for aggregated data
-    create_aggregated_table(aggregated_table_name)
+# Round timeOnIce to the hundredth of a second
+df_grouped_all["timeOnIce"] = df_grouped_all["timeOnIce"].round(2)
 
-    # Insert aggregated data into the new table
-    df_grouped_all.to_sql(
-        aggregated_table_name, con=engine, if_exists="replace", index=False
-    )
+# Apply the threshold for game_count
+threshold = 82 * 0.32
+df_grouped_all = df_grouped_all.query(f"game_count >= {threshold}")
 
-    print(f"Data inserted successfully into {aggregated_table_name}")
+# Ensure that display is consistent with rounding
+df_grouped_all["CF_Percent"] = df_grouped_all["CF_Percent"].apply(
+    lambda x: np.round(x, 4)
+)
+df_grouped_all["timeOnIce"] = df_grouped_all["timeOnIce"].apply(
+    lambda x: np.round(x, 2)
+)
+
+# Sort by CF_Percent in descending order
+df_grouped_all = df_grouped_all.sort_values("CF_Percent", ascending=False)
+
+# Define table name for aggregated data
+aggregated_table_name = f"aggregated_corsi_{season}"
+
+# Create new table for aggregated data
+create_aggregated_table(aggregated_table_name)
+
+# Insert aggregated data into the new table
+df_grouped_all.to_sql(
+    aggregated_table_name, con=engine, if_exists="replace", index=False
+)
+
+print(f"Data inserted successfully into {aggregated_table_name}")
 
 print("Data inserted successfully into all tables")
