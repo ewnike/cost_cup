@@ -22,7 +22,7 @@ DBAPI = os.getenv("DBAPI")
 ENDPOINT = os.getenv("ENDPOINT")
 USER = os.getenv("USER")
 PASSWORD = os.getenv("PASSWORD")
-PORT = int(os.getenv("PORT", 5433))  # Provide default value if not set
+PORT = int(os.getenv("PORT", 5432))  # Provide default value if not set
 DATABASE = os.getenv("DATABASE")
 
 # Create the connection string
