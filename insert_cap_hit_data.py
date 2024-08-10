@@ -39,9 +39,9 @@ def create_caphit_table(table_name):
     return Table(
         table_name,
         metadata,
-        Column("First Name", String(50)),
-        Column("Last Name", String(50)),
-        Column("Cap Hit", String(50)),
+        Column("firstName", String(50)),
+        Column("lastName", String(50)),
+        Column("capHit", String(50)),
     )
 
 
