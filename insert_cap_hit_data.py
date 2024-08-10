@@ -77,15 +77,15 @@ def insert_data_from_csv(engine, table_name, file_path):
 csv_files_and_mappings = [
     (
         "/Users/ericwiniecke/Documents/github/cost_cup/player_cap_hits/player_cap_hits_2015.csv",
-        "player_cap_hits_2015",
+        "player_cap_hit_20152016",
     ),
     (
         "/Users/ericwiniecke/Documents/github/cost_cup/player_cap_hits/player_cap_hits_2016.csv",
-        "player_cap_hits_2016",
+        "player_cap_hit_20162017",
     ),
     (
         "/Users/ericwiniecke/Documents/github/cost_cup/player_cap_hits/player_cap_hits_2017.csv",
-        "player_cap_hits_2017",
+        "player_cap_hit_20172018",
     ),
 ]
 
