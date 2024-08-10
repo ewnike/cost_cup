@@ -47,20 +47,20 @@ def create_aggregated_table(table_name):
         Column("player_id", BigInteger, primary_key=True),
         Column("firstName", String),
         Column("lastName", String),
-        Column("CF", Float),
-        Column("CA", Float),
-        Column("C", Float),
+        Column("corsi_for", Float),
+        Column("corsi_against", Float),
+        Column("corsi", Float),
         Column("CF_Percent", Float),
         Column("timeOnIce", Float),
         Column("game_count", Integer),
-        Column("CAP_HIT", Float),
+        Column("Cap_Hit", String(50)),
     )
     metadata.create_all(engine)
 
 
 for season in ["20152016", "20162017", "20172018"]:
     # Get corsi data
-    corsi_query = f"SELECT * FROM corsi_{season}"
+    corsi_query = f"SELECT * FROM raw_corsi_{season}"
     df_corsi = get_data_from_db(corsi_query).drop(columns=["Unnamed: 0"])
 
     # Get game skater stats
@@ -84,9 +84,9 @@ for season in ["20152016", "20162017", "20172018"]:
             {
                 "firstName": "first",
                 "lastName": "first",
-                "CF": "mean",
-                "CA": "mean",
-                "C": "mean",
+                "corsi_for": "mean",
+                "corsi_against": "mean",
+                "corsi": "mean",
                 "CF_Percent": "mean",
                 "timeOnIce": "mean",
                 "game_id": "count",
@@ -98,7 +98,7 @@ for season in ["20152016", "20162017", "20172018"]:
 
     # Get player salary data
     player_salary_query = (
-        f"SELECT firstName, lastName, `CAP HIT`, SALARY FROM player_{season}"
+        f"SELECT firstName, lastName, capHit FROM player_cap_hit_{season}"
     )
     df_player_salary = get_data_from_db(player_salary_query)
 

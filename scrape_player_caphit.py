@@ -75,7 +75,7 @@ for year in years:
 
     # Create a DataFrame to store the results
     df = pd.DataFrame(
-        {"First Name": first_names, "Last Name": last_names, "Cap Hit": cap_hits}
+        {"firstName": first_names, "lastName": last_names, "capHit": cap_hits}
     )
 
     # Store the DataFrame in the dictionary
