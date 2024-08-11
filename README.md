@@ -10,7 +10,7 @@
 
 ## Introduction
 
-This project involves setting up a PostgreSQL database, performing data dumps, and manipulating data files using pgAdmin, PostgreSQL, and Python.
+This project involves setting up a PostgreSQL database,the installation and the use of pgAdmin, and Python.
 
 ## Prerequisites
 
