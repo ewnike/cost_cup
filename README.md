@@ -25,3 +25,14 @@ Before starting, ensure you have the following installed:
 
 1. **Install PostgreSQL and pgAdmin**:
     - Follow the instructions on the [PostgreSQL](https://www.postgresql.org/download/) and [pgAdmin](https://www.pgadmin.org/download/) websites to download and install the software.
+  
+2. **Start PostgreSQL Server**:
+    - Ensure your PostgreSQL server is running. You can start it from your terminal or command prompt:
+    ```sh
+    pg_ctl -D /usr/local/var/postgres start
+    ```
+
+3. **Create a New Database**:
+    - Open pgAdmin and connect to your PostgreSQL server.
+    - Right-click on `Databases` and select `Create > Database...`.
+    - Enter the database name (e.g., `my_database`) and click `Save`.
