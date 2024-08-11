@@ -1,3 +1,11 @@
+"""
+August 11, 2024
+Script to scrape payer caphit, first name, and
+last name from spotrac. Used selenium and set webdriver
+to safari.
+Eric Winiecke
+"""
+
 import os
 import time
 
@@ -13,21 +21,21 @@ from selenium.webdriver.support.ui import WebDriverWait
 driver = webdriver.Safari()
 
 # Base URL to scrape
-base_url = "https://www.spotrac.com/nhl/rankings/player/_/year/{}/sort/cap_total"
+BASE_URL = "https://www.spotrac.com/nhl/rankings/player/_/year/{}/sort/cap_total"
 
 # Years to scrape
 years = [2015, 2016, 2017]
 
 # Directory to store CSV files
-output_dir = "player_cap_hits"
-os.makedirs(output_dir, exist_ok=True)
+OUTPUT_DIR = "player_cap_hits"
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # Dictionary to store DataFrames for each year
 dfs_by_year = {}
 
 
-# Function to clean and split player name
 def split_player_name(name):
+    """Function to clean and split player name"""
     name_parts = name.split()
     first_name = name_parts[0]
     last_name = " ".join(name_parts[1:]) if len(name_parts) > 1 else ""
@@ -36,7 +44,7 @@ def split_player_name(name):
 
 # Loop through each year and scrape the data
 for year in years:
-    url = base_url.format(year)
+    url = BASE_URL.format(year)
     driver.get(url)
 
     # Wait until the table is loaded
@@ -91,7 +99,7 @@ for year, df in dfs_by_year.items():
 
 # Save the DataFrames to CSV files
 for year, df in dfs_by_year.items():
-    csv_path = os.path.join(output_dir, f"player_cap_hits_{year}.csv")
+    csv_path = os.path.join(OUTPUT_DIR, f"player_cap_hits_{year}.csv")
     df.to_csv(csv_path, index=False, mode="w")
 
-print(f"Data saved to {output_dir} directory.")
+print(f"Data saved to {OUTPUT_DIR} directory.")
