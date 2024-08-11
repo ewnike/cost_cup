@@ -32,7 +32,17 @@ Before starting, ensure you have the following installed:
     pg_ctl -D /usr/local/var/postgres start
     ```
 
-3. **Create a New Database**:
-    - Open pgAdmin and connect to your PostgreSQL server.
-    - Right-click on `Databases` and select `Create > Database...`.
-    - Enter the database name (e.g., `my_database`) and click `Save`.
+## Create a New Database
+
+1. **Open pgAdmin** and connect to your PostgreSQL server.
+2. **Right-click on `Databases`** and select `Create > Database...`.
+3. **Enter the database name** (e.g., `hockey_stats`) and click `Save`.
+
+Now that you have created your database, you need to configure the environment variables that your project will use to connect to this database.
+
+## Configure the Environment Variables
+
+1. **Copy the `.env.example` file** to create your own `.env` file:
+   ```bash
+   cp .env.example .env
+
