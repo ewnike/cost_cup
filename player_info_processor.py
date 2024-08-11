@@ -1,3 +1,12 @@
+"""
+August 11, 2024.
+Code to upload player_info
+from AWS S3 bucket. Read data. 
+Insert data into datatable in hockey_stats
+database.
+Eric Winiecke
+"""
+
 import logging
 import os
 import shutil
@@ -81,8 +90,8 @@ metadata.create_all(engine)
 logging.info("Table created successfully.")
 
 
-# Function to download a file from S3
 def download_file_from_s3(bucket, key, download_path):
+    """Function to download a file from S3"""
     logging.info(f"Downloading from bucket: {bucket}, key: {key}, to: {download_path}")
     try:
         s3_client.download_file(bucket, key, download_path)
@@ -95,16 +104,16 @@ def download_file_from_s3(bucket, key, download_path):
             raise
 
 
-# Function to clear a directory
 def clear_directory(directory):
+    """Function to clear a directory"""
     if os.path.exists(directory):
         shutil.rmtree(directory)
         logging.info(f"Cleared directory: {directory}")
     os.makedirs(directory, exist_ok=True)
 
 
-# Function to convert height from "6' 1"" format to total inches
 def convert_height(height_str):
+    """Function to convert height from "6' 1"" format to total inches"""
     if pd.isnull(height_str):
         return None
     try:
@@ -116,8 +125,8 @@ def convert_height(height_str):
         return None
 
 
-# Function to process and insert CSV data into the player_info table
 def process_and_insert_csv(file_path, table):
+    """Function to process and insert CSV data into the player_info table"""
     # Check if the file extension suggests it might be a CSV file
     if file_path.endswith(".csv") or file_path.endswith(".csv.xls"):
         # Read the file as a CSV
@@ -166,8 +175,8 @@ def process_and_insert_csv(file_path, table):
         session.close()
 
 
-# Main function to handle the workflow
 def main():
+    """Main function to handle the workflow"""
     # Clear the extracted folder and recreate it
     clear_directory(local_extract_path)
 

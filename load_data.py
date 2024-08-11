@@ -31,6 +31,7 @@ def get_env_vars():
 
 
 def get_db_engine(env_vars):
+    """create connection string to database"""
     connection_string = (
         f"{env_vars['DATABASE_TYPE']}+{env_vars['DBAPI']}://"
         f"{env_vars['USER']}:{env_vars['PASSWORD']}@"
@@ -41,6 +42,7 @@ def get_db_engine(env_vars):
 
 
 def load_data(env_vars):
+    """connect to db."""
     engine = get_db_engine(env_vars)
 
     queries = {
