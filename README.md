@@ -7,6 +7,7 @@
 2. [Prerequisites](#prerequisites)
 3. [Database Setup](#database-setup)
 4. [Configure Environment Variables](#envinornment-setup)
+5. [Install Dependencies](#dependencies)
 
 
 ## Introduction
@@ -77,6 +78,12 @@ Start by copying the provided `.env.example` file to create your own `.env` file
 
 3. Save the .env File
    Once you have filled in all the required details, save the .env file.
+
+## Install Dependencies
+Make sure all necessary dependencies are installed before running the project:
+
+1. pip install -r requirements.txt
+
 
 
 
