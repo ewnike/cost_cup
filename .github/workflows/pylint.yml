@@ -19,7 +19,10 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pylint
+    - name: Create pylint configuration
+      run: |
+        echo "[MESSAGES CONTROL]" > .pylintrc
+        echo "disable=logging-fstring-interpolation" >> .pylintrc
     - name: Analysing the code with pylint
       run: |
         pylint $(git ls-files '*.py')
-
