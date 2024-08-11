@@ -14,6 +14,9 @@ from load_data import get_env_vars, load_data
 
 
 def get_num_players(shift_df):
+    """keep track of the number of players on the ice
+    at specific times. Important for being able to assign the
+    correct shift stats per player."""
     shifts_melted = pd.melt(
         shift_df,
         id_vars=["game_id", "player_id"],
@@ -32,6 +35,16 @@ def get_num_players(shift_df):
 
 
 def get_penalty_exclude_times(game_shifts, game_skater_stats):
+    """
+    The get_penalty_exclude_times function is
+    designed to identify periods during a hockey
+    game where there is a difference in the number
+    of players on the ice between two teams,
+    particularly focusing on when a team has fewer
+    than five players (indicating a penalty situation).
+    The function processes data on player shifts and
+    game stats to determine these periods.
+    """
     game_shifts = pd.merge(
         game_shifts, game_skater_stats[["player_id", "team_id"]], on="player_id"
     )
@@ -73,6 +86,16 @@ def get_penalty_exclude_times(game_shifts, game_skater_stats):
 
 
 def organize_by_season(seasons, df):
+    """
+    function is designed to process
+    hockey data for multiple seasons and
+    compute advanced statistics
+    (related to Corsi metrics) for
+    each season. The function works with
+    several related DataFrames,
+    filtering, merging, and manipulating
+    the data for each season.
+    """
     df_orig = df
     nhl_dfs = []
     for season in seasons:
@@ -135,6 +158,15 @@ def organize_by_season(seasons, df):
 
 
 def create_corsi_stats(df_corsi, df):
+    """
+    function calculates Corsi statistics
+    for individual players across different
+    games using a DataFrame (df_corsi)
+    that contains player and game information.
+    Corsi is an advanced hockey statistic used
+    to measure shot attempts and is often used
+    as a proxy for puck possession.
+    """
     print("Entered create_corsi_stats")
     df_corsi[["corsi_for", "corsi_against", "corsi"]] = np.nan
 
@@ -198,6 +230,12 @@ def create_corsi_stats(df_corsi, df):
 
 
 def write_csv(dfs):
+    """
+    function is responsible for saving
+    a list of DataFrames to CSV files,
+    with each file named according to a
+    season identifier.
+    """
     relative_directory = "corsi_stats"
 
     if not os.path.exists(relative_directory):
@@ -210,6 +248,12 @@ def write_csv(dfs):
 
 
 def calculate_and_save_corsi_stats():
+    """
+    function is a high-level function
+    that orchestrates the loading,
+    processing, and saving of hockey
+    Corsi statistics data.
+    """
     # Get environment variables using the get_env_vars function from load_data.py
     env_vars = get_env_vars()
     df_master = load_data(env_vars)
