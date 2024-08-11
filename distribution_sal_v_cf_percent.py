@@ -1,10 +1,15 @@
+"""
+August 11, 2024
+Code for chart displaying exploratory
+data exploration.
+Eric Winiecke
+"""
+
 import os
 
-import matplotlib.pyplot as plt
-
-# import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
+from matplotlib import pyplot as plt
 from sqlalchemy import create_engine
 
 # Load environment variables from .env file

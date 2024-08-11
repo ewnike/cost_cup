@@ -1,9 +1,16 @@
+"""
+August 11, 2024.
+Code to create a chart that
+shows exploratory analysis of the data.
+Eric Winiecke
+"""
+
 import os
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
+from matplotlib import pyplot as plt
 from sqlalchemy import create_engine
 
 # Load environment variables from .env file
@@ -46,8 +53,8 @@ df["capHit"] = pd.to_numeric(df["capHit"], errors="coerce")
 df = df.dropna(subset=["capHit"])
 
 # Define the number of bins and bin width
-bin_width = 300000  # $300,000
-bins = np.arange(575000, df["capHit"].max() + bin_width, bin_width)
+BIN_WIDTH = 300000  # $300,000
+bins = np.arange(575000, df["capHit"].max() + BIN_WIDTH, BIN_WIDTH)
 
 # Create subplots
 fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(18, 6), sharey=True)
@@ -62,7 +69,7 @@ for ax, season in zip(axes, seasons):
 
     # Create bin labels for the x-axis
     bin_labels = [
-        f"${edge/1000:,.0f}k-${(edge + bin_width)/1000:,.0f}k"
+        f"${edge/1000:,.0f}k-${(edge + BIN_WIDTH)/1000:,.0f}k"
         for edge in bin_edges[:-1]
     ]
 
