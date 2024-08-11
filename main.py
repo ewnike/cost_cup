@@ -18,16 +18,22 @@ logging.basicConfig(
 
 
 def run_script(script_name):
-    """code to kickoff downloading data from AWS S3 buckets and
+    """Code to kickoff downloading data from AWS S3 buckets and
     inserting data into datatables in the hockey_stats database.
     """
     try:
-        result = subprocess.run(["python", script_name], capture_output=True, text=True)
+        result = subprocess.run(
+            ["python", script_name], capture_output=True, text=True, check=True
+        )
         logging.info(f"Output of {script_name}:\n{result.stdout}")
         if result.stderr:
             logging.error(f"Errors in {script_name}:\n{result.stderr}")
         print(result.stdout)
         print(result.stderr)
+    except subprocess.CalledProcessError as e:
+        # This will catch the error if the subprocess fails and check=True is set
+        logging.error(f"Script {script_name} failed with error: {e.stderr}")
+        print(f"Script {script_name} failed with error: {e.stderr}")
     except Exception as e:
         logging.error(f"Failed to run {script_name}: {e}")
         print(f"Failed to run {script_name}: {e}")
