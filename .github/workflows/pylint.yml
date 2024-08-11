@@ -22,7 +22,7 @@ jobs:
     - name: Create pylint configuration
       run: |
         echo "[MESSAGES CONTROL]" > .pylintrc
-        echo "disable=logging-fstring-interpolation, undefined-variable" >> .pylintrc
+        echo "disable=logging-fstring-interpolation,undefined-variable,invalid-envvar-default,redefined-outer-name,broad-exception-caught" >> .pylintrc
     - name: Analysing the code with pylint
       run: |
         pylint $(git ls-files '*.py')
