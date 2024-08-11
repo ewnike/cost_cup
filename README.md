@@ -48,8 +48,9 @@ Your project requires various environment variables to be set up for connecting 
 
 Start by copying the provided `.env.example` file to create your own `.env` file:
 
-    '''bash
+    ```bash
     cp .env.example .env
+    ```
 
 2. Open the .env file in a text editor and replace the placeholder values with your actual PostgreSQL database information:
 ```plaintext
@@ -60,16 +61,21 @@ Start by copying the provided `.env.example` file to create your own `.env` file
     PASSWORD=your_password   # Replace with your PostgreSQL password
     PORT=5432                # Default PostgreSQL port is 5432
     DATABASE=hockey_stats    # Replace with your created database name
+``````
+
 
 3. AWS S3 Bucket Access Configuration. (Credentials can be obtained from project author)
 
+    Update the following variables in your .env file with your AWS S3 credentials:
+   ```plaintext
     AWS_ACCESS_KEY_ID=your_access_key_id     # Replace with your AWS Access Key ID
     AWS_SECRET_ACCESS_KEY=your_secret_key    # Replace with your AWS Secret Access Key
     AWS_S3_BUCKET_NAME=your_bucket_name      # Replace with your S3 bucket name
     AWS_REGION=your_region                   # Replace with the AWS region of your bucket
+   ``````
                 
 
-4. Save the .env File
+3. Save the .env File
    Once you have filled in all the required details, save the .env file.
 
 
