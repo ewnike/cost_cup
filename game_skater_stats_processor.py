@@ -78,8 +78,8 @@ engine = create_engine(connection_string)
 Session = sessionmaker(bind=engine)
 
 
-# Function to clean the DataFrame
 def clean_data(df, column_mapping):
+    """Function to clean the DataFrame"""
     # Replace NaN with None for all columns
     df = df.where(pd.notnull(df), None)
 
