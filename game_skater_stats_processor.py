@@ -1,3 +1,11 @@
+"""
+August 11, 2024.
+Code to upload data from AWS S3 Bucket. Read
+data. Insert raw data into the data table
+created in the hockey_stats db.
+Eric Winiecke
+"""
+
 import logging
 import os
 import shutil
@@ -126,21 +134,21 @@ def clean_data(df, column_mapping):
     return df
 
 
-# Function to create the table if it does not exist
 def create_table(engine):
+    """Function to create the table if it does not exist"""
     metadata.create_all(engine)
 
 
-# Function to clear the table if it exists
 def clear_table(engine, table):
+    """Function to clear the table if it exists"""
     with engine.connect() as connection:
         connection.execute(table.delete())
         connection.commit()
         logging.info(f"Table {table.name} cleared.")
 
 
-# Function to insert data into the database
 def insert_data(df, table):
+    """Function to insert data into the database"""
     data = df.to_dict(orient="records")
     with Session() as session:
         try:
@@ -157,8 +165,8 @@ def insert_data(df, table):
             logging.error(f"Error inserting data into {table.name}: {e}")
 
 
-# Function to inspect data for errors
 def inspect_data(df):
+    """Function to inspect data for errors"""
     # Check unique values in critical columns
     logging.info(f"Unique values in 'game_id': {df['game_id'].unique()}")
     logging.info(f"Unique values in 'player_id': {df['player_id'].unique()}")
@@ -195,8 +203,8 @@ def inspect_data(df):
         logging.warning(df[df[column] < 0])
 
 
-# Function to process and insert data from a CSV file
 def process_and_insert_csv(csv_file_path, table, column_mapping):
+    """Function to process and insert data from a CSV file"""
     try:
         logging.info(f"Processing {csv_file_path} for table {table.name}")
         df = pd.read_csv(csv_file_path)
@@ -268,8 +276,8 @@ local_zip_path = os.path.join(local_extract_path, "game_skater_stats.zip")
 data_path = os.getenv("DATA_PATH", "data")  # Path to the data folder
 
 
-# Function to download a zip file from S3
 def download_zip_from_s3(bucket, key, download_path):
+    """Function to download a zip file from S3"""
     logging.info(f"Downloading from bucket: {bucket}, key: {key}, to: {download_path}")
     try:
         s3_client.download_file(bucket, key, download_path)
@@ -282,23 +290,23 @@ def download_zip_from_s3(bucket, key, download_path):
             raise
 
 
-# Function to extract zip files
 def extract_zip(zip_path, extract_to):
+    """Function to extract zip files"""
     shutil.unpack_archive(zip_path, extract_to)
     logging.info(f"Extracted {zip_path} to {extract_to}")
     return os.listdir(extract_to)
 
 
-# Function to clear a directory
 def clear_directory(directory):
+    """Function to clear a directory"""
     if os.path.exists(directory):
         shutil.rmtree(directory)
         logging.info(f"Cleared directory: {directory}")
     os.makedirs(directory, exist_ok=True)
 
 
-# Main function to handle the workflow
 def main():
+    """Main function to handle the workflow"""
     # Clear the extracted folder and recreate it
     clear_directory(local_extract_path)
 
