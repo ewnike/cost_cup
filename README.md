@@ -6,6 +6,7 @@
 1. [Introduction](#introduction)
 2. [Prerequisites](#prerequisites)
 3. [Database Setup](#database-setup)
+4. [Configure Environment Variables](#envinornment-setup)
 
 
 ## Introduction
@@ -38,11 +39,41 @@ Before starting, ensure you have the following installed:
 2. **Right-click on `Databases`** and select `Create > Database...`.
 3. **Enter the database name** (e.g., `hockey_stats`) and click `Save`.
 
-Now that you have created your database, you need to configure the environment variables that your project will use to connect to this database.
 
 ## Configure the Environment Variables
 
-1. **Copy the `.env.example` file** to create your own `.env` file:
-   ```bash
-   cp .env.example .env
+Your project requires various environment variables to be set up for connecting to the PostgreSQL database and accessing data from an S3 bucket. These variables are stored in a `.env` file.
+
+1. Copy the `.env.example` File
+
+Start by copying the provided `.env.example` file to create your own `.env` file:
+
+'''bash
+cp .env.example .env
+'''
+
+2. Open the .env file in a text editor and replace the placeholder values with your actual PostgreSQL database information:
+
+    DATABASE_TYPE=postgresql
+    DBAPI=psycopg2
+    ENDPOINT=localhost       # Replace with your PostgreSQL server address
+    USER=your_username       # Replace with your PostgreSQL username
+    PASSWORD=your_password   # Replace with your PostgreSQL password
+    PORT=5432                # Default PostgreSQL port is 5432
+    DATABASE=hockey_stats    # Replace with your created database name
+
+3. AWS S3 Bucket Access Configuration. (Credentials can be obtained from project author)
+
+    Update the following variables with your AWS S3 credentials:
+    AWS_ACCESS_KEY_ID=your_access_key_id     # Replace with your AWS Access Key ID
+    AWS_SECRET_ACCESS_KEY=your_secret_key    # Replace with your AWS Secret Access Key
+    AWS_S3_BUCKET_NAME=your_bucket_name      # Replace with your S3 bucket name
+    AWS_REGION=your_region                   # Replace with the AWS region of your bucket
+
+4. Save the .env File
+   Once you have filled in all the required details, save the .env file.
+
+
+
+
 
