@@ -1,6 +1,6 @@
 """
 August 11, 2024
-code to create aggragated table in database.
+code to create aggregated table in database.
 The code also aggragtes the stats per season
 per player.
 Eric Winiecke
