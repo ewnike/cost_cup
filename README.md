@@ -50,7 +50,7 @@ Start by copying the provided `.env.example` file to create your own `.env` file
 
     ```bash
     cp .env.example .env
-    ```
+    
 
 2. Open the .env file in a text editor and replace the placeholder values with your actual PostgreSQL database information:
 ```plaintext
