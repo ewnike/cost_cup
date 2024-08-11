@@ -1,3 +1,11 @@
+"""
+August 11, 2024
+code to create aggragated table in database.
+The code also aggragtes the stats per season
+per player.
+Eric Winiecke
+"""
+
 import os
 
 import numpy as np
@@ -35,12 +43,17 @@ engine = create_engine(connection_string)
 
 # Define function to get data from the database
 def get_data_from_db(query):
+    """
+    Function to get data from the database.
+    """
     with engine.connect() as connection:
         return pd.read_sql(query, connection)
 
 
-# Define function to create a new table schema for aggregated data
 def create_aggregated_table(table_name):
+    """
+    create table schema for aggragated table.
+    """
     metadata = MetaData()
     Table(
         table_name,
@@ -60,21 +73,23 @@ def create_aggregated_table(table_name):
 
 
 for season in ["20152016", "20162017", "20172018"]:
-    # Get corsi data
-    corsi_query = f"SELECT * FROM raw_corsi_{season}"
-    df_corsi = get_data_from_db(corsi_query)
+    """
+    get corsi data.
+    """
+    CORSI_QUERY = f"SELECT * FROM raw_corsi_{season}"
+    df_corsi = get_data_from_db(CORSI_QUERY)
     if "Unnamed: 0" in df_corsi.columns:
         df_corsi = df_corsi.drop(columns=["Unnamed: 0"])
 
     # Get game skater stats
-    gss_toi_query = 'SELECT game_id, player_id, "timeOnIce" FROM game_skater_stats'  # Adjust the column name to match your DB schema
-    df_gss_toi = get_data_from_db(gss_toi_query)
+    GSS_TOI_QUERY = 'SELECT game_id, player_id, "timeOnIce" FROM game_skater_stats'
+    df_gss_toi = get_data_from_db(GSS_TOI_QUERY)
 
     # Get player info
-    player_info_query = (
+    PLAYER_INFO_QUERY = (
         'SELECT player_id, "firstName", "lastName", "primaryPosition" FROM player_info'
     )
-    df_player_info = get_data_from_db(player_info_query)
+    df_player_info = get_data_from_db(PLAYER_INFO_QUERY)
 
     # Merge dataframes
     df_all = pd.merge(df_corsi, df_gss_toi, on=["game_id", "player_id"])
@@ -99,19 +114,11 @@ for season in ["20152016", "20162017", "20172018"]:
         .rename(columns={"game_id": "game_count"})
     )
 
-    # Get player salary data
-    # player_salary_query = (
-    #     f"SELECT 'firstName', 'lastName', 'capHit' FROM player_cap_hit_{season}"
-    # )
-    # df_player_salary = get_data_from_db(player_salary_query)
-    # player_salary_query = (
-    # f"SELECT firstName, lastName, capHit FROM player_cap_hit_{season}"
-    # )
-    player_salary_query = (
+    PLAYER_SALARY_QUERY = (
         f'SELECT "firstName", "lastName", "capHit" FROM player_cap_hit_{season}'
     )
 
-    df_player_salary = get_data_from_db(player_salary_query)
+    df_player_salary = get_data_from_db(PLAYER_SALARY_QUERY)
     print(df_player_salary.head())
 
     # Convert capHit from string to float
@@ -132,8 +139,8 @@ df_grouped_all["CF_Percent"] = (df_grouped_all["CF_Percent"].round(4) * 100).rou
 df_grouped_all["timeOnIce"] = df_grouped_all["timeOnIce"].round(2)
 
 # Apply the threshold for game_count
-threshold = 82 * 0.32
-df_grouped_all = df_grouped_all.query(f"game_count >= {threshold}")
+THRESHOLD = 82 * 0.32
+df_grouped_all = df_grouped_all.query(f"game_count >= {THRESHOLD}")
 
 # Ensure that display is consistent with rounding
 df_grouped_all["CF_Percent"] = df_grouped_all["CF_Percent"].apply(
