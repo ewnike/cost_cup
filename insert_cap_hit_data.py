@@ -1,3 +1,10 @@
+"""
+August 11, 2024
+Code to insert data scraped from spotrac
+website into data table in hockey_stats
+database.
+Eric Winiecke
+"""
 import os
 
 import pandas as pd
@@ -34,8 +41,8 @@ engine = create_engine(connection_string)
 metadata = MetaData()
 
 
-# Define table creation function to avoid repetition
 def create_caphit_table(table_name):
+    """Define table creation function to avoid repetition"""
     return Table(
         table_name,
         metadata,
@@ -56,6 +63,7 @@ Session = sessionmaker(bind=engine)
 
 
 def insert_data_from_csv(engine, table_name, file_path):
+    """insert data"""
     try:
         df = pd.read_csv(file_path)
         df.to_sql(table_name, con=engine, if_exists="replace", index=False)
