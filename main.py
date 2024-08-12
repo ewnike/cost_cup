@@ -46,6 +46,7 @@ def main():
         "game_shifts_processor.py",
         "game_skater_stats_processor.py",
         "game_plays_processor.py",
+        "player_info_processor.py",
     ]
 
     for script in scripts:
