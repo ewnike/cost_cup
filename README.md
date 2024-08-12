@@ -80,7 +80,7 @@ Start by copying the provided `.env.example` file to create your own `.env` file
 5. Secure the .env File
     Ensure that your .env file is not accidentally committed to your version control system (e.g., Git) by adding it to your .gitignore file.
 
-     # Ignore the .env file
+     ###Ignore the .env file
         .env
 
 
