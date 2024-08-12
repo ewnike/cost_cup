@@ -64,7 +64,6 @@ Start by copying the provided `.env.example` file to create your own `.env` file
     DATABASE=hockey_stats    # Replace with your created database name
 ``````
 
-
 3. AWS S3 Bucket Access Configuration. (Credentials can be obtained from project author)
 
     Update the following variables in your .env file with your AWS S3 credentials:
@@ -75,11 +74,10 @@ Start by copying the provided `.env.example` file to create your own `.env` file
     AWS_REGION=your_region                   # Replace with the AWS region of your bucket
    ``````
                 
-
 4. Save the .env File
     Once you have filled in all the required details, save the .env file.
 
-5.Secure the .env File
+5. Secure the .env File
     Ensure that your .env file is not accidentally committed to your version control system (e.g., Git) by adding it to your .gitignore file.
 
     # Ignore the .env file
