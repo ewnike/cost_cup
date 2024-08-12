@@ -76,8 +76,15 @@ Start by copying the provided `.env.example` file to create your own `.env` file
    ``````
                 
 
-3. Save the .env File
-   Once you have filled in all the required details, save the .env file.
+4. Save the .env File
+    Once you have filled in all the required details, save the .env file.
+
+5.Secure the .env File
+    Ensure that your .env file is not accidentally committed to your version control system (e.g., Git) by adding it to your .gitignore file.
+
+    # Ignore the .env file
+        .env
+
 
 ## Install Dependencies
 Make sure all necessary dependencies are installed before running the project:
