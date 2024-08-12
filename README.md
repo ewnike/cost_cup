@@ -8,6 +8,8 @@
 3. [Database Setup](#database-setup)
 4. [Configure Environment Variables](#envinornment-setup)
 5. [Install Dependencies](#dependencies)
+6. [Database Dump Option](#datadump)
+7. [Verify the Setup](#verify)
 
 
 ## Introduction
