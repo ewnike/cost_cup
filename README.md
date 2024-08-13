@@ -56,6 +56,7 @@ Start by copying the provided `.env.example` file to create your own `.env` file
     
 
 2. Open the .env file in a text editor and replace the placeholder values with your actual PostgreSQL database information:
+   
 ```plaintext
     DATABASE_TYPE=postgresql
     DBAPI=psycopg2
@@ -87,23 +88,22 @@ Start by copying the provided `.env.example` file to create your own `.env` file
 
 
 ## Install Dependencies
+
 Make sure all necessary dependencies are installed before running the project:
 
 1. pip install -r requirements.txt
 
-
 ## Database Dump Option
-
-If You Don't Want to Manually Upload Data:
 
 If you prefer not to manually read the data into your database, you can use the provided database dump file.
 
-Step 1: Download the Database Dump
+1. Download the Database Dump
 
-Download the database dump file (hockey_stats_db.sql) from.
-Step 2: Restore the Database from the Dump
+    Download the database dump file (hockey_stats_db.sql). There is a helper function in the repository, 'dwnld_hockey_stats_db.py'.
 
-Open your terminal or command prompt and run the following command to restore the database:
+2. Restore the Database from the Dump
+
+    Open your terminal or command prompt and run the following command to restore the database.
 
 
 
