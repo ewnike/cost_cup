@@ -92,6 +92,20 @@ Make sure all necessary dependencies are installed before running the project:
 1. pip install -r requirements.txt
 
 
+## Database Dump Option
+
+If You Don't Want to Manually Upload Data:
+
+If you prefer not to manually read the data into your database, you can use the provided database dump file.
+
+Step 1: Download the Database Dump
+
+Download the database dump file (hockey_stats_db.sql) from.
+Step 2: Restore the Database from the Dump
+
+Open your terminal or command prompt and run the following command to restore the database:
+
+
 
 
 
