@@ -6,10 +6,10 @@
 1. [Introduction](#introduction)
 2. [Prerequisites](#prerequisites)
 3. [Database Setup](#database-setup)
-4. [Configure Environment Variables](#envinornment-setup)
-5. [Install Dependencies](#dependencies)
-6. [Database Dump Option](#datadump)
-7. [Verify the Setup](#verify)
+4. [Configure Environment Variables](#configure-environment-variables)
+5. [Install Dependencies](#install-dependencies)
+6. [Database Dump Option](#database-dump-option)
+7. [Verify the Setup](#verify-the-setup)
 
 
 ## Introduction
