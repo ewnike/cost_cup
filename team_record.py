@@ -1,3 +1,10 @@
+"""
+August 28, 2024
+Script to scrape team win/loss record from hockey-reference.com
+Used selenium.xpath and set webdriver to safari.
+Eric Winiecke
+"""
+
 import os
 import pandas as pd
 from selenium import webdriver
