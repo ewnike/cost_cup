@@ -43,17 +43,11 @@ engine = create_engine(connection_string)
 
 # Define function to get data from the database
 def get_data_from_db(query):
-    """
-    Function to get data from the database.
-    """
     with engine.connect() as connection:
         return pd.read_sql(query, connection)
 
 
 def create_aggregated_table(table_name):
-    """
-    create table schema for aggragated table.
-    """
     metadata = MetaData()
     Table(
         table_name,
@@ -61,6 +55,7 @@ def create_aggregated_table(table_name):
         Column("player_id", BigInteger, primary_key=True),
         Column("firstName", String),
         Column("lastName", String),
+        Column("team_id", String),  # Added team_id
         Column("corsi_for", Float),
         Column("corsi_against", Float),
         Column("corsi", Float),
@@ -73,16 +68,16 @@ def create_aggregated_table(table_name):
 
 
 for season in ["20152016", "20162017", "20172018"]:
-    """
-    get corsi data.
-    """
+    # Get corsi data
     CORSI_QUERY = f"SELECT * FROM raw_corsi_{season}"
     df_corsi = get_data_from_db(CORSI_QUERY)
     if "Unnamed: 0" in df_corsi.columns:
         df_corsi = df_corsi.drop(columns=["Unnamed: 0"])
 
     # Get game skater stats
-    GSS_TOI_QUERY = 'SELECT game_id, player_id, "timeOnIce" FROM game_skater_stats'
+    GSS_TOI_QUERY = (
+        'SELECT game_id, player_id, "timeOnIce", team_id FROM game_skater_stats'
+    )
     df_gss_toi = get_data_from_db(GSS_TOI_QUERY)
 
     # Get player info
@@ -91,9 +86,15 @@ for season in ["20152016", "20162017", "20172018"]:
     )
     df_player_info = get_data_from_db(PLAYER_INFO_QUERY)
 
+    # Drop 'team_id' from df_corsi to avoid duplication
+    df_corsi.drop(columns=["team_id"], inplace=True, errors="ignore")
+
     # Merge dataframes
     df_all = pd.merge(df_corsi, df_gss_toi, on=["game_id", "player_id"])
     df_all = pd.merge(df_all, df_player_info, on="player_id")
+
+    # Verify the columns after merging
+    print(f"Columns in df_all before grouping for season {season}: {df_all.columns}")
 
     # Group and aggregate player stats
     df_grouped_all = (
@@ -102,6 +103,7 @@ for season in ["20152016", "20162017", "20172018"]:
             {
                 "firstName": "first",
                 "lastName": "first",
+                "team_id": "first",  # Include team_id
                 "corsi_for": "mean",
                 "corsi_against": "mean",
                 "corsi": "mean",
@@ -119,51 +121,44 @@ for season in ["20152016", "20162017", "20172018"]:
     )
 
     df_player_salary = get_data_from_db(PLAYER_SALARY_QUERY)
-    print(df_player_salary.head())
 
     # Convert capHit from string to float
     df_player_salary["capHit"] = (
         df_player_salary["capHit"].replace(r"[\$,]", "", regex=True).astype(float)
     )
 
-# Merge aggregated stats with salary info
-df_grouped_all = pd.merge(
-    df_grouped_all, df_player_salary, on=["firstName", "lastName"]
-)
+    # Merge aggregated stats with salary info
+    df_grouped_all = pd.merge(
+        df_grouped_all, df_player_salary, on=["firstName", "lastName"]
+    )
 
-# Post-processing
-# Round CF_Percent to four decimal places, then multiply by 100
-df_grouped_all["CF_Percent"] = (df_grouped_all["CF_Percent"].round(4) * 100).round(4)
+    # Round all relevant columns to four decimal places
+    df_grouped_all["corsi_for"] = df_grouped_all["corsi_for"].round(4)
+    df_grouped_all["corsi_against"] = df_grouped_all["corsi_against"].round(4)
+    df_grouped_all["corsi"] = df_grouped_all["corsi"].round(4)
+    df_grouped_all["CF_Percent"] = (df_grouped_all["CF_Percent"].round(4) * 100).round(
+        4
+    )
+    df_grouped_all["timeOnIce"] = df_grouped_all["timeOnIce"].round(4)
 
-# Round timeOnIce to the hundredth of a second
-df_grouped_all["timeOnIce"] = df_grouped_all["timeOnIce"].round(2)
+    # Apply the threshold for game_count
+    THRESHOLD = 82 * 0.32
+    df_grouped_all = df_grouped_all.query(f"game_count >= {THRESHOLD}")
 
-# Apply the threshold for game_count
-THRESHOLD = 82 * 0.32
-df_grouped_all = df_grouped_all.query(f"game_count >= {THRESHOLD}")
+    # Sort by CF_Percent in descending order
+    df_grouped_all = df_grouped_all.sort_values("CF_Percent", ascending=False)
 
-# Ensure that display is consistent with rounding
-df_grouped_all["CF_Percent"] = df_grouped_all["CF_Percent"].apply(
-    lambda x: np.round(x, 4)
-)
-df_grouped_all["timeOnIce"] = df_grouped_all["timeOnIce"].apply(
-    lambda x: np.round(x, 2)
-)
+    # Define table name for aggregated data
+    aggregated_table_name = f"aggregated_corsi_{season}"
 
-# Sort by CF_Percent in descending order
-df_grouped_all = df_grouped_all.sort_values("CF_Percent", ascending=False)
+    # Create new table for aggregated data
+    create_aggregated_table(aggregated_table_name)
 
-# Define table name for aggregated data
-aggregated_table_name = f"aggregated_corsi_{season}"
+    # Insert aggregated data into the new table
+    df_grouped_all.to_sql(
+        aggregated_table_name, con=engine, if_exists="replace", index=False
+    )
 
-# Create new table for aggregated data
-create_aggregated_table(aggregated_table_name)
-
-# Insert aggregated data into the new table
-df_grouped_all.to_sql(
-    aggregated_table_name, con=engine, if_exists="replace", index=False
-)
-
-print(f"Data inserted successfully into {aggregated_table_name}")
+    print(f"Data inserted successfully into {aggregated_table_name}")
 
 print("Data inserted successfully into all tables")
