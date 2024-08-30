@@ -7,6 +7,7 @@ Eric Winiecke
 
 import os
 import time
+
 import pandas as pd
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -61,7 +62,7 @@ for year in years:
     # Iterate over each row to extract the name and payroll value
     for row in rows:
         # Get the team name, usually from the 'a' tag within the second 'td' element
-        team_name_tag = row.find_all("td")[1].find('a')
+        team_name_tag = row.find_all("td")[1].find("a")
         if team_name_tag:
             team_name = team_name_tag.get_text(strip=True)
         else:
@@ -84,4 +85,3 @@ for year in years:
 driver.quit()
 
 print("Scraping completed. CSV files saved in the 'output' directory.")
-

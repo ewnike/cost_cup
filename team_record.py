@@ -6,15 +6,16 @@ Eric Winiecke
 """
 
 import os
+
 import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.safari.service import Service as SafariService
-from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 # Directory to store CSV files
-OUTPUT_DIR = "output_dir"
+OUTPUT_DIR = "team_records"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # Set up the Selenium WebDriver for Safari
@@ -29,23 +30,68 @@ years = [2016, 2017, 2018]
 
 # Columns to extract
 columns_to_extract = {
-    'team_name': 'Team',
-    'games': 'GP',
-    'wins': 'W',
-    'losses': 'L',
-    'losses_ot': 'OTL',
-    'points': 'PTS'
+    "team_name": "Team",
+    "games": "GP",
+    "wins": "W",
+    "losses": "L",
+    "losses_ot": "OTL",
+    "points": "PTS",
 }
 
 # XPath to locate specific columns in the table
 xpaths = {
-    'team_name': './/td[@data-stat="team_name"]/a',
-    'games': './/td[@data-stat="games"]',
-    'wins': './/td[@data-stat="wins"]',
-    'losses': './/td[@data-stat="losses"]',
-    'losses_ot': './/td[@data-stat="losses_ot"]',
-    'points': './/td[@data-stat="points"]'
+    "team_name": './/td[@data-stat="team_name"]/a',
+    "games": './/td[@data-stat="games"]',
+    "wins": './/td[@data-stat="wins"]',
+    "losses": './/td[@data-stat="losses"]',
+    "losses_ot": './/td[@data-stat="losses_ot"]',
+    "points": './/td[@data-stat="points"]',
 }
+
+# Step 2: Create a dictionary mapping full names to abbreviations and team IDs
+name_to_abbreviation = {
+    "Washington Capitals": ("WAS", 15),
+    "Dallas Stars": ("DAL", 25),
+    "St. Louis Blues": ("STL", 19),
+    "Pittsburgh Penguins": ("PIT", 5),
+    "Chicago Blackhawks": ("CHI", 16),
+    "Florida Panthers": ("FLA", 13),
+    "Anaheim Ducks": ("ANA", 24),
+    "Los Angeles Kings": ("LAK", 26),
+    "New York Rangers": ("NYR", 3),
+    "New York Islanders": ("NYI", 2),
+    "San Jose Sharks": ("SJS", 28),
+    "Tampa Bay Lightning": ("TBL", 14),
+    "Nashville Predators": ("NSH", 18),
+    "Philadelphia Flyers": ("PHI", 4),
+    "Detroit Red Wings": ("DET", 17),
+    "Boston Bruins": ("BOS", 6),
+    "Minnesota Wild": ("MIN", 30),
+    "Carolina Hurricanes": ("CAR", 12),
+    "Ottawa Senators": ("OTT", 9),
+    "New Jersey Devils": ("NJD", 1),
+    "Montreal Canadiens": ("MTL", 8),
+    "Colorado Avalanche": ("COL", 21),
+    "Buffalo Sabres": ("BUF", 7),
+    "Winnipeg Jets": ("WPG", 52),
+    "Arizona Coyotes": ("ARI", 53),
+    "Calgary Flames": ("CGY", 20),
+    "Columbus Blue Jackets": ("CBJ", 29),
+    "Vancouver Canucks": ("VAN", 23),
+    "Edmonton Oilers": ("EDM", 22),
+    "Toronto Maple Leafs": ("TOR", 10),
+}
+
+# Convert the dictionary into a DataFrame
+team_df = pd.DataFrame.from_dict(
+    name_to_abbreviation, orient="index", columns=["Abbreviation", "Team_ID"]
+)
+team_df.reset_index(inplace=True)
+team_df.rename(columns={"index": "Team_Name"}, inplace=True)
+
+# Display the team DataFrame
+print("Team DataFrame:")
+print(team_df)
 
 # Loop through each year and scrape the data
 for year in years:
@@ -77,20 +123,19 @@ for year in years:
     # Convert the data to a DataFrame
     df = pd.DataFrame(data, columns=columns_to_extract.values())
 
-    # Save the DataFrame to a CSV file for the current year
-    output_file = os.path.join(OUTPUT_DIR, f"NHL_{year}_team_stats.csv")
-    df.to_csv(output_file, index=False)
+    # Merge the scraped data with the team_df to include Abbreviation and Team_ID
+    merged_df = pd.merge(df, team_df, left_on="Team", right_on="Team_Name", how="left")
 
-    print(f"Scraping completed for {year}. Data saved to '{output_file}'")
+    # Drop the redundant 'Team_Name' column from the merged DataFrame
+    merged_df.drop(columns=["Team_Name"], inplace=True)
+
+    # Save the merged DataFrame to a CSV file for the current year
+    output_file = os.path.join(OUTPUT_DIR, f"NHL_{year}_team_stats.csv")
+    merged_df.to_csv(output_file, index=False)
+
+    print(f"Scraping and merging completed for {year}. Data saved to '{output_file}'")
 
 # Close the Safari WebDriver
 driver.quit()
 
-print("All seasons scraped and saved.")
-
-
-
-
-
-
-
+print("All seasons scraped, merged, and saved.")
