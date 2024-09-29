@@ -1,10 +1,3 @@
-"""
-August 11, 2024
-Code for chart displaying exploratory
-data exploration.
-Eric Winiecke
-"""
-
 import os
 
 import altair as alt
@@ -24,7 +17,6 @@ USER = os.getenv("USER")
 PASSWORD = os.getenv("PASSWORD")
 PORT = int(os.getenv("PORT", 5432))
 DATABASE = os.getenv("DATABASE", "hockey_stats")
-
 
 # Create the connection string
 connection_string = (
@@ -48,30 +40,22 @@ for season in seasons:
     season_df["season"] = season  # Add the season column manually in Python
     df = pd.concat([df, season_df], ignore_index=True)
 
-# Convert `capHit` and `CF_Percent` to numeric if they aren't already
+# Ensure numeric types for Altair
 df["capHit"] = pd.to_numeric(df["capHit"], errors="coerce")
 df["CF_Percent"] = pd.to_numeric(df["CF_Percent"], errors="coerce")
-
-# Drop any null values that might exist after conversion
 df = df.dropna(subset=["capHit", "CF_Percent"])
-
+print(df)
 # Create scatter plots for each season using Altair
 charts = []
 
 for season in seasons:
-    # Filter data for the specific season and ensure it remains a DataFrame
     df_season = df[df["season"] == season]
 
-    # Ensure df_season is still a DataFrame
-    if isinstance(df_season, pd.Series):
-        df_season = df_season.to_frame()
-
-    # Ensure the DataFrame isn't empty
+    # Avoid empty DataFrames
     if df_season.empty:
         print(f"No data available for season {season}")
         continue
 
-    # Create the scatter plot with Altair
     scatter_plot = (
         alt.Chart(df_season)
         .mark_circle(size=60)
@@ -86,14 +70,13 @@ for season in seasons:
 
     charts.append(scatter_plot)
 
-# Combine the charts into a horizontal layout
+# # Combine the charts into a horizontal layout
 combined_chart = alt.concat(*charts, columns=3)
+print("Howdy Doody")
+# combined_chart.show()
+alt.renderers.enable('png')
+combined_chart
 
-# Show the plot
-#combined_chart.display()
-#altair_viewer.show(combined_chart, open_browser=True)
-# Save the chart as an HTML file
-combined_chart.save('combined_chart.html')
-
-# Alternatively, display the chart directly in a browser
-altair_viewer.show(combined_chart)
+# # Save the chart as an HTML file and open it
+# combined_chart.save("combined_chart.html")
+# altair_viewer.show(combined_chart)
