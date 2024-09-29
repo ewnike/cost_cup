@@ -1,4 +1,5 @@
-"""August 11, 2024
+"""
+August 11, 2024
 Code for chart displaying exploratory
 data exploration.
 Eric Winiecke
@@ -6,9 +7,10 @@ Eric Winiecke
 
 import os
 
+import altair as alt
+import altair_viewer
 import pandas as pd
 from dotenv import load_dotenv
-from matplotlib import pyplot as plt
 from sqlalchemy import create_engine
 
 # Load environment variables from .env file
@@ -22,6 +24,7 @@ USER = os.getenv("USER")
 PASSWORD = os.getenv("PASSWORD")
 PORT = int(os.getenv("PORT", 5432))
 DATABASE = os.getenv("DATABASE", "hockey_stats")
+
 
 # Create the connection string
 connection_string = (
@@ -52,34 +55,45 @@ df["CF_Percent"] = pd.to_numeric(df["CF_Percent"], errors="coerce")
 # Drop any null values that might exist after conversion
 df = df.dropna(subset=["capHit", "CF_Percent"])
 
-# Create subplots for each season
-fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(18, 6), sharey=True, sharex=True)
+# Create scatter plots for each season using Altair
+charts = []
 
-# Loop through each season and create a scatter plot in its own subplot
-for ax, season in zip(axes, seasons):
-    # Filter data for the specific season
+for season in seasons:
+    # Filter data for the specific season and ensure it remains a DataFrame
     df_season = df[df["season"] == season]
 
-    # Create the scatter plot with CF_Percent on x-axis and capHit on y-axis
-    ax.scatter(
-        df_season["CF_Percent"],
-        df_season["capHit"],
-        alpha=0.6,
-        edgecolors="w",
-        linewidth=0.5,
+    # Ensure df_season is still a DataFrame
+    if isinstance(df_season, pd.Series):
+        df_season = df_season.to_frame()
+
+    # Ensure the DataFrame isn't empty
+    if df_season.empty:
+        print(f"No data available for season {season}")
+        continue
+
+    # Create the scatter plot with Altair
+    scatter_plot = (
+        alt.Chart(df_season)
+        .mark_circle(size=60)
+        .encode(
+            x=alt.X("CF_Percent", title="Corsi For Percentage (CF%)"),
+            y=alt.Y("capHit", title="Cap Hit ($)"),
+            tooltip=["CF_Percent", "capHit"],
+            opacity=alt.value(0.6),
+        )
+        .properties(title=f"Season {season}", width=250, height=300)
     )
 
-    # Set title and labels
-    ax.set_title(f"Season {season}")
-    ax.set_xlabel("Corsi For Percentage (CF%)")
-    ax.set_ylabel("Cap Hit ($)")
-    ax.grid(True)
+    charts.append(scatter_plot)
 
-# Set the y-label only on the first subplot (since sharey=True)
-axes[0].set_ylabel("Cap Hit ($)")
-
-# Adjust layout
-plt.tight_layout()
+# Combine the charts into a horizontal layout
+combined_chart = alt.concat(*charts, columns=3)
 
 # Show the plot
-plt.show()
+#combined_chart.display()
+#altair_viewer.show(combined_chart, open_browser=True)
+# Save the chart as an HTML file
+combined_chart.save('combined_chart.html')
+
+# Alternatively, display the chart directly in a browser
+altair_viewer.show(combined_chart)
