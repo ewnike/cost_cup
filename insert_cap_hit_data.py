@@ -5,37 +5,25 @@ website into data table in hockey_stats
 database.
 Eric Winiecke
 """
+
 import os
 
 import pandas as pd
-from dotenv import load_dotenv
+
+# from dotenv import load_dotenv
 from sqlalchemy import (
     Column,
     MetaData,
     String,
     Table,
-    create_engine,
 )
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 
-# Load environment variables from the .env file
-load_dotenv()
+from db_utils import get_db_engine, get_metadata
 
-# Retrieve database connection parameters from environment variables
-DATABASE_TYPE = os.getenv("DATABASE_TYPE")
-DBAPI = os.getenv("DBAPI")
-ENDPOINT = os.getenv("ENDPOINT")
-USER = os.getenv("USER")
-PASSWORD = os.getenv("PASSWORD")
-PORT = int(os.getenv("PORT", 5432))  # Provide default value if not set
-DATABASE = os.getenv("DATABASE")
-
-# Create the connection string
-connection_string = (
-    f"{DATABASE_TYPE}+{DBAPI}://{USER}:{PASSWORD}@{ENDPOINT}:{PORT}/{DATABASE}"
-)
-engine = create_engine(connection_string)
+engine = get_db_engine()
+metadata = get_metadata()
 
 # Define metadata and tables
 metadata = MetaData()

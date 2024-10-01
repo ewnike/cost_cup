@@ -114,14 +114,6 @@ for year in years:
     # Prepare the list to hold the data
     data = []
 
-    # Iterate over each row and extract the specific columns
-    # for row in rows:
-    #     team_data = {}
-    #     for key, xpath in xpaths.items():
-    #         element = row.find_element(By.XPATH, xpath)
-    #         team_data[columns_to_extract[key]] = element.text
-    #     data.append(team_data)
-
         # Iterate over each row and extract the specific columns
     for row in rows:
         team_data = {}
