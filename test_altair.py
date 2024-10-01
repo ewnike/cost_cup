@@ -78,5 +78,5 @@ alt.renderers.enable('png')
 combined_chart
 
 # # Save the chart as an HTML file and open it
-# combined_chart.save("combined_chart.html")
+combined_chart.save("combined_chart.html")
 # altair_viewer.show(combined_chart)
