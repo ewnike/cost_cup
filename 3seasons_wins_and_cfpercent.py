@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 from sqlalchemy import text
 
@@ -6,6 +7,9 @@ from db_utils import get_db_engine, get_metadata
 engine = get_db_engine()
 metadata = get_metadata()
 
+# Directory to store CSV files
+OUTPUT_DIR = "wins_and_cfpercent"
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # Define seasons and corresponding years
 seasons = ["20152016", "20162017", "20172018"]
@@ -37,10 +41,19 @@ for season, year in zip(seasons, years):
         # Store the DataFrame for each season in the dictionary
         dfs[season] = df
 
+        # Save each DataFrame to a CSV file in the output directory
+        output_file = os.path.join(OUTPUT_DIR, f"team_wins_and_cfpercent_{year}.csv")
+        df.to_csv(output_file, index=False)
+        print(f"Data for {season} saved to '{output_file}'.")
+
 # Access individual DataFrames by season
 df_20152016 = dfs["20152016"]
 df_20162017 = dfs["20162017"]
 df_20172018 = dfs["20172018"]
+
+    # Save DataFrame to a CSV file
+output_file = os.path.join(OUTPUT_DIR, f"team_wins_and_cfpercent_{year}.csv")
+df.to_csv(output_file, index=False)
 
 # Display the DataFrames separately
 print("Data for 20152016 Season:")
