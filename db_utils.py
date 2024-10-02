@@ -1,3 +1,10 @@
+"""
+October 1, 2024
+Helper function for accessing
+the database and reduce clutter from
+redundant code.
+"""
+
 import os
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, MetaData
