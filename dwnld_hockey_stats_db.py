@@ -2,7 +2,7 @@
 August 12, 2024.
 Helper function for users that
 want to download initial data for
-cost_of_cup directly to their postgresql d
+cost_of_cup directly to their postgresql
 database.
 Eric Winiecke
 """
