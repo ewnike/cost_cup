@@ -1,4 +1,5 @@
-altair==4.2.0
+ace_tools==0.0
+altair==5.4.1
 altair-data-server==0.4.1
 altair-saver==0.5.0
 altair-viewer==0.4.0
@@ -68,6 +69,7 @@ matplotlib==3.9.1.post1
 matplotlib-inline==0.1.7
 mercantile==1.2.1
 mistune==3.0.2
+narwhals==1.8.4
 nbclient==0.10.0
 nbconvert==7.16.4
 nbformat==5.10.4
