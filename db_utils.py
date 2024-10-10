@@ -6,14 +6,17 @@ redundant code.
 """
 
 import os
+
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, MetaData
+from sqlalchemy import MetaData, create_engine
+
 
 # Load environment variables from the .env file
 def load_environment_variables():
     # Load environment variables from the .env file
     load_dotenv()
-    #print("Environment variables loaded!")  # Debug message to verify loading
+    # print("Environment variables loaded!")  # Debug message to verify loading
+
 
 def get_db_engine():
     # Load the environment variables
@@ -36,14 +39,12 @@ def get_db_engine():
     connection_string = (
         f"{DATABASE_TYPE}+{DBAPI}://{USER}:{PASSWORD}@{ENDPOINT}:{PORT}/{DATABASE}"
     )
-    #print("Connection string:", connection_string)  # Debugging print
+    # print("Connection string:", connection_string)  # Debugging print
 
     # Return the SQLAlchemy engine
     return create_engine(connection_string)
 
+
 # Function to return SQLAlchemy metadata
 def get_metadata():
     return MetaData()
-
-
-
