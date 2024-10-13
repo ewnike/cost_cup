@@ -223,7 +223,7 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="gL1o9Zj5MICsFiWbh3Co-39" value="" style="rounded=0;whiteSpace=wrap;html=1;opacity=0;strokeWidth=2;perimeterSpacing=2;container=0;fillStyle=solid;labelBorderColor=#FFFFFF;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+        <mxCell id="gL1o9Zj5MICsFiWbh3Co-39" value="" style="rounded=0;whiteSpace=wrap;html=1;opacity=0;strokeWidth=2;perimeterSpacing=2;container=0;fillStyle=solid;labelBorderColor=#FFFFFF;strokeColor=#FFFFFF;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
           <mxGeometry x="50" y="770" width="270" height="60" as="geometry" />
         </mxCell>
       </root>
