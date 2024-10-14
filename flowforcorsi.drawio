@@ -11,13 +11,16 @@
           </mxGeometry>
         </mxCell>
         <mxCell id="WIyWlLk6GJQsqaUBKTNV-11" value="Set initial variables: game_id_prev, shifts_game, and plays_game =None Initialized prior to loop starting" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;labelBackgroundColor=none;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
-          <mxGeometry x="630" y="45" width="210" height="90" as="geometry" />
+          <mxGeometry x="540" y="40" width="210" height="90" as="geometry" />
         </mxCell>
         <mxCell id="A0f_4Amc53qVXCeso7hz-2" value="Start" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.start_1;whiteSpace=wrap;labelBackgroundColor=none;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
           <mxGeometry x="20" y="30" width="100" height="60" as="geometry" />
         </mxCell>
+        <mxCell id="gL1o9Zj5MICsFiWbh3Co-52" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#FFFFFF;strokeWidth=3;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="WIyWlLk6GJQsqaUBKTNV-12" target="WIyWlLk6GJQsqaUBKTNV-11">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
         <mxCell id="WIyWlLk6GJQsqaUBKTNV-12" value="Initialize Columns: corsi_for, corsi_against, and corsi using np.nan" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;labelBackgroundColor=none;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
-          <mxGeometry x="470" y="40" width="120" height="90" as="geometry" />
+          <mxGeometry x="370" y="40" width="120" height="90" as="geometry" />
         </mxCell>
         <mxCell id="A0f_4Amc53qVXCeso7hz-5" value="iterate through rows of df_corsi using iterrows()" style="rounded=1;whiteSpace=wrap;html=1;labelBackgroundColor=none;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
           <mxGeometry x="660" y="180" width="120" height="60" as="geometry" />
@@ -96,9 +99,7 @@
             <mxPoint x="510" y="200" as="sourcePoint" />
             <mxPoint x="530" y="180" as="targetPoint" />
             <Array as="points">
-              <mxPoint x="523" y="200" />
-              <mxPoint x="479" y="200" />
-              <mxPoint x="479" y="230" />
+              <mxPoint x="663" y="230" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -194,11 +195,25 @@
             </Array>
           </mxGeometry>
         </mxCell>
+        <mxCell id="gL1o9Zj5MICsFiWbh3Co-50" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;strokeColor=#FFFFFF;strokeWidth=3;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="gL1o9Zj5MICsFiWbh3Co-43">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="250" y="110" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
         <mxCell id="gL1o9Zj5MICsFiWbh3Co-43" value="read data from hockey_stats.db using &amp;nbsp;pd.read_sql()" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
-          <mxGeometry x="170" y="12.5" width="100" height="125" as="geometry" />
+          <mxGeometry x="20" y="120" width="100" height="125" as="geometry" />
+        </mxCell>
+        <mxCell id="gL1o9Zj5MICsFiWbh3Co-51" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#FFFFFF;strokeWidth=3;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="gL1o9Zj5MICsFiWbh3Co-45" target="WIyWlLk6GJQsqaUBKTNV-12">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="gL1o9Zj5MICsFiWbh3Co-45" value="Organize data by season. (pd.concat())" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
-          <mxGeometry x="320" y="45" width="120" height="60" as="geometry" />
+          <mxGeometry x="200" y="40" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="gL1o9Zj5MICsFiWbh3Co-48" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#FFFFFF;strokeWidth=3;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="70" y="90" as="sourcePoint" />
+            <mxPoint x="70" y="120" as="targetPoint" />
+          </mxGeometry>
         </mxCell>
       </root>
     </mxGraphModel>
