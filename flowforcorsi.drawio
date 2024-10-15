@@ -140,8 +140,17 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="gL1o9Zj5MICsFiWbh3Co-101" value="load corsi stats into raw_corsi_stats tables in hockey_stats.db using&amp;nbsp;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
-          <mxGeometry x="630" y="620" width="120" height="110" as="geometry" />
+        <mxCell id="gL1o9Zj5MICsFiWbh3Co-102" value="load corsi data into hockey_stats.db using &amp;nbsp;pd.to_sql()" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="650" y="610" width="130" height="125" as="geometry" />
+        </mxCell>
+        <mxCell id="gL1o9Zj5MICsFiWbh3Co-103" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#FFFFFF;strokeWidth=3;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="500" y="610" as="sourcePoint" />
+            <mxPoint x="640" y="680" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="500" y="680" />
+            </Array>
+          </mxGeometry>
         </mxCell>
       </root>
     </mxGraphModel>
