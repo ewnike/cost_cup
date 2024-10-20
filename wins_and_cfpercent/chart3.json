@@ -1,0 +1,920 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.20.1.json",
+  "config": {
+    "view": {
+      "continuousHeight": 300,
+      "continuousWidth": 300
+    }
+  },
+  "data": {
+    "name": "data-e4420fff73fbb3964249cc442a220798"
+  },
+  "datasets": {
+    "data-e4420fff73fbb3964249cc442a220798": [
+      {
+        "Abbreviation": "WAS",
+        "PTS": 120,
+        "Salary_Quantile": "Q2",
+        "Season": "2015-2016",
+        "Total_Payroll": 70403880.0,
+        "avg_cf_percent": 50.15,
+        "quantile_label": "Q2 ($67156310 - $71243968)"
+      },
+      {
+        "Abbreviation": "DAL",
+        "PTS": 109,
+        "Salary_Quantile": "Q1",
+        "Season": "2015-2016",
+        "Total_Payroll": 66132966.0,
+        "avg_cf_percent": 49.13,
+        "quantile_label": "Q1 ($55070883 - $66424256)"
+      },
+      {
+        "Abbreviation": "STL",
+        "PTS": 107,
+        "Salary_Quantile": "Q2",
+        "Season": "2015-2016",
+        "Total_Payroll": 71168167.0,
+        "avg_cf_percent": 50.98,
+        "quantile_label": "Q2 ($67156310 - $71243968)"
+      },
+      {
+        "Abbreviation": "PIT",
+        "PTS": 104,
+        "Salary_Quantile": "Q4",
+        "Season": "2015-2016",
+        "Total_Payroll": 74775446.0,
+        "avg_cf_percent": 51.44,
+        "quantile_label": "Q4 ($74505703 - $80251776)"
+      },
+      {
+        "Abbreviation": "CHI",
+        "PTS": 103,
+        "Salary_Quantile": "Q3",
+        "Season": "2015-2016",
+        "Total_Payroll": 71531510.0,
+        "avg_cf_percent": 48.86,
+        "quantile_label": "Q3 ($71531510 - $74453080)"
+      },
+      {
+        "Abbreviation": "FLA",
+        "PTS": 103,
+        "Salary_Quantile": "Q2",
+        "Season": "2015-2016",
+        "Total_Payroll": 69087745.0,
+        "avg_cf_percent": 49.04,
+        "quantile_label": "Q2 ($67156310 - $71243968)"
+      },
+      {
+        "Abbreviation": "ANA",
+        "PTS": 103,
+        "Salary_Quantile": "Q1",
+        "Season": "2015-2016",
+        "Total_Payroll": 63192523.0,
+        "avg_cf_percent": 51.12,
+        "quantile_label": "Q1 ($55070883 - $66424256)"
+      },
+      {
+        "Abbreviation": "LAK",
+        "PTS": 102,
+        "Salary_Quantile": "Q4",
+        "Season": "2015-2016",
+        "Total_Payroll": 76675934.0,
+        "avg_cf_percent": 52.53,
+        "quantile_label": "Q4 ($74505703 - $80251776)"
+      },
+      {
+        "Abbreviation": "NYR",
+        "PTS": 101,
+        "Salary_Quantile": "Q4",
+        "Season": "2015-2016",
+        "Total_Payroll": 76261193.0,
+        "avg_cf_percent": 49.13,
+        "quantile_label": "Q4 ($74505703 - $80251776)"
+      },
+      {
+        "Abbreviation": "NYI",
+        "PTS": 100,
+        "Salary_Quantile": "Q1",
+        "Season": "2015-2016",
+        "Total_Payroll": 65254015.0,
+        "avg_cf_percent": 48.51,
+        "quantile_label": "Q1 ($55070883 - $66424256)"
+      },
+      {
+        "Abbreviation": "SJS",
+        "PTS": 98,
+        "Salary_Quantile": "Q2",
+        "Season": "2015-2016",
+        "Total_Payroll": 69675193.0,
+        "avg_cf_percent": 51.78,
+        "quantile_label": "Q2 ($67156310 - $71243968)"
+      },
+      {
+        "Abbreviation": "TBL",
+        "PTS": 97,
+        "Salary_Quantile": "Q3",
+        "Season": "2015-2016",
+        "Total_Payroll": 72843083.0,
+        "avg_cf_percent": 49.59,
+        "quantile_label": "Q3 ($71531510 - $74453080)"
+      },
+      {
+        "Abbreviation": "NSH",
+        "PTS": 96,
+        "Salary_Quantile": "Q1",
+        "Season": "2015-2016",
+        "Total_Payroll": 61178945.0,
+        "avg_cf_percent": 51.12,
+        "quantile_label": "Q1 ($55070883 - $66424256)"
+      },
+      {
+        "Abbreviation": "PHI",
+        "PTS": 96,
+        "Salary_Quantile": "Q2",
+        "Season": "2015-2016",
+        "Total_Payroll": 69056693.0,
+        "avg_cf_percent": 49.91,
+        "quantile_label": "Q2 ($67156310 - $71243968)"
+      },
+      {
+        "Abbreviation": "DET",
+        "PTS": 93,
+        "Salary_Quantile": "Q2",
+        "Season": "2015-2016",
+        "Total_Payroll": 70882623.0,
+        "avg_cf_percent": 49.0,
+        "quantile_label": "Q2 ($67156310 - $71243968)"
+      },
+      {
+        "Abbreviation": "BOS",
+        "PTS": 93,
+        "Salary_Quantile": "Q2",
+        "Season": "2015-2016",
+        "Total_Payroll": 69478695.0,
+        "avg_cf_percent": 48.82,
+        "quantile_label": "Q2 ($67156310 - $71243968)"
+      },
+      {
+        "Abbreviation": "MIN",
+        "PTS": 87,
+        "Salary_Quantile": "Q2",
+        "Season": "2015-2016",
+        "Total_Payroll": 69866538.0,
+        "avg_cf_percent": 49.17,
+        "quantile_label": "Q2 ($67156310 - $71243968)"
+      },
+      {
+        "Abbreviation": "CAR",
+        "PTS": 86,
+        "Salary_Quantile": "Q1",
+        "Season": "2015-2016",
+        "Total_Payroll": 57310738.0,
+        "avg_cf_percent": 50.04,
+        "quantile_label": "Q1 ($55070883 - $66424256)"
+      },
+      {
+        "Abbreviation": "OTT",
+        "PTS": 85,
+        "Salary_Quantile": "Q1",
+        "Season": "2015-2016",
+        "Total_Payroll": 65450504.0,
+        "avg_cf_percent": 45.87,
+        "quantile_label": "Q1 ($55070883 - $66424256)"
+      },
+      {
+        "Abbreviation": "NJD",
+        "PTS": 84,
+        "Salary_Quantile": "Q1",
+        "Season": "2015-2016",
+        "Total_Payroll": 63197460.0,
+        "avg_cf_percent": 49.61,
+        "quantile_label": "Q1 ($55070883 - $66424256)"
+      },
+      {
+        "Abbreviation": "MTL",
+        "PTS": 82,
+        "Salary_Quantile": "Q3",
+        "Season": "2015-2016",
+        "Total_Payroll": 71938679.0,
+        "avg_cf_percent": 51.69,
+        "quantile_label": "Q3 ($71531510 - $74453080)"
+      },
+      {
+        "Abbreviation": "COL",
+        "PTS": 82,
+        "Salary_Quantile": "Q1",
+        "Season": "2015-2016",
+        "Total_Payroll": 62767942.0,
+        "avg_cf_percent": 48.83,
+        "quantile_label": "Q1 ($55070883 - $66424256)"
+      },
+      {
+        "Abbreviation": "BUF",
+        "PTS": 81,
+        "Salary_Quantile": "Q1",
+        "Season": "2015-2016",
+        "Total_Payroll": 62019704.0,
+        "avg_cf_percent": 48.67,
+        "quantile_label": "Q1 ($55070883 - $66424256)"
+      },
+      {
+        "Abbreviation": "WPG",
+        "PTS": 78,
+        "Salary_Quantile": "Q1",
+        "Season": "2015-2016",
+        "Total_Payroll": 57038400.0,
+        "avg_cf_percent": 49.76,
+        "quantile_label": "Q1 ($55070883 - $66424256)"
+      },
+      {
+        "Abbreviation": "ARI",
+        "PTS": 78,
+        "Salary_Quantile": "Q1",
+        "Season": "2015-2016",
+        "Total_Payroll": 65050932.0,
+        "avg_cf_percent": 47.89,
+        "quantile_label": "Q1 ($55070883 - $66424256)"
+      },
+      {
+        "Abbreviation": "CGY",
+        "PTS": 77,
+        "Salary_Quantile": "Q2",
+        "Season": "2015-2016",
+        "Total_Payroll": 67570257.0,
+        "avg_cf_percent": 50.11,
+        "quantile_label": "Q2 ($67156310 - $71243968)"
+      },
+      {
+        "Abbreviation": "CBJ",
+        "PTS": 76,
+        "Salary_Quantile": "Q2",
+        "Season": "2015-2016",
+        "Total_Payroll": 67937548.0,
+        "avg_cf_percent": 49.13,
+        "quantile_label": "Q2 ($67156310 - $71243968)"
+      },
+      {
+        "Abbreviation": "VAN",
+        "PTS": 75,
+        "Salary_Quantile": "Q3",
+        "Season": "2015-2016",
+        "Total_Payroll": 71693645.0,
+        "avg_cf_percent": 47.9,
+        "quantile_label": "Q3 ($71531510 - $74453080)"
+      },
+      {
+        "Abbreviation": "EDM",
+        "PTS": 70,
+        "Salary_Quantile": "Q2",
+        "Season": "2015-2016",
+        "Total_Payroll": 68765462.0,
+        "avg_cf_percent": 47.45,
+        "quantile_label": "Q2 ($67156310 - $71243968)"
+      },
+      {
+        "Abbreviation": "TOR",
+        "PTS": 69,
+        "Salary_Quantile": "Q3",
+        "Season": "2015-2016",
+        "Total_Payroll": 73041937.0,
+        "avg_cf_percent": 47.58,
+        "quantile_label": "Q3 ($71531510 - $74453080)"
+      },
+      {
+        "Abbreviation": "WAS",
+        "PTS": 118,
+        "Salary_Quantile": "Q3",
+        "Season": "2016-2017",
+        "Total_Payroll": 73952827.0,
+        "avg_cf_percent": 49.59,
+        "quantile_label": "Q3 ($71531510 - $74453080)"
+      },
+      {
+        "Abbreviation": "PIT",
+        "PTS": 111,
+        "Salary_Quantile": "Q3",
+        "Season": "2016-2017",
+        "Total_Payroll": 74097288.0,
+        "avg_cf_percent": 51.5,
+        "quantile_label": "Q3 ($71531510 - $74453080)"
+      },
+      {
+        "Abbreviation": "CHI",
+        "PTS": 109,
+        "Salary_Quantile": "Q2",
+        "Season": "2016-2017",
+        "Total_Payroll": 70593221.0,
+        "avg_cf_percent": 49.73,
+        "quantile_label": "Q2 ($67156310 - $71243968)"
+      },
+      {
+        "Abbreviation": "CBJ",
+        "PTS": 108,
+        "Salary_Quantile": "Q3",
+        "Season": "2016-2017",
+        "Total_Payroll": 73033208.0,
+        "avg_cf_percent": 49.42,
+        "quantile_label": "Q3 ($71531510 - $74453080)"
+      },
+      {
+        "Abbreviation": "MIN",
+        "PTS": 106,
+        "Salary_Quantile": "Q4",
+        "Season": "2016-2017",
+        "Total_Payroll": 75007092.0,
+        "avg_cf_percent": 51.37,
+        "quantile_label": "Q4 ($74505703 - $80251776)"
+      },
+      {
+        "Abbreviation": "ANA",
+        "PTS": 105,
+        "Salary_Quantile": "Q4",
+        "Season": "2016-2017",
+        "Total_Payroll": 76954459.0,
+        "avg_cf_percent": 49.14,
+        "quantile_label": "Q4 ($74505703 - $80251776)"
+      },
+      {
+        "Abbreviation": "MTL",
+        "PTS": 103,
+        "Salary_Quantile": "Q3",
+        "Season": "2016-2017",
+        "Total_Payroll": 74453080.0,
+        "avg_cf_percent": 50.62,
+        "quantile_label": "Q3 ($71531510 - $74453080)"
+      },
+      {
+        "Abbreviation": "EDM",
+        "PTS": 103,
+        "Salary_Quantile": "Q2",
+        "Season": "2016-2017",
+        "Total_Payroll": 69680520.0,
+        "avg_cf_percent": 50.53,
+        "quantile_label": "Q2 ($67156310 - $71243968)"
+      },
+      {
+        "Abbreviation": "NYR",
+        "PTS": 102,
+        "Salary_Quantile": "Q3",
+        "Season": "2016-2017",
+        "Total_Payroll": 73375352.0,
+        "avg_cf_percent": 50.76,
+        "quantile_label": "Q3 ($71531510 - $74453080)"
+      },
+      {
+        "Abbreviation": "STL",
+        "PTS": 99,
+        "Salary_Quantile": "Q2",
+        "Season": "2016-2017",
+        "Total_Payroll": 70675984.0,
+        "avg_cf_percent": 51.11,
+        "quantile_label": "Q2 ($67156310 - $71243968)"
+      },
+      {
+        "Abbreviation": "SJS",
+        "PTS": 99,
+        "Salary_Quantile": "Q3",
+        "Season": "2016-2017",
+        "Total_Payroll": 73385869.0,
+        "avg_cf_percent": 53.31,
+        "quantile_label": "Q3 ($71531510 - $74453080)"
+      },
+      {
+        "Abbreviation": "OTT",
+        "PTS": 98,
+        "Salary_Quantile": "Q4",
+        "Season": "2016-2017",
+        "Total_Payroll": 75947622.0,
+        "avg_cf_percent": 49.24,
+        "quantile_label": "Q4 ($74505703 - $80251776)"
+      },
+      {
+        "Abbreviation": "TOR",
+        "PTS": 95,
+        "Salary_Quantile": "Q4",
+        "Season": "2016-2017",
+        "Total_Payroll": 76495820.0,
+        "avg_cf_percent": 49.16,
+        "quantile_label": "Q4 ($74505703 - $80251776)"
+      },
+      {
+        "Abbreviation": "BOS",
+        "PTS": 95,
+        "Salary_Quantile": "Q4",
+        "Season": "2016-2017",
+        "Total_Payroll": 74772546.0,
+        "avg_cf_percent": 53.29,
+        "quantile_label": "Q4 ($74505703 - $80251776)"
+      },
+      {
+        "Abbreviation": "CGY",
+        "PTS": 94,
+        "Salary_Quantile": "Q3",
+        "Season": "2016-2017",
+        "Total_Payroll": 74332972.0,
+        "avg_cf_percent": 49.54,
+        "quantile_label": "Q3 ($71531510 - $74453080)"
+      },
+      {
+        "Abbreviation": "TBL",
+        "PTS": 94,
+        "Salary_Quantile": "Q1",
+        "Season": "2016-2017",
+        "Total_Payroll": 64056091.0,
+        "avg_cf_percent": 49.47,
+        "quantile_label": "Q1 ($55070883 - $66424256)"
+      },
+      {
+        "Abbreviation": "NSH",
+        "PTS": 94,
+        "Salary_Quantile": "Q2",
+        "Season": "2016-2017",
+        "Total_Payroll": 70791103.0,
+        "avg_cf_percent": 49.62,
+        "quantile_label": "Q2 ($67156310 - $71243968)"
+      },
+      {
+        "Abbreviation": "NYI",
+        "PTS": 94,
+        "Salary_Quantile": "Q2",
+        "Season": "2016-2017",
+        "Total_Payroll": 70929419.0,
+        "avg_cf_percent": 49.13,
+        "quantile_label": "Q2 ($67156310 - $71243968)"
+      },
+      {
+        "Abbreviation": "PHI",
+        "PTS": 88,
+        "Salary_Quantile": "Q4",
+        "Season": "2016-2017",
+        "Total_Payroll": 74563822.0,
+        "avg_cf_percent": 50.42,
+        "quantile_label": "Q4 ($74505703 - $80251776)"
+      },
+      {
+        "Abbreviation": "WPG",
+        "PTS": 87,
+        "Salary_Quantile": "Q1",
+        "Season": "2016-2017",
+        "Total_Payroll": 64113622.0,
+        "avg_cf_percent": 48.59,
+        "quantile_label": "Q1 ($55070883 - $66424256)"
+      },
+      {
+        "Abbreviation": "CAR",
+        "PTS": 87,
+        "Salary_Quantile": "Q1",
+        "Season": "2016-2017",
+        "Total_Payroll": 55070883.0,
+        "avg_cf_percent": 48.57,
+        "quantile_label": "Q1 ($55070883 - $66424256)"
+      },
+      {
+        "Abbreviation": "LAK",
+        "PTS": 86,
+        "Salary_Quantile": "Q4",
+        "Season": "2016-2017",
+        "Total_Payroll": 78349869.0,
+        "avg_cf_percent": 51.45,
+        "quantile_label": "Q4 ($74505703 - $80251776)"
+      },
+      {
+        "Abbreviation": "FLA",
+        "PTS": 81,
+        "Salary_Quantile": "Q1",
+        "Season": "2016-2017",
+        "Total_Payroll": 64675437.0,
+        "avg_cf_percent": 48.42,
+        "quantile_label": "Q1 ($55070883 - $66424256)"
+      },
+      {
+        "Abbreviation": "DAL",
+        "PTS": 79,
+        "Salary_Quantile": "Q2",
+        "Season": "2016-2017",
+        "Total_Payroll": 67509048.0,
+        "avg_cf_percent": 49.89,
+        "quantile_label": "Q2 ($67156310 - $71243968)"
+      },
+      {
+        "Abbreviation": "DET",
+        "PTS": 79,
+        "Salary_Quantile": "Q4",
+        "Season": "2016-2017",
+        "Total_Payroll": 74505703.0,
+        "avg_cf_percent": 47.73,
+        "quantile_label": "Q4 ($74505703 - $80251776)"
+      },
+      {
+        "Abbreviation": "BUF",
+        "PTS": 78,
+        "Salary_Quantile": "Q3",
+        "Season": "2016-2017",
+        "Total_Payroll": 72465004.0,
+        "avg_cf_percent": 48.71,
+        "quantile_label": "Q3 ($71531510 - $74453080)"
+      },
+      {
+        "Abbreviation": "NJD",
+        "PTS": 70,
+        "Salary_Quantile": "Q1",
+        "Season": "2016-2017",
+        "Total_Payroll": 63384193.0,
+        "avg_cf_percent": 48.56,
+        "quantile_label": "Q1 ($55070883 - $66424256)"
+      },
+      {
+        "Abbreviation": "ARI",
+        "PTS": 70,
+        "Salary_Quantile": "Q3",
+        "Season": "2016-2017",
+        "Total_Payroll": 73017656.0,
+        "avg_cf_percent": 46.58,
+        "quantile_label": "Q3 ($71531510 - $74453080)"
+      },
+      {
+        "Abbreviation": "VAN",
+        "PTS": 69,
+        "Salary_Quantile": "Q1",
+        "Season": "2016-2017",
+        "Total_Payroll": 66424256.0,
+        "avg_cf_percent": 48.07,
+        "quantile_label": "Q1 ($55070883 - $66424256)"
+      },
+      {
+        "Abbreviation": "COL",
+        "PTS": 48,
+        "Salary_Quantile": "Q2",
+        "Season": "2016-2017",
+        "Total_Payroll": 69968694.0,
+        "avg_cf_percent": 46.98,
+        "quantile_label": "Q2 ($67156310 - $71243968)"
+      },
+      {
+        "Abbreviation": "NSH",
+        "PTS": 117,
+        "Salary_Quantile": "Q1",
+        "Season": "2017-2018",
+        "Total_Payroll": 64340995.0,
+        "avg_cf_percent": 49.16,
+        "quantile_label": "Q1 ($55070883 - $66424256)"
+      },
+      {
+        "Abbreviation": "WPG",
+        "PTS": 114,
+        "Salary_Quantile": "Q4",
+        "Season": "2017-2018",
+        "Total_Payroll": 74719851.0,
+        "avg_cf_percent": 51.6,
+        "quantile_label": "Q4 ($74505703 - $80251776)"
+      },
+      {
+        "Abbreviation": "TBL",
+        "PTS": 113,
+        "Salary_Quantile": "Q4",
+        "Season": "2017-2018",
+        "Total_Payroll": 78018887.0,
+        "avg_cf_percent": 50.51,
+        "quantile_label": "Q4 ($74505703 - $80251776)"
+      },
+      {
+        "Abbreviation": "BOS",
+        "PTS": 112,
+        "Salary_Quantile": "Q4",
+        "Season": "2017-2018",
+        "Total_Payroll": 75204391.0,
+        "avg_cf_percent": 49.82,
+        "quantile_label": "Q4 ($74505703 - $80251776)"
+      },
+      {
+        "Abbreviation": "VGK",
+        "PTS": 109,
+        "Salary_Quantile": "Q4",
+        "Season": "2017-2018",
+        "Total_Payroll": 75041028.0,
+        "avg_cf_percent": 49.65,
+        "quantile_label": "Q4 ($74505703 - $80251776)"
+      },
+      {
+        "Abbreviation": "WAS",
+        "PTS": 105,
+        "Salary_Quantile": "Q4",
+        "Season": "2017-2018",
+        "Total_Payroll": 77332485.0,
+        "avg_cf_percent": 47.85,
+        "quantile_label": "Q4 ($74505703 - $80251776)"
+      },
+      {
+        "Abbreviation": "TOR",
+        "PTS": 105,
+        "Salary_Quantile": "Q4",
+        "Season": "2017-2018",
+        "Total_Payroll": 80251776.0,
+        "avg_cf_percent": 47.07,
+        "quantile_label": "Q4 ($74505703 - $80251776)"
+      },
+      {
+        "Abbreviation": "MIN",
+        "PTS": 101,
+        "Salary_Quantile": "Q4",
+        "Season": "2017-2018",
+        "Total_Payroll": 75336765.0,
+        "avg_cf_percent": 49.95,
+        "quantile_label": "Q4 ($74505703 - $80251776)"
+      },
+      {
+        "Abbreviation": "ANA",
+        "PTS": 101,
+        "Salary_Quantile": "Q4",
+        "Season": "2017-2018",
+        "Total_Payroll": 74675365.0,
+        "avg_cf_percent": 49.21,
+        "quantile_label": "Q4 ($74505703 - $80251776)"
+      },
+      {
+        "Abbreviation": "SJS",
+        "PTS": 100,
+        "Salary_Quantile": "Q3",
+        "Season": "2017-2018",
+        "Total_Payroll": 73969118.0,
+        "avg_cf_percent": 51.08,
+        "quantile_label": "Q3 ($71531510 - $74453080)"
+      },
+      {
+        "Abbreviation": "PIT",
+        "PTS": 100,
+        "Salary_Quantile": "Q3",
+        "Season": "2017-2018",
+        "Total_Payroll": 74369360.0,
+        "avg_cf_percent": 50.54,
+        "quantile_label": "Q3 ($71531510 - $74453080)"
+      },
+      {
+        "Abbreviation": "LAK",
+        "PTS": 98,
+        "Salary_Quantile": "Q3",
+        "Season": "2017-2018",
+        "Total_Payroll": 72539315.0,
+        "avg_cf_percent": 49.95,
+        "quantile_label": "Q3 ($71531510 - $74453080)"
+      },
+      {
+        "Abbreviation": "PHI",
+        "PTS": 98,
+        "Salary_Quantile": "Q4",
+        "Season": "2017-2018",
+        "Total_Payroll": 74933174.0,
+        "avg_cf_percent": 49.54,
+        "quantile_label": "Q4 ($74505703 - $80251776)"
+      },
+      {
+        "Abbreviation": "CBJ",
+        "PTS": 97,
+        "Salary_Quantile": "Q4",
+        "Season": "2017-2018",
+        "Total_Payroll": 74758383.0,
+        "avg_cf_percent": 51.72,
+        "quantile_label": "Q4 ($74505703 - $80251776)"
+      },
+      {
+        "Abbreviation": "NJD",
+        "PTS": 97,
+        "Salary_Quantile": "Q4",
+        "Season": "2017-2018",
+        "Total_Payroll": 75442295.0,
+        "avg_cf_percent": 49.78,
+        "quantile_label": "Q4 ($74505703 - $80251776)"
+      },
+      {
+        "Abbreviation": "FLA",
+        "PTS": 96,
+        "Salary_Quantile": "Q2",
+        "Season": "2017-2018",
+        "Total_Payroll": 69282341.0,
+        "avg_cf_percent": 49.73,
+        "quantile_label": "Q2 ($67156310 - $71243968)"
+      },
+      {
+        "Abbreviation": "COL",
+        "PTS": 95,
+        "Salary_Quantile": "Q3",
+        "Season": "2017-2018",
+        "Total_Payroll": 74395026.0,
+        "avg_cf_percent": 49.28,
+        "quantile_label": "Q3 ($71531510 - $74453080)"
+      },
+      {
+        "Abbreviation": "STL",
+        "PTS": 94,
+        "Salary_Quantile": "Q2",
+        "Season": "2017-2018",
+        "Total_Payroll": 71243968.0,
+        "avg_cf_percent": 50.99,
+        "quantile_label": "Q2 ($67156310 - $71243968)"
+      },
+      {
+        "Abbreviation": "DAL",
+        "PTS": 92,
+        "Salary_Quantile": "Q4",
+        "Season": "2017-2018",
+        "Total_Payroll": 74724071.0,
+        "avg_cf_percent": 48.56,
+        "quantile_label": "Q4 ($74505703 - $80251776)"
+      },
+      {
+        "Abbreviation": "CGY",
+        "PTS": 84,
+        "Salary_Quantile": "Q3",
+        "Season": "2017-2018",
+        "Total_Payroll": 73797429.0,
+        "avg_cf_percent": 51.42,
+        "quantile_label": "Q3 ($71531510 - $74453080)"
+      },
+      {
+        "Abbreviation": "CAR",
+        "PTS": 83,
+        "Salary_Quantile": "Q1",
+        "Season": "2017-2018",
+        "Total_Payroll": 57873988.0,
+        "avg_cf_percent": 50.97,
+        "quantile_label": "Q1 ($55070883 - $66424256)"
+      },
+      {
+        "Abbreviation": "NYI",
+        "PTS": 80,
+        "Salary_Quantile": "Q3",
+        "Season": "2017-2018",
+        "Total_Payroll": 72769434.0,
+        "avg_cf_percent": 48.43,
+        "quantile_label": "Q3 ($71531510 - $74453080)"
+      },
+      {
+        "Abbreviation": "EDM",
+        "PTS": 78,
+        "Salary_Quantile": "Q1",
+        "Season": "2017-2018",
+        "Total_Payroll": 63310213.0,
+        "avg_cf_percent": 50.86,
+        "quantile_label": "Q1 ($55070883 - $66424256)"
+      },
+      {
+        "Abbreviation": "NYR",
+        "PTS": 77,
+        "Salary_Quantile": "Q2",
+        "Season": "2017-2018",
+        "Total_Payroll": 68255896.0,
+        "avg_cf_percent": 48.73,
+        "quantile_label": "Q2 ($67156310 - $71243968)"
+      },
+      {
+        "Abbreviation": "CHI",
+        "PTS": 76,
+        "Salary_Quantile": "Q3",
+        "Season": "2017-2018",
+        "Total_Payroll": 73541908.0,
+        "avg_cf_percent": 48.81,
+        "quantile_label": "Q3 ($71531510 - $74453080)"
+      },
+      {
+        "Abbreviation": "VAN",
+        "PTS": 73,
+        "Salary_Quantile": "Q3",
+        "Season": "2017-2018",
+        "Total_Payroll": 73096295.0,
+        "avg_cf_percent": 46.67,
+        "quantile_label": "Q3 ($71531510 - $74453080)"
+      },
+      {
+        "Abbreviation": "DET",
+        "PTS": 73,
+        "Salary_Quantile": "Q2",
+        "Season": "2017-2018",
+        "Total_Payroll": 70872049.0,
+        "avg_cf_percent": 50.67,
+        "quantile_label": "Q2 ($67156310 - $71243968)"
+      },
+      {
+        "Abbreviation": "MTL",
+        "PTS": 71,
+        "Salary_Quantile": "Q1",
+        "Season": "2017-2018",
+        "Total_Payroll": 61260710.0,
+        "avg_cf_percent": 49.79,
+        "quantile_label": "Q1 ($55070883 - $66424256)"
+      },
+      {
+        "Abbreviation": "ARI",
+        "PTS": 70,
+        "Salary_Quantile": "Q1",
+        "Season": "2017-2018",
+        "Total_Payroll": 57472552.0,
+        "avg_cf_percent": 46.97,
+        "quantile_label": "Q1 ($55070883 - $66424256)"
+      },
+      {
+        "Abbreviation": "OTT",
+        "PTS": 67,
+        "Salary_Quantile": "Q2",
+        "Season": "2017-2018",
+        "Total_Payroll": 67156310.0,
+        "avg_cf_percent": 48.13,
+        "quantile_label": "Q2 ($67156310 - $71243968)"
+      },
+      {
+        "Abbreviation": "BUF",
+        "PTS": 62,
+        "Salary_Quantile": "Q1",
+        "Season": "2017-2018",
+        "Total_Payroll": 64604838.0,
+        "avg_cf_percent": 47.48,
+        "quantile_label": "Q1 ($55070883 - $66424256)"
+      }
+    ]
+  },
+  "facet": {
+    "column": {
+      "field": "Season",
+      "header": {
+        "labelFont": "Arial",
+        "labelFontSize": 14,
+        "labelFontWeight": "bold",
+        "titleFont": "Arial",
+        "titleFontSize": 16,
+        "titleFontWeight": "bold"
+      },
+      "title": "Team Points vs Average Corsi For Percentage (Seasons: 2016-2018)",
+      "type": "nominal"
+    }
+  },
+  "spec": {
+    "encoding": {
+      "color": {
+        "field": "quantile_label",
+        "title": "Salary Quantile (Range)",
+        "type": "nominal"
+      },
+      "text": {
+        "field": "Abbreviation",
+        "type": "nominal"
+      },
+      "tooltip": [
+        {
+          "field": "Abbreviation",
+          "type": "nominal"
+        },
+        {
+          "field": "PTS",
+          "type": "quantitative"
+        },
+        {
+          "field": "Total_Payroll",
+          "type": "quantitative"
+        },
+        {
+          "field": "avg_cf_percent",
+          "type": "quantitative"
+        },
+        {
+          "field": "quantile_label",
+          "type": "nominal"
+        },
+        {
+          "field": "Season",
+          "type": "nominal"
+        }
+      ],
+      "x": {
+        "field": "PTS",
+        "scale": {
+          "domain": [
+            48.0,
+            120.0
+          ]
+        },
+        "title": "Points (PTS)",
+        "type": "quantitative"
+      },
+      "y": {
+        "field": "avg_cf_percent",
+        "scale": {
+          "domain": [
+            45,
+            55
+          ]
+        },
+        "title": "Average Corsi For Percentage (CF%)",
+        "type": "quantitative"
+      }
+    },
+    "height": 336,
+    "mark": {
+      "dx": 0,
+      "dy": -5,
+      "fontWeight": "bold",
+      "size": 10,
+      "type": "text"
+    },
+    "width": 288
+  }
+}
