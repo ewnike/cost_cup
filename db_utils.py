@@ -1,10 +1,11 @@
 """
 October 1, 2024
 Helper function for accessing
-the database and reduce clutter from
+the database and reducing clutter from
 redundant code.
 """
 
+import logging
 import os
 
 from dotenv import load_dotenv
@@ -13,9 +14,8 @@ from sqlalchemy import MetaData, create_engine
 
 # Load environment variables from the .env file
 def load_environment_variables():
-    # Load environment variables from the .env file
     load_dotenv()
-    # print("Environment variables loaded!")  # Debug message to verify loading
+    logging.info("Environment variables loaded.")  # Debug log to confirm loading
 
 
 def get_db_engine():
@@ -33,13 +33,14 @@ def get_db_engine():
 
     # Check if required environment variables are loaded
     if not all([DATABASE_TYPE, DBAPI, ENDPOINT, USER, PASSWORD, DATABASE]):
+        logging.error("Missing one or more required environment variables.")
         raise ValueError("Missing one or more required environment variables.")
 
     # Create the connection string
     connection_string = (
         f"{DATABASE_TYPE}+{DBAPI}://{USER}:{PASSWORD}@{ENDPOINT}:{PORT}/{DATABASE}"
     )
-    # print("Connection string:", connection_string)  # Debugging print
+    logging.info(f"Database connection string created: {connection_string}")
 
     # Return the SQLAlchemy engine
     return create_engine(connection_string)
