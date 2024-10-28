@@ -119,7 +119,8 @@ def organize_by_season(seasons, df):
         print("game_plays before filtering events:")
         print(df["game_plays"].head())
 
-        cols = ["play_id", "game_id", "team_id_for", "event", "time"]
+        # cols = ["play_id", "game_id", "team_id_for", "event", "time"]
+        cols = ["play_id", "game_id", "team_id_for", "team_id_against", "event", "time"]
         events = ["Shot", "Blocked Shot", "Missed Shot", "Goal"]
         df["game_plays"] = df["game_plays"].loc[df["game_plays"]["event"].isin(events)]
         df["game_plays"]["time"] = (
@@ -213,7 +214,8 @@ def create_corsi_stats(df_corsi, df):
         plays_player = plays_game[mask]
 
         corsi_for = (plays_player["team_id_for"] == team_id).sum()
-        corsi_against = len(plays_player) - corsi_for
+        #corsi_against = len(plays_player) - corsi_for
+        corsi_against = (plays_player["team_id_for"] != team_id).sum()
         corsi = corsi_for - corsi_against
         df_corsi.iloc[i, 3:] = [corsi_for, corsi_against, corsi]
 
