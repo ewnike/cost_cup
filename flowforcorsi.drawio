@@ -53,7 +53,7 @@
             <mxPoint x="120" y="110" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="gL1o9Zj5MICsFiWbh3Co-76" value="&lt;font size=&quot;2&quot;&gt;create_corsi_stats()&lt;/font&gt;" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;html=1;labelBackgroundColor=#000000;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+        <mxCell id="gL1o9Zj5MICsFiWbh3Co-76" value="&lt;font size=&quot;2&quot;&gt;&lt;b&gt;create_corsi_stats()&lt;/b&gt;&lt;/font&gt;" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;html=1;labelBackgroundColor=#000000;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
           <mxGeometry x="390" y="320" width="250" height="280" as="geometry" />
         </mxCell>
         <mxCell id="gL1o9Zj5MICsFiWbh3Co-77" value="1. For each game, load the load the shifts and plays data." style="text;strokeColor=#BD7000;fillColor=#FFFFFF;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fontColor=#FFFFFF;perimeterSpacing=3;strokeWidth=4;fontStyle=1;labelBackgroundColor=#000000;" vertex="1" parent="gL1o9Zj5MICsFiWbh3Co-76">
@@ -140,7 +140,7 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="gL1o9Zj5MICsFiWbh3Co-102" value="load corsi data into hockey_stats.db using &amp;nbsp;pd.to_sql()" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fontSize=13;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+        <mxCell id="gL1o9Zj5MICsFiWbh3Co-102" value="load corsi data into hockey_stats.db using &amp;nbsp;pd.to_sql()" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fontSize=13;fontStyle=1" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
           <mxGeometry x="650" y="610" width="130" height="125" as="geometry" />
         </mxCell>
         <mxCell id="gL1o9Zj5MICsFiWbh3Co-103" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#FFFFFF;strokeWidth=3;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
