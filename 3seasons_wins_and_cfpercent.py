@@ -1,3 +1,12 @@
+"""
+Saturday, February 1st, 2025
+Code to calculate the wins and cf%
+for teams by season.
+
+Eric Winiecke
+"""
+
+
 import os
 import pandas as pd
 from sqlalchemy import text
