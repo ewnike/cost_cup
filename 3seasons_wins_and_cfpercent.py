@@ -26,8 +26,8 @@ for season, year in zip(seasons, years):
         mt."Abbreviation",
         mt."PTS",
         mt."Total_Payroll",
-        ROUND(AVG(ac."CF_Percent")::numeric, 3) AS avg_cf_percent
-    FROM public.aggregated_corsi_{season} ac
+        ROUND(AVG(ac."CF%")::numeric, 3) AS avg_cf_percent
+    FROM public.team_event_totals_season_{season} ac
     JOIN public.merged_team_stats_{year} mt ON ac.team_id = mt."Team_ID"
     GROUP BY ac.team_id, mt."Abbreviation", mt."PTS", mt."Total_Payroll"
     ORDER BY mt."PTS" DESC;

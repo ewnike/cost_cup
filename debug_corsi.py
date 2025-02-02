@@ -12,53 +12,166 @@ taken when a player is on the ice. Not a defensive stat)
 
 
 import logging
+from logging.handlers import RotatingFileHandler
 import os
+import time
 from time import perf_counter
 
 import numpy as np
 import pandas as pd
 
-from load_data import get_env_vars, load_data
+from load_data import get_env_vars, load_data, get_db_engine, fetch_game_ids_20152016
 
 # Set up logging with explicit confirmation of path
-log_file_path = "/Users/ericwiniecke/Documents/github/cost_cup/data_processing.log"
+# Define the log file path
+log_file_path = "/Users/ericwiniecke/Documents/github/cost_cup/data_processing_II.log"
 log_directory = os.path.dirname(log_file_path)
+
+# Ensure the log directory exists
 if not os.path.exists(log_directory):
     os.makedirs(log_directory)
     print(f"Created log directory: {log_directory}")
 else:
     print(f"Log directory exists: {log_directory}")
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[logging.FileHandler(log_file_path, mode="w"), logging.StreamHandler()],
+# Set up RotatingFileHandler (Max size 5 MB, keep up to 3 backup files)
+rotating_handler = RotatingFileHandler(
+    log_file_path, maxBytes=5 * 1024 * 1024, backupCount=3
 )
+rotating_handler.setLevel(logging.INFO)
 
-# Test to confirm logger output
-logging.info("Logger configured successfully. Test message to ensure logging works.")
+# Define log format
+formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+rotating_handler.setFormatter(formatter)
+
+# Set up root logger with the rotating handler
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+logger.addHandler(rotating_handler)
+logger.addHandler(logging.StreamHandler())  # Also print logs to console
+
+# Test logging configuration
+logger.info("Logger configured successfully with RotatingFileHandler.")
 print(f"Logging to file: {log_file_path}")
 
+
 # Function Definitions
+# i like this version the best so far....
+# def get_penalty_exclude_times(game_shifts, game_skater_stats):
+#     if game_shifts.empty:
+#         logging.warning("Warning: game_shifts is empty in get_penalty_exclude_times")
+#         return pd.DataFrame()  # Return an empty DataFrame if no shifts are available
+
+#     # Merge the `team_id` column from `game_skater_stats` into `game_shifts`
+#     game_shifts = pd.merge(
+#         game_shifts,
+#         game_skater_stats[["game_id", "player_id", "team_id"]],
+#         on=["game_id", "player_id"],
+#         how="left",
+#     )
+#     game_shifts = game_shifts.drop(columns=["team_id_y"], errors="ignore").rename(
+#         columns={"team_id_x": "team_id"}
+#     )
+
+#     # Divide shifts by team
+#     team_1 = game_shifts.iloc[0]["team_id"]
+#     mask = game_shifts["team_id"] == team_1
+#     shifts_1 = game_shifts[mask]
+#     shifts_2 = game_shifts[~mask]
+
+#     # Calculate the number of players on each team
+#     df_num_players_1 = get_num_players(shifts_1)
+#     df_num_players_2 = get_num_players(shifts_2)
+
+#     # Rename and merge the player counts for each team
+#     df_num_players_1 = df_num_players_1.rename(
+#         columns={"value": "time", "num_players": "team_1"}
+#     )
+#     df_num_players_2 = df_num_players_2.rename(
+#         columns={"value": "time", "num_players": "team_2"}
+#     )
+
+#     df_exclude = pd.concat([df_num_players_1, df_num_players_2]).sort_values(
+#         "time", ignore_index=True
+#     )
+#     df_exclude = df_exclude.ffill()
+
+#     mask = df_exclude["time"].shift(-1) != df_exclude["time"]
+#     df_exclude = df_exclude[mask]
+
+#     # Identify overlaps (more than 6 players on a team)
+#     overlaps = (df_exclude["team_1"] > 6) | (df_exclude["team_2"] > 6)
+#     if overlaps.any():
+#         logging.info("Detected overlaps during line changes:")
+#         for _, row in df_exclude[overlaps].iterrows():
+#             logging.info(
+#                 f"Time: {row['time']}, Team 1 Players: {row['team_1']}, Team 2 Players: {row['team_2']}"
+#             )
+
+#     # Determine exclusions based on player counts
+#     unequal_players = df_exclude["team_1"] != df_exclude["team_2"]
+#     # below_minimum = (df_exclude["team_1"] < 5) | (df_exclude["team_2"] < 5)
+#     reasonable_max_players = (df_exclude["team_1"] <= 6) & (df_exclude["team_2"] <= 6)
+
+#     # Final exclusion condition
+#     # df_exclude["exclude"] = unequal_players & below_minimum & reasonable_max_players
+#     # Updated exclusion condition
+#     df_exclude["exclude"] = unequal_players & reasonable_max_players
+
+#     # Reset index for clean output
+#     df_exclude = df_exclude.reset_index(drop=True)
+
+#     # Log the penalty exclude times for verification
+#     logging.info("Penalty Exclude Times:")
+#     for _, row in df_exclude.iterrows():
+#         logging.info(
+#             f"Time: {row['time']}, Team 1 Players: {row['team_1']}, Team 2 Players: {row['team_2']}, Exclude: {row['exclude']}"
+#         )
+
+#     return df_exclude
+def verify_penalty(game_id, time, game_plays, game_shifts):
+    """
+    Verify if a penalty exists at the given time, checking for offsetting minors.
+
+    Args:
+        game_id (int): The ID of the game to verify.
+        time (float): The time in seconds to check.
+        game_plays (pd.DataFrame): The DataFrame containing game play events.
+        game_shifts (pd.DataFrame): The DataFrame containing game shifts.
+
+    Returns:
+        str: 'Penalty' for regular penalties, 'Offsetting' for offsetting minors, 'None' otherwise.
+    """
+    # Ensure required columns exist
+    required_columns = ["team_id_for", "team_id_against", "period", "periodTime", "event"]
+    for col in required_columns:
+        if col not in game_plays.columns:
+            logging.error(f"Missing column '{col}' in game_plays.")
+            return "None"
+
+    # Filter game plays by game_id
+    plays = game_plays[game_plays["game_id"] == game_id]
+
+    # Calculate total game time in seconds
+    plays["event_time"] = (plays["period"] - 1) * 1200 + plays["periodTime"]
+
+    # Check for penalties at the given time
+    penalties = plays[(plays["event"] == "Penalty") & (plays["event_time"] == time)]
+
+    if penalties.empty:
+        return "None"
+
+    # Check if penalties are offsetting
+    unique_teams = penalties["team_id_for"].nunique()
+    if unique_teams > 1:
+        return "Offsetting"
+
+    # If a single penalty exists
+    return "Penalty"
 
 
-def get_num_players(shift_df):
-    shifts_melted = pd.melt(
-        shift_df,
-        id_vars=["game_id", "player_id"],
-        value_vars=["shift_start", "shift_end"],
-    ).sort_values("value", ignore_index=True)
-    shifts_melted["change"] = (
-        2 * (shifts_melted["variable"] == "shift_start").astype(int) - 1
-    )
-    shifts_melted["num_players"] = shifts_melted["change"].cumsum()
-    df_num_players = shifts_melted.groupby("value")["num_players"].last().reset_index()
-    return df_num_players[
-        df_num_players["num_players"].shift() != df_num_players["num_players"]
-    ].reset_index(drop=True)
 
-
-def get_penalty_exclude_times(game_shifts, game_skater_stats):
+def get_penalty_exclude_times(game_shifts, game_skater_stats, game_plays):
     if game_shifts.empty:
         logging.warning("Warning: game_shifts is empty in get_penalty_exclude_times")
         return pd.DataFrame()  # Return an empty DataFrame if no shifts are available
@@ -70,7 +183,7 @@ def get_penalty_exclude_times(game_shifts, game_skater_stats):
         on=["game_id", "player_id"],
         how="left",
     )
-    game_shifts = game_shifts.drop(columns=["team_id_y"]).rename(
+    game_shifts = game_shifts.drop(columns=["team_id_y"], errors="ignore").rename(
         columns={"team_id_x": "team_id"}
     )
 
@@ -80,7 +193,7 @@ def get_penalty_exclude_times(game_shifts, game_skater_stats):
     shifts_1 = game_shifts[mask]
     shifts_2 = game_shifts[~mask]
 
-    # Calculate the number of players on each team and proceed as before
+    # Calculate the number of players on each team
     df_num_players_1 = get_num_players(shifts_1)
     df_num_players_2 = get_num_players(shifts_2)
 
@@ -95,15 +208,51 @@ def get_penalty_exclude_times(game_shifts, game_skater_stats):
     df_exclude = pd.concat([df_num_players_1, df_num_players_2]).sort_values(
         "time", ignore_index=True
     )
+    df_exclude["game_id"] = game_shifts["game_id"].iloc[0]
+
     df_exclude = df_exclude.ffill()
 
     mask = df_exclude["time"].shift(-1) != df_exclude["time"]
     df_exclude = df_exclude[mask]
 
-    # Determine exclusions based on player counts
-    diff = df_exclude["team_1"] != df_exclude["team_2"]
-    missing = (df_exclude["team_1"] < 5) | (df_exclude["team_2"] < 5)
-    df_exclude["exclude"] = diff & missing
+    # Identify overlaps (more than 6 players on a team)
+    overlaps = (df_exclude["team_1"] > 6) | (df_exclude["team_2"] > 6)
+    if overlaps.any():
+        logging.info("Detected overlaps during line changes:")
+        for _, row in df_exclude[overlaps].iterrows():
+            logging.info(
+                f"Time: {row['time']}, Team 1 Players: {row['team_1']}, Team 2 Players: {row['team_2']}"
+            )
+
+    # Calculate exclusions
+    exclude_list = []
+    for _, row in df_exclude.iterrows():
+        game_id = row["game_id"]
+        time = row["time"]
+        team_1 = row["team_1"]
+        team_2 = row["team_2"]
+
+        # Check penalty type
+        penalty_type = verify_penalty(game_id, time, game_plays, game_shifts)
+
+        if penalty_type == "Penalty":
+            exclude_list.append(True)  # Exclude regular penalties
+            continue
+        elif penalty_type == "Offsetting":
+            exclude_list.append(False)  # Do not exclude offsetting minors
+            continue
+
+        # Exclude based on imbalance and reasonable player counts
+        unequal_players = team_1 != team_2
+        reasonable_max_players = (team_1 <= 6) & (team_2 <= 6)
+        exclude = unequal_players & reasonable_max_players
+
+        exclude_list.append(exclude)
+
+    # Assign exclude_list to df_exclude["exclude"]
+    df_exclude["exclude"] = exclude_list
+
+    # Reset index for clean output
     df_exclude = df_exclude.reset_index(drop=True)
 
     # Log the penalty exclude times for verification
@@ -114,6 +263,85 @@ def get_penalty_exclude_times(game_shifts, game_skater_stats):
         )
 
     return df_exclude
+
+
+
+
+
+#previous code that worked but may not be totally correct
+def get_num_players(shift_df):
+    shifts_melted = pd.melt(
+        shift_df,
+        id_vars=["game_id", "player_id"],
+        value_vars=["shift_start", "shift_end"],
+    ).sort_values("value", ignore_index=True)
+    shifts_melted["change"] = (
+        2 * (shifts_melted["variable"] == "shift_start").astype(int) - 1
+    )
+    shifts_melted["num_players"] = shifts_melted["change"].cumsum()
+    df_num_players = shifts_melted.groupby("value")["num_players"].last().reset_index()
+    return df_num_players[
+        df_num_players["num_players"].shift() != df_num_players["num_players"]
+    ].reset_index(drop=True)
+    print(df_num_players)
+
+
+# def get_penalty_exclude_times(game_shifts, game_skater_stats):
+#     if game_shifts.empty:
+#         logging.warning("Warning: game_shifts is empty in get_penalty_exclude_times")
+#         return pd.DataFrame()  # Return an empty DataFrame if no shifts are available
+
+#     # Merge the `team_id` column from `game_skater_stats` into `game_shifts`
+#     game_shifts = pd.merge(
+#         game_shifts,
+#         game_skater_stats[["game_id", "player_id", "team_id"]],
+#         on=["game_id", "player_id"],
+#         how="left",
+#     )
+#     game_shifts = game_shifts.drop(columns=["team_id_y"], errors="ignore").rename(
+#         columns={"team_id_x": "team_id"}
+#     )
+
+#     # Divide shifts by team
+#     team_1 = game_shifts.iloc[0]["team_id"]
+#     mask = game_shifts["team_id"] == team_1
+#     shifts_1 = game_shifts[mask]
+#     shifts_2 = game_shifts[~mask]
+
+#     # Calculate the number of players on each team and proceed as before
+#     df_num_players_1 = get_num_players(shifts_1)
+#     df_num_players_2 = get_num_players(shifts_2)
+
+#     # Rename and merge the player counts for each team
+#     df_num_players_1 = df_num_players_1.rename(
+#         columns={"value": "time", "num_players": "team_1"}
+#     )
+#     df_num_players_2 = df_num_players_2.rename(
+#         columns={"value": "time", "num_players": "team_2"}
+#     )
+
+#     df_exclude = pd.concat([df_num_players_1, df_num_players_2]).sort_values(
+#         "time", ignore_index=True
+#     )
+#     df_exclude = df_exclude.ffill()
+
+#     mask = df_exclude["time"].shift(-1) != df_exclude["time"]
+#     df_exclude = df_exclude[mask]
+
+#     # Determine exclusions based on player counts
+#     diff = df_exclude["team_1"] != df_exclude["team_2"]
+#     missing = (df_exclude["team_1"] < 5) | (df_exclude["team_2"] < 5)
+#     df_exclude["exclude"] = diff & missing
+#     df_exclude = df_exclude.reset_index(drop=True)
+#     print(df_exclude)
+#     # Log the penalty exclude times for verification
+#     logging.info("Penalty Exclude Times:")
+#     for _, row in df_exclude.iterrows():
+#         logging.info(
+#             f"Time: {row['time']}, Team 1 Players: {row['team_1']}, Team 2 Players: {row['team_2']}, Exclude: {row['exclude']}"
+#         )
+
+#     return df_exclude
 
 
 # Save this!!! This is the corsi code for all players.
@@ -386,7 +614,7 @@ def organize_by_season(seasons, df):
             ["game_id", "player_id"], ignore_index=True
         )[["game_id", "player_id", "team_id"]]
         nhl_dfs.append([season, create_corsi_stats(df_corsi, df)])
-
+        print('Howdy Doody!! + *(50)')
     return nhl_dfs
 
 
@@ -451,8 +679,6 @@ def create_corsi_stats(df_corsi, df):
                 logging.info(
                     f"'time' column verified in plays_game for game_id {game_id}."
                 )
-
-            # Continue with the rest of the function as needed, adding further logs as appropriate
 
             # Merge team_id into game_shifts and ensure team_id is an integer after merging
             game_shifts = pd.merge(
@@ -541,8 +767,309 @@ def create_corsi_stats(df_corsi, df):
     return df_corsi
 
 
-if __name__ == "__main__":
-    calculate_and_save_corsi_stats(game_id=2015020002)
+# def calculate_team_event_totals(game_id=None):
+#     """
+#     Calculate the total number of goals, shots, missed shots, and blocked shots for and against
+#     each team_id, excluding periods when teams are not at even strength.
+#     """
+#     env_vars = get_env_vars()
+#     df_master = load_data(env_vars)
+
+#     if not all(key in df_master for key in ["game_plays", "game_shifts", "game_skater_stats"]):
+#         logging.error("Required dataframes are missing from the loaded data.")
+#         return
+
+#     # Filter data by game_id if provided
+#     if game_id:
+#         df_master = {name: df[df["game_id"] == game_id] for name, df in df_master.items()}
+#     logging.info(f"Data loaded for game_id {game_id}.")
+
+#     # Prepare dataframes
+#     game_plays = df_master["game_plays"]
+#     game_shifts = df_master["game_shifts"]
+#     game_skater_stats = df_master["game_skater_stats"]
+
+#     # Create 'time' column in game_plays if it doesn't exist
+#     if "time" not in game_plays.columns:
+#         game_plays["time"] = game_plays["periodTime"] + (game_plays["period"] - 1) * 1200
+
+#     # Get exclude times when teams are not at even strength
+#     #df_exclude_times = get_penalty_exclude_times(game_shifts, game_skater_stats)
+#     df_exclude_times = get_penalty_exclude_times(game_shifts, game_skater_stats, game_plays)
+
+#     idx = df_exclude_times["time"].searchsorted(game_plays["time"]) - 1
+#     idx[idx < 0] = 0
+#     mask = df_exclude_times["exclude"][idx].reset_index(drop=True).to_numpy()
+#     even_strength_plays = game_plays.loc[~mask]
+
+#     # Aggregate events by team_id_for
+#     event_totals_for = (
+#         even_strength_plays.groupby("team_id_for")
+#         .agg(
+#             total_goals=("event", lambda x: (x == "Goal").sum()),
+#             total_shots=("event", lambda x: (x == "Shot").sum()),
+#             total_missed_shots=("event", lambda x: (x == "Missed Shot").sum()),
+#             total_blocked_shots_against=("event", lambda x: (x == "Blocked Shot").sum())
+#         )
+#         .reset_index()
+#         .rename(columns={"team_id_for": "team_id"})
+#     )
+
+#     # Aggregate events by team_id_against
+#     event_totals_against = (
+#         even_strength_plays.groupby("team_id_against")
+#         .agg(
+#             total_goals_against=("event", lambda x: (x == "Goal").sum()),
+#             total_shots_against=("event", lambda x: (x == "Shot").sum()),
+#             total_missed_shots_against=("event", lambda x: (x == "Missed Shot").sum()),
+#             total_blocked_shots_for=("event", lambda x: (x == "Blocked Shot").sum())
+#         )
+#         .reset_index()
+#         .rename(columns={"team_id_against": "team_id"})
+#     )
+
+#     # Merge the results using 'team_id' as the key
+#     event_totals_combined = pd.merge(
+#         event_totals_for, event_totals_against, on="team_id", how="outer", suffixes=('_for', '_against')
+#     ).fillna(0)  # Replace NaNs with 0s to handle missing data
+
+#     # Log the final combined results
+#     logging.info("Final aggregated team event totals:")
+#     #logging.info(event_totals_combined)
+#     logging.info("\n" + event_totals_combined.to_string(index=False))
+#     logging.info("Event totals for team_id_for and team_id_against calculated and merged successfully.")
+#     return event_totals_combined
+
+def calculate_team_event_totals(game_id=None):
+    """
+    Calculate the total number of goals, shots, missed shots, and blocked shots for and against
+    each team_id, excluding periods when teams are not at even strength.
+    """
+    env_vars = get_env_vars()
+    df_master = load_data(env_vars)
+
+    if not all(key in df_master for key in ["game_plays", "game_shifts", "game_skater_stats"]):
+        logging.error("Required dataframes are missing from the loaded data.")
+        return
+
+    # Filter data by game_id if provided
+    if game_id:
+        df_master = {name: df[df["game_id"] == game_id] for name, df in df_master.items()}
+    logging.info(f"Data loaded for game_id {game_id}.")
+
+    # Prepare dataframes
+    game_plays = df_master["game_plays"]
+    game_shifts = df_master["game_shifts"]
+    game_skater_stats = df_master["game_skater_stats"]
+
+    # Create 'time' column in game_plays if it doesn't exist
+    if "time" not in game_plays.columns:
+        game_plays["time"] = game_plays["periodTime"] + (game_plays["period"] - 1) * 1200
+
+    # Get exclude times when teams are not at even strength
+    df_exclude_times = get_penalty_exclude_times(game_shifts, game_skater_stats, game_plays)
+    # print(df_exclude_times)
+    idx = df_exclude_times["time"].searchsorted(game_plays["time"]) - 1
+    idx[idx < 0] = 0
+    mask = df_exclude_times["exclude"][idx].reset_index(drop=True).to_numpy()
+    even_strength_plays = game_plays.loc[~mask]
+
+    # Aggregate events by team_id_for
+    event_totals_for = (
+        even_strength_plays.groupby("team_id_for")
+        .agg(
+            total_goals=("event", lambda x: (x == "Goal").sum()),
+            total_shots=("event", lambda x: (x == "Shot").sum()),
+            total_missed_shots=("event", lambda x: (x == "Missed Shot").sum()),
+            total_blocked_shots_against=("event", lambda x: (x == "Blocked Shot").sum())
+        )
+        .reset_index()
+        .rename(columns={"team_id_for": "team_id"})
+    )
+
+    # Aggregate events by team_id_against
+    event_totals_against = (
+        even_strength_plays.groupby("team_id_against")
+        .agg(
+            total_goals_against=("event", lambda x: (x == "Goal").sum()),
+            total_shots_against=("event", lambda x: (x == "Shot").sum()),
+            total_missed_shots_against=("event", lambda x: (x == "Missed Shot").sum()),
+            total_blocked_shots_for=("event", lambda x: (x == "Blocked Shot").sum())
+        )
+        .reset_index()
+        .rename(columns={"team_id_against": "team_id"})
+    )
+
+    # Merge the results using 'team_id' as the key
+    event_totals_combined = pd.merge(
+        event_totals_for, event_totals_against, on="team_id", how="outer", suffixes=('_for', '_against')
+    ).fillna(0)  # Replace NaNs with 0s to handle missing data
+
+    # Add the game_id column
+    event_totals_combined["game_id"] = game_id
+
+    # Log the final combined results
+    logging.info("Final aggregated team event totals:")
+    logging.info("\n" + event_totals_combined.to_string(index=False))
+    logging.info("Event totals for team_id_for and team_id_against calculated and merged successfully.")
+    return event_totals_combined
+
+#Example of calling the function
+#Works for 1 game
+# if __name__ == "__main__":
+#     result = calculate_team_event_totals(game_id=2015020002)
+#     #import os
+#     print(type(result))
+#     print(result)
+
+#     print(os.getcwd())
+
+#     # print(result)
+#     columns = ['team_id','total_goals','total_shots','total_missed_shots','total_blocked_shots_against','total_goals_against','total_shots_against','total_missed_shots_against','total_blocked_shots_for']
+#     game_tot = pd.DataFrame(result, columns=columns)
+#     print(game_tot)
+#  # Optionally, save the combined results to a CSV file
+#     game_id = 2015020002
+#     game_tot.to_csv(f"team_event_totals_for_game_id: {game_id}.csv", index=False)
+#     print(f"Results saved to team_event_totals_for_game_id: {game_id}.csv")
+
+
+
+
+
+
+
+
+# if __name__ == "__main__":
+#     calculate_and_save_corsi_stats(game_id=2015020002)
     # calculate_and_save_corsi_stats(
     #     game_id=2015020002, track_player_id=8474141
     # )  # Replace with the actual player_id
+
+# if __name__ == "__main__":
+#     # Define the game IDs you want to process
+#     game_ids = [2015020002, 2015020003, 2015020004, 2015020005, 2015020006]
+
+#     all_results = []
+
+#     for game_id in game_ids:
+#         logging.info(f"Processing game_id: {game_id}")
+
+#         try:
+#             result = calculate_team_event_totals(game_id=game_id)
+#             if result is not None:
+#                 all_results.append(result)
+#                 logging.info(f"Results for game_id {game_id}:")
+#                 logging.info("\n" + result.to_string(index=False))
+#             else:
+#                 logging.warning(f"No data processed for game_id {game_id}.")
+#         except Exception as e:
+#             logging.error(f"Error processing game_id {game_id}: {e}")
+
+#     # Combine the results from all games into a single DataFrame
+#     if all_results:
+#         combined_results = pd.concat(all_results, ignore_index=True)
+#         logging.info("Combined results for all processed games:")
+#         logging.info("\n" + combined_results.to_string(index=False))
+
+#         # Save the combined results to a CSV file
+#         output_file = "team_event_totals_for_5_games.csv"
+#         combined_results.to_csv(output_file, index=False)
+#         logging.info(f"Results saved to {output_file}")
+#     else:
+#         logging.warning("No results to combine.")
+
+# if __name__ == "__main__":
+#     # Define the game IDs you want to process
+#     game_ids = [2015020002, 2015020003, 2015020004, 2015020005, 2015020006]
+
+#     all_results = []
+
+#     for game_id in game_ids:
+#         logging.info(f"Processing game_id: {game_id}")
+
+#         try:
+#             result = calculate_team_event_totals(game_id=game_id)
+#             if result is not None:
+#                 all_results.append(result)
+#                 logging.info(f"Results for game_id {game_id}:")
+#                 logging.info("\n" + result.to_string(index=False))
+#             else:
+#                 logging.warning(f"No data processed for game_id {game_id}.")
+#         except Exception as e:
+#             logging.error(f"Error processing game_id {game_id}: {e}")
+
+#     # Combine the results from all games into a single DataFrame
+#     if all_results:
+#         combined_results = pd.concat(all_results, ignore_index=True)
+#         logging.info("Combined results for all processed games:")
+#         logging.info("\n" + combined_results.to_string(index=False))
+
+#         # Save the combined results to a CSV file
+#         output_file = "team_event_totals_for_5_games.csv"
+#         combined_results.to_csv(output_file, index=False)
+#         logging.info(f"Results saved to {output_file}")
+#     else:
+#         logging.warning("No results to combine.")
+
+
+
+if __name__ == "__main__":
+    # Define the game IDs you want to process
+    game_ids = [2015020002, 2015020003, 2015020004, 2015020005, 2015020006]
+    # game_ids = [2018020157]
+    all_results = []
+
+    # Start timing for the 5 games
+    start_time = time.time()
+
+    for game_id in game_ids:
+        logging.info(f"Processing game_id: {game_id}")
+
+        try:
+            result = calculate_team_event_totals(game_id=game_id)
+            if result is not None:
+                all_results.append(result)
+                logging.info(f"Results for game_id {game_id}:")
+                logging.info("\n" + result.to_string(index=False))
+            else:
+                logging.warning(f"No data processed for game_id {game_id}.")
+        except Exception as e:
+            logging.error(f"Error processing game_id {game_id}: {e}")
+
+    # End timing for the 5 games
+    end_time = time.time()
+
+    # Calculate time taken and estimate for 1280 games
+    elapsed_time = end_time - start_time
+    games_processed = len(game_ids)
+    estimated_total_time = (elapsed_time / games_processed) * 1280
+
+    # Combine the results from all games into a single DataFrame
+    if all_results:
+        combined_results = pd.concat(all_results, ignore_index=True)
+        logging.info("Combined results for all processed games:")
+        logging.info("\n" + combined_results.to_string(index=False))
+
+        # Save the combined results to a CSV file
+        output_file = "team_event_totals_for_5_games.csv"
+        combined_results.to_csv(output_file, index=False)
+        logging.info(f"Results saved to {output_file}")
+    else:
+        logging.warning("No results to combine.")
+
+    # Print timing information
+    print(f"Time taken to process {games_processed} games: {elapsed_time:.2f} seconds")
+    print(f"Estimated time to process 1,280 games: {estimated_total_time / 3600:.2f} hours")
+
+
+
+
+
+
+
+
+
+
+
+

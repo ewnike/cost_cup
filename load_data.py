@@ -40,6 +40,23 @@ def get_db_engine(env_vars):
     )
     return create_engine(connection_string)
 
+# load_data.py
+
+# load_data.py
+
+def fetch_game_ids_20152016(engine):
+    """
+    Fetch all game IDs for the 2015-2016 season from the database.
+    """
+    query = """
+    SELECT DISTINCT game_id
+    FROM public.game_plays
+    WHERE game_id >= 2015000000
+    AND game_id < 2016000000;
+    """
+    return pd.read_sql(query, engine)["game_id"].tolist()
+
+
 
 def load_data(env_vars):
     """connect to db."""
@@ -55,6 +72,11 @@ def load_data(env_vars):
     df = {}
     for name, query in queries.items():
         df[name] = pd.read_sql(query, engine)
+
+        # Ensure 'game_id' is cast to int64 for consistency
+        if "game_id" in df[name].columns:
+            df[name]["game_id"] = df[name]["game_id"].astype("int64")
+
         print(f"{name}:")
         print(df[name].head())  # Print first few rows of each DataFrame for debugging
 
@@ -64,6 +86,7 @@ def load_data(env_vars):
 if __name__ == "__main__":
     env_vars = get_env_vars()
     df = load_data(env_vars)
+
     print("Data loaded successfully.")
     for name, df in df.items():
         print(f"{name}: {len(df)} rows")

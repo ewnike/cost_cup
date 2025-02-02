@@ -118,9 +118,18 @@ for season in ["20152016", "20162017", "20172018"]:
     df_grouped_all["corsi_for"] = df_grouped_all["corsi_for"].round(4)
     df_grouped_all["corsi_against"] = df_grouped_all["corsi_against"].round(4)
     df_grouped_all["corsi"] = df_grouped_all["corsi"].round(4)
-    df_grouped_all["CF_Percent"] = (df_grouped_all["CF_Percent"].round(4) * 100).round(
-        4
+    df_grouped_all["CF_Percent"] = (
+        (
+            (
+                df_grouped_all["corsi_for"]
+                / (df_grouped_all["corsi_for"] + df_grouped_all["corsi_against"])
+            )
+            * 100
+        )
+        .fillna(0)
+        .round(4)
     )
+
     df_grouped_all["timeOnIce"] = df_grouped_all["timeOnIce"].round(4)
 
     # Apply the threshold for game_count

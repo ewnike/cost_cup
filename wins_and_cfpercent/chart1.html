@@ -12,11 +12,12 @@
     <div id="vis"></div>
 
     <script type="text/javascript">
-        vegaEmbed('#vis', 'https://chart-json.s3.us-east-2.amazonaws.com/chart1.json').then(function (result) {
+        vegaEmbed('#vis', 'https://chart-json.s3.us-east-2.amazonaws.com/chart1.json?timestamp=' + new Date().getTime()).then(function (result) {
             // Access the Vega view instance (https://vega.github.io/vega/docs/api/view/) as result.view
         }).catch(console.error);
     </script>
 </body>
 </html>
+
 
 

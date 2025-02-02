@@ -1,7 +1,7 @@
 """
 August 11, 2024.
 Code to upload player_info
-from AWS S3 bucket. Read data. 
+from AWS S3 bucket. Read data.
 Insert data into datatable in hockey_stats
 database.
 Eric Winiecke

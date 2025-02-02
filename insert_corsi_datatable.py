@@ -9,7 +9,8 @@ Eric Winiecke
 import os
 
 import pandas as pd
-#from dotenv import load_dotenv
+
+# from dotenv import load_dotenv
 from sqlalchemy import (
     BigInteger,
     Column,
@@ -17,33 +18,15 @@ from sqlalchemy import (
     Integer,
     MetaData,
     Table,
-    #create_engine,
 )
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
+
 from db_utils import get_db_engine, get_metadata
 
 engine = get_db_engine()
 metadata = get_metadata()
-# # Load environment variables from the .env file
-# load_dotenv()
 
-# # Retrieve database connection parameters from environment variables
-# DATABASE_TYPE = os.getenv("DATABASE_TYPE")
-# DBAPI = os.getenv("DBAPI")
-# ENDPOINT = os.getenv("ENDPOINT")
-# USER = os.getenv("USER")
-# PASSWORD = os.getenv("PASSWORD")
-# PORT = int(os.getenv("PORT", 5432))  # Provide default value if not set
-# DATABASE = os.getenv("DATABASE")
-
-# # Create the connection string
-# connection_string = (
-#     f"{DATABASE_TYPE}+{DBAPI}://{USER}:{PASSWORD}@{ENDPOINT}:{PORT}/{DATABASE}"
-# )
-# engine = create_engine(connection_string)
-
-# Define metadata and tables
 metadata = MetaData()
 
 
@@ -76,7 +59,7 @@ def insert_data_from_csv(engine, table_name, file_path):
     """insert data"""
     try:
         df = pd.read_csv(file_path)
-        df.to_sql(table_name, con=engine, if_exists="replace", index=False)
+        df.to_sql(table_name, con=engine, if_exists="append", index=False)
         print(f"Data inserted successfully into {table_name}")
 
         # Remove the file after successful insertion
@@ -94,21 +77,21 @@ def insert_data_from_csv(engine, table_name, file_path):
 # Define directories and mappings
 csv_files_and_mappings = [
     (
-        "/Users/ericwiniecke/Documents/github/cost_cup/corsi_stats/corsi_20152016.csv",
+        "/Users/ericwiniecke/Documents/github/cost_cup/corsi_stats/corsi_stats_20152016.csv",
         "raw_corsi_20152016",
     ),
     (
-        "/Users/ericwiniecke/Documents/github/cost_cup/corsi_stats/corsi_20162017.csv",
+        "/Users/ericwiniecke/Documents/github/cost_cup/corsi_stats/corsi_stats_20162017.csv",
         "raw_corsi_20162017",
     ),
     (
-        "/Users/ericwiniecke/Documents/github/cost_cup/corsi_stats/corsi_20172018.csv",
+        "/Users/ericwiniecke/Documents/github/cost_cup/corsi_stats/corsi_stats_20172018.csv",
         "raw_corsi_20172018",
     ),
 ]
 
-with Session() as session:
-    for file_path, table_name in csv_files_and_mappings:
-        insert_data_from_csv(engine, table_name, file_path)
 
-    print("Data inserted successfully into all tables")
+for file_path, table_name in csv_files_and_mappings:
+    insert_data_from_csv(engine, table_name, file_path)
+
+print("Data inserted successfully into all tables")
