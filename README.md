@@ -29,7 +29,7 @@ Before starting, ensure you have the following installed:
 
 1. **Install PostgreSQL and pgAdmin**:
     - Follow the instructions on the [PostgreSQL](https://www.postgresql.org/download/) and [pgAdmin](https://www.pgadmin.org/download/) websites to download and install the software.
-  
+
 2. **Start PostgreSQL Server**:
     - Ensure your PostgreSQL server is running. You can start it from your terminal or command prompt:
     ```sh
@@ -53,10 +53,10 @@ Start by copying the provided `.env.example` file to create your own `.env` file
 
     ```bash
     cp .env.example .env
-    
+
 
 2. Open the .env file in a text editor and replace the placeholder values with your actual PostgreSQL database information:
-   
+
 ```plaintext
     DATABASE_TYPE=postgresql
     DBAPI=psycopg2
@@ -76,7 +76,7 @@ Start by copying the provided `.env.example` file to create your own `.env` file
     AWS_S3_BUCKET_NAME=your_bucket_name      # Replace with your S3 bucket name
     AWS_REGION=your_region                   # Replace with the AWS region of your bucket
    ``````
-                
+
 4. Save the .env File
     Once you have filled in all the required details, save the .env file.
 
@@ -104,9 +104,3 @@ If you prefer not to manually read the data into your database, you can use the 
 2. Restore the Database from the Dump
 
     Open your terminal or command prompt and run the following command to restore the database.
-
-
-
-
-
-

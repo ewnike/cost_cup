@@ -57,7 +57,9 @@ for season in ["20152016", "20162017", "20172018"]:
         df_corsi = df_corsi.drop(columns=["Unnamed: 0"])
 
     # Get game skater stats
-    GSS_TOI_QUERY = 'SELECT game_id, player_id, "timeOnIce", team_id FROM game_skater_stats'
+    GSS_TOI_QUERY = (
+        'SELECT game_id, player_id, "timeOnIce", team_id FROM game_skater_stats'
+    )
     df_gss_toi = get_data_from_db(GSS_TOI_QUERY)
 
     # Get player info
@@ -96,7 +98,9 @@ for season in ["20152016", "20162017", "20172018"]:
         .rename(columns={"game_id": "game_count"})
     )
 
-    PLAYER_SALARY_QUERY = f'SELECT "firstName", "lastName", "capHit" FROM player_cap_hit_{season}'
+    PLAYER_SALARY_QUERY = (
+        f'SELECT "firstName", "lastName", "capHit" FROM player_cap_hit_{season}'
+    )
 
     df_player_salary = get_data_from_db(PLAYER_SALARY_QUERY)
 
@@ -106,7 +110,9 @@ for season in ["20152016", "20162017", "20172018"]:
     )
 
     # Merge aggregated stats with salary info
-    df_grouped_all = pd.merge(df_grouped_all, df_player_salary, on=["firstName", "lastName"])
+    df_grouped_all = pd.merge(
+        df_grouped_all, df_player_salary, on=["firstName", "lastName"]
+    )
 
     # Round all relevant columns to four decimal places
     df_grouped_all["corsi_for"] = df_grouped_all["corsi_for"].round(4)
@@ -140,7 +146,9 @@ for season in ["20152016", "20162017", "20172018"]:
     create_aggregated_table(aggregated_table_name)
 
     # Insert aggregated data into the new table
-    df_grouped_all.to_sql(aggregated_table_name, con=engine, if_exists="replace", index=False)
+    df_grouped_all.to_sql(
+        aggregated_table_name, con=engine, if_exists="replace", index=False
+    )
 
     print(f"Data inserted successfully into {aggregated_table_name}")
 

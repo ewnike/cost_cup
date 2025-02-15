@@ -39,7 +39,9 @@ PORT = int(os.getenv("PORT", 5432))
 DATABASE = os.getenv("DATABASE", "hockey_stats")
 
 # Create the connection string
-connection_string = f"{DATABASE_TYPE}+{DBAPI}://{USER}:{PASSWORD}@{ENDPOINT}:{PORT}/{DATABASE}"
+connection_string = (
+    f"{DATABASE_TYPE}+{DBAPI}://{USER}:{PASSWORD}@{ENDPOINT}:{PORT}/{DATABASE}"
+)
 
 # Define table schema for game_skater_stats
 metadata = MetaData()
@@ -150,7 +152,9 @@ def insert_data(df, table):
     data = df.to_dict(orient="records")
     with Session() as session:
         try:
-            with tqdm(total=len(data), desc=f"Inserting data into {table.name}") as pbar:
+            with tqdm(
+                total=len(data), desc=f"Inserting data into {table.name}"
+            ) as pbar:
                 for record in data:
                     session.execute(table.insert().values(**record))
                     session.commit()
@@ -312,7 +316,9 @@ def main():
     logging.info(f"Extracted files: {extracted_files}")
 
     # Path to game_skater_stats.csv file
-    game_skater_stats_csv_file_path = os.path.join(local_extract_path, "game_skater_stats.csv")
+    game_skater_stats_csv_file_path = os.path.join(
+        local_extract_path, "game_skater_stats.csv"
+    )
 
     # Create the table if it does not exist
     create_table(engine)

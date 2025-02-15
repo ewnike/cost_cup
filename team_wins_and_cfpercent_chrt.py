@@ -19,7 +19,9 @@ scatter = (
 )
 
 # Add team labels
-text = scatter.mark_text(align="left", baseline="middle", dx=7).encode(text="Abbreviation")
+text = scatter.mark_text(align="left", baseline="middle", dx=7).encode(
+    text="Abbreviation"
+)
 
 
 # Combine the scatter plot and text labels

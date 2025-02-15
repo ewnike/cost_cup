@@ -37,7 +37,9 @@ def get_db_engine():
         raise ValueError("Missing one or more required environment variables.")
 
     # Create the connection string
-    connection_string = f"{DATABASE_TYPE}+{DBAPI}://{USER}:{PASSWORD}@{ENDPOINT}:{PORT}/{DATABASE}"
+    connection_string = (
+        f"{DATABASE_TYPE}+{DBAPI}://{USER}:{PASSWORD}@{ENDPOINT}:{PORT}/{DATABASE}"
+    )
     logging.info(f"Database connection string created: {connection_string}")
 
     # Return the SQLAlchemy engine

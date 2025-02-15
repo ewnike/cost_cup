@@ -48,7 +48,9 @@ PORT = int(os.getenv("PORT", 5432))
 DATABASE = os.getenv("DATABASE", "hockey_stats")
 
 # Create the connection string
-connection_string = f"{DATABASE_TYPE}+{DBAPI}://{USER}:{PASSWORD}@{ENDPOINT}:{PORT}/{DATABASE}"
+connection_string = (
+    f"{DATABASE_TYPE}+{DBAPI}://{USER}:{PASSWORD}@{ENDPOINT}:{PORT}/{DATABASE}"
+)
 
 # Define table schemas
 metadata = MetaData()
@@ -93,7 +95,9 @@ def clean_data(df, column_mapping):
     # Convert columns to appropriate data types based on column_mapping
     for db_column, csv_column in column_mapping.items():
         if "int" in str(df[csv_column].dtype):
-            df[csv_column] = pd.to_numeric(df[csv_column], downcast="integer", errors="coerce")
+            df[csv_column] = pd.to_numeric(
+                df[csv_column], downcast="integer", errors="coerce"
+            )
         elif "float" in str(df[csv_column].dtype):
             df[csv_column] = pd.to_numeric(df[csv_column], errors="coerce")
         elif "date_time" in csv_column:
@@ -123,7 +127,9 @@ def insert_data(df, table):
     data = df.to_dict(orient="records")
     with Session() as session:
         try:
-            with tqdm(total=len(data), desc=f"Inserting data into {table.name}") as pbar:
+            with tqdm(
+                total=len(data), desc=f"Inserting data into {table.name}"
+            ) as pbar:
                 for record in data:
                     session.execute(table.insert().values(**record))
                     session.commit()

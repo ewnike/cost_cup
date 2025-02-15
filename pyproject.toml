@@ -1,5 +1,5 @@
 [tool.ruff]
-line-length = 100  # Set line length for code
+line-length = 100  # Set line length for formatting
 target-version = "py312"  # Adjust to your Python version
 
 [tool.ruff.lint]
