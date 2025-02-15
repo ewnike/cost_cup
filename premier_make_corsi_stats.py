@@ -11,7 +11,6 @@ taken when a player is on the ice. Not a defensive stat)
 
 import logging
 import os
-from time import perf_counter
 
 import numpy as np
 import pandas as pd
@@ -158,13 +157,19 @@ def calculate_and_save_corsi_stats(season_game_ids, season):
     # Combine all game data into a single DataFrame
     if season_corsi_stats:
         final_season_df = pd.concat(season_corsi_stats, ignore_index=True)
-        output_dir = "/Users/ericwiniecke/Documents/github/cost_cup/corsi_stats"
-        os.makedirs(
-            output_dir, exist_ok=True
-        )  # Create the directory if it doesn't exist
-        output_file = os.path.join(
-            output_dir, f"corsi_stats_{season}.csv"
-        )  # Set the output path
+        # output_dir = "/Users/ericwiniecke/Documents/github/cost_cup/corsi_stats"
+        # os.makedirs(
+        #     output_dir, exist_ok=True
+        # )  # Create the directory if it doesn't exist
+        # output_file = os.path.join(
+        #     output_dir, f"corsi_stats_{season}.csv"
+        # )  # Set the output path
+        # final_season_df.to_csv(output_file, index=False)
+            # Use a relative path for the output directory
+        output_dir = os.path.join(os.getcwd(), "corsi_stats")  # Relative to current working directory
+        os.makedirs(output_dir, exist_ok=True)  # Ensure directory exists
+
+        output_file = os.path.join(output_dir, f"corsi_stats_{season}.csv")  # Set output path
         final_season_df.to_csv(output_file, index=False)
         logging.info(f"Saved Corsi data for the {season} season to {output_file}.")
     else:
@@ -236,7 +241,6 @@ def create_corsi_stats(df_corsi, df):
         return
 
     game_id_prev = None
-    t1 = perf_counter()
 
     for i, row in df_corsi.iterrows():
         game_id, player_id, team_id = row.iloc[:3]
@@ -391,4 +395,3 @@ if __name__ == "__main__":
         logging.error(
             "The 'game' DataFrame is missing from the loaded data. Cannot proceed."
         )
-

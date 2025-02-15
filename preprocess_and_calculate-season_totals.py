@@ -2,6 +2,7 @@
 January 5, 2025
 Code to calculate shot statistics
 per team per season.
+Eric Winiecke
 """
 
 import logging
