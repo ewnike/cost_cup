@@ -2,7 +2,7 @@
 October 24, 2024
 writing code to upload game_plays_player
 file from aws s3 bucket, clean data, and
-insert data into the hockey_stats data table
+insert data into the hockey_stats data table.
 """
 
 import logging
@@ -72,9 +72,7 @@ def clean_data(df, column_mapping):
 
     # Clean object-type columns, truncating strings and removing whitespace
     for column in df.select_dtypes(include=["object"]).columns:
-        df[column] = df[column].apply(
-            lambda x: str(x).strip()[:255] if isinstance(x, str) else x
-        )
+        df[column] = df[column].apply(lambda x: str(x).strip()[:255] if isinstance(x, str) else x)
 
     return df
 
@@ -105,14 +103,14 @@ data_path = os.getenv("DATA_PATH", "data")  # Path to the data folder
 
 
 def extract_zip(zip_path, extract_to):
-    """Function to extract zip files"""
+    """Function to extract zip files."""
     shutil.unpack_archive(zip_path, extract_to)
     logging.info(f"Extracted {zip_path} to {extract_to}")
     return os.listdir(extract_to)
 
 
 def clear_directory(directory):
-    """Function to clear a directory"""
+    """Function to clear a directory."""
     if os.path.exists(directory):
         shutil.rmtree(directory)
         logging.info(f"Cleared directory: {directory}")
@@ -176,9 +174,7 @@ def add_suffix_to_duplicate_play_ids(df):
             play_id_counts[play_id] += 1
             suffix = string.ascii_lowercase[play_id_counts[play_id] - 1]
             df.at[idx, "play_id"] = f"{play_id}{suffix}"
-            logging.debug(
-                f"Updated play_id: {df.at[idx, 'play_id']}"
-            )  # Log updated play_id
+            logging.debug(f"Updated play_id: {df.at[idx, 'play_id']}")  # Log updated play_id
         else:
             # Initialize the count for this play_id
             play_id_counts[play_id] = 1
@@ -187,12 +183,12 @@ def add_suffix_to_duplicate_play_ids(df):
 
 
 def create_table(engine):
-    """Function to create the table if it does not exist"""
+    """Function to create the table if it does not exist."""
     metadata.create_all(engine)
 
 
 def clear_table(engine, table):
-    """Function to clear the table if it exists"""
+    """Function to clear the table if it exists."""
     with engine.connect() as connection:
         connection.execute(table.delete())
         connection.commit()
@@ -200,7 +196,7 @@ def clear_table(engine, table):
 
 
 def insert_data(df, table):
-    """Function to insert data into the database"""
+    """Function to insert data into the database."""
     data = df.to_dict(orient="records")
     session = Session()  # Properly instantiate a session
     try:
@@ -226,7 +222,7 @@ def insert_data(df, table):
 
 
 def process_and_insert_csv(csv_file_path, table, column_mapping):
-    """Function to process and insert data from a CSV file"""
+    """Function to process and insert data from a CSV file."""
     try:
         logging.info(f"Processing {csv_file_path} for table {table.name}")
         # Load CSV data
@@ -271,7 +267,7 @@ def test_db_connection():
     """Test if the database connection is successful."""
     try:
         engine = get_db_engine()
-        with engine.connect() as connection:
+        with engine.connect():
             logging.info("Database connection test successful.")
             print("Database connection test successful.")  # Console confirmation
     except Exception as e:
@@ -296,7 +292,7 @@ def main():
     # Check if the zip file was successfully downloaded
     if os.path.exists(local_zip_path):
         # Extract the zip file
-        extracted_files = extract_zip(local_zip_path, local_extract_path)
+        extract_zip(local_zip_path, local_extract_path)
         csv_file_path = os.path.join(local_extract_path, "game_plays_players.csv")
 
         # Check if the CSV file exists

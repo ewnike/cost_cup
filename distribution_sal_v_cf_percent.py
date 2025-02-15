@@ -1,7 +1,8 @@
-"""August 11, 2024
+"""
+August 11, 2024
 Code for chart displaying exploratory
 data exploration.
-Eric Winiecke
+Eric Winiecke.
 """
 
 import pandas as pd

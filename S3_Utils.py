@@ -6,9 +6,7 @@ import botocore
 
 # Initialize the S3 client
 s3_client = boto3.client("s3")
-bucket_name = os.getenv(
-    "S3_BUCKET_NAME"
-)  # Get the bucket name from environment variables
+bucket_name = os.getenv("S3_BUCKET_NAME")  # Get the bucket name from environment variables
 
 
 def download_from_s3(bucket, key, download_path):
@@ -22,6 +20,7 @@ def download_from_s3(bucket, key, download_path):
 
     Returns:
     - None
+
     """
     logging.info(f"Downloading from bucket: {bucket}, key: {key}, to: {download_path}")
     try:
@@ -48,6 +47,4 @@ if __name__ == "__main__":
     if bucket_name:
         download_from_s3(bucket_name, s3_file_key, local_file_path)
     else:
-        logging.error(
-            "Bucket name not found. Please set the S3_BUCKET_NAME environment variable."
-        )
+        logging.error("Bucket name not found. Please set the S3_BUCKET_NAME environment variable.")

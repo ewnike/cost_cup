@@ -4,7 +4,7 @@ Helper function for users that
 want to download initial data for
 cost_of_cup directly to their postgresql
 database.
-Eric Winiecke
+Eric Winiecke.
 """
 
 import os
@@ -26,7 +26,7 @@ s3 = boto3.client(
 # Define bucket and file details
 bucket_name = os.getenv("S3_BUCKET_NAME")
 file_name = "hockey_stats_db.sql"
-#local_file_name = "your_local_file_name"
+# local_file_name = "your_local_file_name"
 
 # Prompt the user to input the local file name
 local_file_name = input("Enter the local destination file name: ")

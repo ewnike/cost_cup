@@ -1,0 +1,10 @@
+[tool.ruff]
+line-length = 100  # Set line length for code
+target-version = "py312"  # Adjust to your Python version
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "D"]  # Enable common linting rules
+ignore = ["D203", "D212"]
+
+[tool.ruff.format]
+line-ending = "lf"  # Use LF line endings

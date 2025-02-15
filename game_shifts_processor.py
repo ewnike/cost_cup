@@ -3,7 +3,7 @@ August 11, 2024
 Code to process game_shifts data.
 Upload from AWS S3 Bucket. Read data.
 Insert data into a data table in hockey_stats db.
-Eric Winiecke
+Eric Winiecke.
 """
 
 import logging
@@ -39,9 +39,7 @@ PORT = int(os.getenv("PORT", 5432))
 DATABASE = os.getenv("DATABASE", "hockey_stats")
 
 # Create the connection string
-connection_string = (
-    f"{DATABASE_TYPE}+{DBAPI}://{USER}:{PASSWORD}@{ENDPOINT}:{PORT}/{DATABASE}"
-)
+connection_string = f"{DATABASE_TYPE}+{DBAPI}://{USER}:{PASSWORD}@{ENDPOINT}:{PORT}/{DATABASE}"
 
 # Define table schema for game_shifts
 metadata = MetaData()
@@ -62,7 +60,7 @@ Session = sessionmaker(bind=engine)
 
 
 def clean_data(df, column_mapping):
-    """Function to clean the DataFrame"""
+    """Function to clean the DataFrame."""
     # Replace NaN with None for all columns
     df = df.where(pd.notnull(df), None)
 
@@ -88,12 +86,12 @@ def clean_data(df, column_mapping):
 
 
 def create_table(engine):
-    """Function to create the table if it does not exist"""
+    """Function to create the table if it does not exist."""
     metadata.create_all(engine)
 
 
 def clear_table(engine, table):
-    """Function to clear the table if it exists"""
+    """Function to clear the table if it exists."""
     with engine.connect() as connection:
         connection.execute(table.delete())
         connection.commit()
@@ -101,13 +99,11 @@ def clear_table(engine, table):
 
 
 def insert_data(df, table):
-    """Function to insert data into the database"""
+    """Function to insert data into the database."""
     data = df.to_dict(orient="records")
     with Session() as session:
         try:
-            with tqdm(
-                total=len(data), desc=f"Inserting data into {table.name}"
-            ) as pbar:
+            with tqdm(total=len(data), desc=f"Inserting data into {table.name}") as pbar:
                 for record in data:
                     session.execute(table.insert().values(**record))
                     session.commit()
@@ -119,7 +115,7 @@ def insert_data(df, table):
 
 
 def inspect_data(df):
-    """Function to inspect data for errors"""
+    """Function to inspect data for errors."""
     # Check unique values in critical columns
     logging.info(f"Unique values in 'game_id': {df['game_id'].unique()}")
     logging.info(f"Unique values in 'player_id': {df['player_id'].unique()}")
@@ -134,7 +130,7 @@ def inspect_data(df):
 
 
 def process_and_insert_csv(csv_file_path, table, column_mapping):
-    """Function to process and insert data from a CSV file"""
+    """Function to process and insert data from a CSV file."""
     try:
         logging.info(f"Processing {csv_file_path} for table {table.name}")
         df = pd.read_csv(csv_file_path)
@@ -190,7 +186,7 @@ data_path = os.getenv("DATA_PATH", "data")  # Path to the data folder
 
 
 def download_zip_from_s3(bucket, key, download_path):
-    """Function to download a zip file from S3"""
+    """Function to download a zip file from S3."""
     logging.info(f"Downloading from bucket: {bucket}, key: {key}, to: {download_path}")
     try:
         s3_client.download_file(bucket, key, download_path)
@@ -204,14 +200,14 @@ def download_zip_from_s3(bucket, key, download_path):
 
 
 def extract_zip(zip_path, extract_to):
-    """Function to extract zip files"""
+    """Function to extract zip files."""
     shutil.unpack_archive(zip_path, extract_to)
     logging.info(f"Extracted {zip_path} to {extract_to}")
     return os.listdir(extract_to)
 
 
 def clear_directory(directory):
-    """Function to clear a directory"""
+    """Function to clear a directory."""
     if os.path.exists(directory):
         shutil.rmtree(directory)
         logging.info(f"Cleared directory: {directory}")
@@ -219,7 +215,7 @@ def clear_directory(directory):
 
 
 def main():
-    """Main function to handle the workflow"""
+    """Main function to handle the workflow."""
     # Clear the extracted folder and recreate it
     clear_directory(local_extract_path)
 
@@ -236,9 +232,7 @@ def main():
 
     # Process and insert game_shifts.csv
     if os.path.exists(game_shifts_csv_file_path):
-        process_and_insert_csv(
-            game_shifts_csv_file_path, game_shifts, game_shifts_column_mapping
-        )
+        process_and_insert_csv(game_shifts_csv_file_path, game_shifts, game_shifts_column_mapping)
     else:
         logging.error(f"CSV file {game_shifts_csv_file_path} not found")
 

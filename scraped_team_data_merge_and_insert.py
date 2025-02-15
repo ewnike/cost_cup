@@ -59,9 +59,7 @@ for season in seasons:
         # Insert the merged data into a new table in the database
         table_name = f"merged_team_stats_{season}"
         merged_data.to_sql(table_name, engine, if_exists="replace", index=False)
-        print(
-            f"Data for season {season} has been successfully inserted into the database."
-        )
+        print(f"Data for season {season} has been successfully inserted into the database.")
 
         # Delete the CSV files after successful insertion
         try:

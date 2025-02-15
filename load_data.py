@@ -3,7 +3,7 @@ July 30, 2024
 Code to load data from database into working env
 so that code can access data, calculate corsi,
 aggregate data, and insert data back into data table.
-Eric Winiecke
+Eric Winiecke.
 """
 
 import os
@@ -14,9 +14,7 @@ from sqlalchemy import create_engine
 
 
 def get_env_vars():
-    """
-    Assemble credentials for login
-    """
+    """Assemble credentials for login."""
     load_dotenv()
     env_vars = {
         "DATABASE_TYPE": os.getenv("DATABASE_TYPE"),
@@ -31,7 +29,7 @@ def get_env_vars():
 
 
 def get_db_engine(env_vars):
-    """create connection string to database"""
+    """Create connection string to database."""
     connection_string = (
         f"{env_vars['DATABASE_TYPE']}+{env_vars['DBAPI']}://"
         f"{env_vars['USER']}:{env_vars['PASSWORD']}@"
@@ -40,14 +38,14 @@ def get_db_engine(env_vars):
     )
     return create_engine(connection_string)
 
+
 # load_data.py
 
 # load_data.py
+
 
 def fetch_game_ids_20152016(engine):
-    """
-    Fetch all game IDs for the 2015-2016 season from the database.
-    """
+    """Fetch all game IDs for the 2015-2016 season from the database."""
     query = """
     SELECT DISTINCT game_id
     FROM public.game_plays
@@ -57,9 +55,8 @@ def fetch_game_ids_20152016(engine):
     return pd.read_sql(query, engine)["game_id"].tolist()
 
 
-
 def load_data(env_vars):
-    """connect to db."""
+    """Connect to db."""
     engine = get_db_engine(env_vars)
 
     queries = {

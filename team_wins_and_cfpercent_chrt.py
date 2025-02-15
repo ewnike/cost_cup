@@ -1,7 +1,6 @@
 import altair as alt
 import pandas as pd
 
-
 data = pd.read_csv(
     r"/Users/ericwiniecke/Documents/github/cost_cup/wins_and_cfpercent/team_wins_and_cfpercent_2018.csv"
 )
@@ -20,9 +19,7 @@ scatter = (
 )
 
 # Add team labels
-text = scatter.mark_text(align="left", baseline="middle", dx=7).encode(
-    text="Abbreviation"
-)
+text = scatter.mark_text(align="left", baseline="middle", dx=7).encode(text="Abbreviation")
 
 
 # Combine the scatter plot and text labels

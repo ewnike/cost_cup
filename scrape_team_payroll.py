@@ -2,7 +2,7 @@
 August 28, 2024
 Script to scrape team payroll from spotrac. Used selenium and set webdriver
 to safari.
-Eric Winiecke
+Eric Winiecke.
 """
 
 import os
