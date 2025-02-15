@@ -4,20 +4,20 @@ Code to create datatables and insert
 data into the penalty_exclude_times
 tables for each season.
 """
+
 import os
 
 import pandas as pd
 
 # from dotenv import load_dotenv
 from sqlalchemy import (
+    VARCHAR,
     BigInteger,
     Column,
-    VARCHAR,
     Integer,
     MetaData,
     Table,
 )
-
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 
@@ -27,6 +27,7 @@ engine = get_db_engine()
 metadata = get_metadata()
 
 metadata = MetaData()
+
 
 def create_penalty_exclude_table(table_name):
     """Define table creation function to avoid repetition"""
@@ -43,13 +44,15 @@ def create_penalty_exclude_table(table_name):
 
 # Create tables for each season
 seasons = ["20152016", "20162017", "20172018"]
-tables = {season: create_penalty_exclude_table(f"penalty_exclude_times_{season}") for season in seasons}
+tables = {
+    season: create_penalty_exclude_table(f"penalty_exclude_times_{season}")
+    for season in seasons
+}
 
 # Create tables in the database
 metadata.create_all(engine)
 
 Session = sessionmaker(bind=engine)
-
 
 
 def insert_data_from_csv(engine, table_name, file_path):
