@@ -4,6 +4,7 @@ Code to create datatables and insert
 data into the team_event_total_games
 tables for each season.
 """
+
 import os
 
 import pandas as pd
@@ -27,6 +28,7 @@ metadata = get_metadata()
 
 metadata = MetaData()
 
+
 def create_team_event_total_games_table(table_name):
     """Define table creation function to avoid repetition"""
     return Table(
@@ -47,13 +49,15 @@ def create_team_event_total_games_table(table_name):
 
 # Create tables for each season
 seasons = ["20152016", "20162017", "20172018"]
-tables = {season: create_team_event_total_games_table(f"team_event_totals_games_{season}") for season in seasons}
+tables = {
+    season: create_team_event_total_games_table(f"team_event_totals_games_{season}")
+    for season in seasons
+}
 
 # Create tables in the database
 metadata.create_all(engine)
 
 Session = sessionmaker(bind=engine)
-
 
 
 def insert_data_from_csv(engine, table_name, file_path):
