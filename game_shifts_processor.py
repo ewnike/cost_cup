@@ -39,7 +39,9 @@ PORT = int(os.getenv("PORT", 5432))
 DATABASE = os.getenv("DATABASE", "hockey_stats")
 
 # Create the connection string
-connection_string = f"{DATABASE_TYPE}+{DBAPI}://{USER}:{PASSWORD}@{ENDPOINT}:{PORT}/{DATABASE}"
+connection_string = (
+    f"{DATABASE_TYPE}+{DBAPI}://{USER}:{PASSWORD}@{ENDPOINT}:{PORT}/{DATABASE}"
+)
 
 # Define table schema for game_shifts
 metadata = MetaData()
@@ -103,7 +105,9 @@ def insert_data(df, table):
     data = df.to_dict(orient="records")
     with Session() as session:
         try:
-            with tqdm(total=len(data), desc=f"Inserting data into {table.name}") as pbar:
+            with tqdm(
+                total=len(data), desc=f"Inserting data into {table.name}"
+            ) as pbar:
                 for record in data:
                     session.execute(table.insert().values(**record))
                     session.commit()
@@ -232,7 +236,9 @@ def main():
 
     # Process and insert game_shifts.csv
     if os.path.exists(game_shifts_csv_file_path):
-        process_and_insert_csv(game_shifts_csv_file_path, game_shifts, game_shifts_column_mapping)
+        process_and_insert_csv(
+            game_shifts_csv_file_path, game_shifts, game_shifts_column_mapping
+        )
     else:
         logging.error(f"CSV file {game_shifts_csv_file_path} not found")
 
