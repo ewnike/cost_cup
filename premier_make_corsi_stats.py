@@ -165,11 +165,15 @@ def calculate_and_save_corsi_stats(season_game_ids, season):
         #     output_dir, f"corsi_stats_{season}.csv"
         # )  # Set the output path
         # final_season_df.to_csv(output_file, index=False)
-            # Use a relative path for the output directory
-        output_dir = os.path.join(os.getcwd(), "corsi_stats")  # Relative to current working directory
+        # Use a relative path for the output directory
+        output_dir = os.path.join(
+            os.getcwd(), "corsi_stats"
+        )  # Relative to current working directory
         os.makedirs(output_dir, exist_ok=True)  # Ensure directory exists
 
-        output_file = os.path.join(output_dir, f"corsi_stats_{season}.csv")  # Set output path
+        output_file = os.path.join(
+            output_dir, f"corsi_stats_{season}.csv"
+        )  # Set output path
         final_season_df.to_csv(output_file, index=False)
         logging.info(f"Saved Corsi data for the {season} season to {output_file}.")
     else:
