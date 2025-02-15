@@ -3,7 +3,7 @@ August 11, 2024
 main.py code needed for setting up db
 and running 4 scripts that read in NHL
 data from AWS S3 Buckets.
-Eric Winiecke
+Eric Winiecke.
 """
 
 import logging
@@ -18,13 +18,12 @@ logging.basicConfig(
 
 
 def run_script(script_name):
-    """Code to kickoff downloading data from AWS S3 buckets and
+    """
+    Code to kickoff downloading data from AWS S3 buckets and
     inserting data into datatables in the hockey_stats database.
     """
     try:
-        result = subprocess.run(
-            ["python", script_name], capture_output=True, text=True, check=True
-        )
+        result = subprocess.run(["python", script_name], capture_output=True, text=True, check=True)
         logging.info(f"Output of {script_name}:\n{result.stdout}")
         if result.stderr:
             logging.error(f"Errors in {script_name}:\n{result.stderr}")
@@ -40,7 +39,7 @@ def run_script(script_name):
 
 
 def main():
-    """The main event"""
+    """The main event."""
     scripts = [
         "game_processor.py",
         "game_shifts_processor.py",

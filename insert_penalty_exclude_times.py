@@ -30,7 +30,7 @@ metadata = MetaData()
 
 
 def create_penalty_exclude_table(table_name):
-    """Define table creation function to avoid repetition"""
+    """Define table creation function to avoid repetition."""
     return Table(
         table_name,
         metadata,
@@ -45,8 +45,7 @@ def create_penalty_exclude_table(table_name):
 # Create tables for each season
 seasons = ["20152016", "20162017", "20172018"]
 tables = {
-    season: create_penalty_exclude_table(f"penalty_exclude_times_{season}")
-    for season in seasons
+    season: create_penalty_exclude_table(f"penalty_exclude_times_{season}") for season in seasons
 }
 
 # Create tables in the database
@@ -56,7 +55,7 @@ Session = sessionmaker(bind=engine)
 
 
 def insert_data_from_csv(engine, table_name, file_path):
-    """insert data"""
+    """Insert data."""
     try:
         df = pd.read_csv(file_path)
         df.to_sql(table_name, con=engine, if_exists="append", index=False)

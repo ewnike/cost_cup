@@ -2,18 +2,18 @@
 August 28, 2024
 Script to scrape team win/loss record from hockey-reference.com
 Used selenium.xpath and set webdriver to safari.
-Eric Winiecke
+Eric Winiecke.
 """
 
 import os
 
 import pandas as pd
 from selenium import webdriver
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.safari.service import Service as SafariService
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.common.exceptions import NoSuchElementException 
 
 # Directory to store CSV files
 OUTPUT_DIR = "team_records"
@@ -81,7 +81,7 @@ name_to_abbreviation = {
     "Vancouver Canucks": ("VAN", 23),
     "Edmonton Oilers": ("EDM", 22),
     "Toronto Maple Leafs": ("TOR", 10),
-    "Vegas Golden Knights": ("VGK", 54)
+    "Vegas Golden Knights": ("VGK", 54),
 }
 
 # Convert the dictionary into a DataFrame
@@ -114,7 +114,7 @@ for year in years:
     # Prepare the list to hold the data
     data = []
 
-        # Iterate over each row and extract the specific columns
+    # Iterate over each row and extract the specific columns
     for row in rows:
         team_data = {}
         for key, xpath in xpaths.items():

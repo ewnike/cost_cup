@@ -3,7 +3,7 @@ August 11, 2024
 Script to scrape payer caphit, first name, and
 last name from spotrac. Used selenium and set webdriver
 to safari.
-Eric Winiecke
+Eric Winiecke.
 """
 
 import os
@@ -35,7 +35,7 @@ dfs_by_year = {}
 
 
 def split_player_name(name):
-    """Function to clean and split player name"""
+    """Function to clean and split player name."""
     name_parts = name.split()
     first_name = name_parts[0]
     last_name = " ".join(name_parts[1:]) if len(name_parts) > 1 else ""
@@ -82,9 +82,7 @@ for year in years:
             cap_hits.append(cap_hit)
 
     # Create a DataFrame to store the results
-    df = pd.DataFrame(
-        {"firstName": first_names, "lastName": last_names, "capHit": cap_hits}
-    )
+    df = pd.DataFrame({"firstName": first_names, "lastName": last_names, "capHit": cap_hits})
 
     # Store the DataFrame in the dictionary
     dfs_by_year[year] = df

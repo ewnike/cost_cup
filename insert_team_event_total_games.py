@@ -17,7 +17,6 @@ from sqlalchemy import (
     MetaData,
     Table,
 )
-
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 
@@ -30,7 +29,7 @@ metadata = MetaData()
 
 
 def create_team_event_total_games_table(table_name):
-    """Define table creation function to avoid repetition"""
+    """Define table creation function to avoid repetition."""
     return Table(
         table_name,
         metadata,
@@ -61,7 +60,7 @@ Session = sessionmaker(bind=engine)
 
 
 def insert_data_from_csv(engine, table_name, file_path):
-    """insert data"""
+    """Insert data."""
     try:
         df = pd.read_csv(file_path)
         df.to_sql(table_name, con=engine, if_exists="append", index=False)

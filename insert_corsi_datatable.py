@@ -3,7 +3,7 @@ August 11, 2024
 Code for inserting newly created
 corsi data into defined tables in the
 hockey_stats database.
-Eric Winiecke
+Eric Winiecke.
 """
 
 import os
@@ -31,7 +31,7 @@ metadata = MetaData()
 
 
 def create_corsi_table(table_name):
-    """Define table creation function to avoid repetition"""
+    """Define table creation function to avoid repetition."""
     return Table(
         table_name,
         metadata,
@@ -56,7 +56,7 @@ Session = sessionmaker(bind=engine)
 
 
 def insert_data_from_csv(engine, table_name, file_path):
-    """insert data"""
+    """Insert data."""
     try:
         df = pd.read_csv(file_path)
         df.to_sql(table_name, con=engine, if_exists="append", index=False)
