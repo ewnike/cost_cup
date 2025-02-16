@@ -1,9 +1,10 @@
 """
-Saturday, February 1st, 2025
+Saturday, February 1st, 2025.
+
 Code to calculate the wins and CF%
 for teams by season.
 
-Eric Winiecke
+Eric Winiecke.
 """
 
 import os
