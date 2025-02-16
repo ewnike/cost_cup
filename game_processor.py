@@ -1,8 +1,10 @@
 """
 August 11, 2024.
+
 Code to load game data from AWS S3 buscket
 and to read nad insert the data into a
 defined table in hockey_stats db.
+
 Eric Winiecke.
 """
 
@@ -81,7 +83,7 @@ Session = sessionmaker(bind=engine)
 
 
 def clean_data(df, column_mapping):
-    """Function to clean the DataFrame."""
+    """Function to clean the DataFrame."""  # noqa: D401
     # Replace NaN with None for all columns
     df = df.where(pd.notnull(df), None)
 
@@ -93,7 +95,7 @@ def clean_data(df, column_mapping):
             )
 
     # Convert columns to appropriate data types based on column_mapping
-    for db_column, csv_column in column_mapping.items():
+    for csv_column in column_mapping.items():
         if "int" in str(df[csv_column].dtype):
             df[csv_column] = pd.to_numeric(
                 df[csv_column], downcast="integer", errors="coerce"
@@ -110,12 +112,12 @@ def clean_data(df, column_mapping):
 
 
 def create_table(engine):
-    """Function to create the table if it does not exist."""
+    """Function to create the table if it does not exist."""  # noqa: D401
     metadata.create_all(engine)
 
 
 def clear_table(engine, table):
-    """Function to clear the table if it exists."""
+    """Function to clear the table if it exists."""  # noqa: D401
     with engine.connect() as connection:
         connection.execute(table.delete())
         connection.commit()
@@ -123,7 +125,7 @@ def clear_table(engine, table):
 
 
 def insert_data(df, table):
-    """Function to insert data into the database."""
+    """Function to insert data into the database."""  # noqa: D401
     data = df.to_dict(orient="records")
     with Session() as session:
         try:
@@ -141,7 +143,7 @@ def insert_data(df, table):
 
 
 def inspect_data(df):
-    """Function to inspect data for errors."""
+    """Function to inspect data for errors."""  # noqa: D401
     # Check unique values in critical columns
     logging.info(f"Unique values in 'game_id': {df['game_id'].unique()}")
     logging.info(f"Unique values in 'away_team_id': {df['away_team_id'].unique()}")
@@ -157,7 +159,7 @@ def inspect_data(df):
 
 
 def process_and_insert_csv(csv_file_path, table, column_mapping):
-    """Function to process and insert data from a CSV file."""
+    """Function to process and insert data from a CSV file."""  # noqa: D401
     try:
         logging.info(f"Processing {csv_file_path} for table {table.name}")
         df = pd.read_csv(csv_file_path)
@@ -223,7 +225,7 @@ data_path = os.getenv("DATA_PATH", "data")  # Path to the data folder
 
 
 def download_zip_from_s3(bucket, key, download_path):
-    """Function to download a zip file from S3."""
+    """Function to download a zip file from S3."""  # noqa: D401
     logging.info(f"Downloading from bucket: {bucket}, key: {key}, to: {download_path}")
     try:
         s3_client.download_file(bucket, key, download_path)
@@ -237,14 +239,14 @@ def download_zip_from_s3(bucket, key, download_path):
 
 
 def extract_zip(zip_path, extract_to):
-    """Function to extract zip files."""
+    """Function to extract zip files."""  # noqa: D401
     shutil.unpack_archive(zip_path, extract_to)
     logging.info(f"Extracted {zip_path} to {extract_to}")
     return os.listdir(extract_to)
 
 
 def clear_directory(directory):
-    """Function to clear a directory."""
+    """Function to clear a directory."""  # noqa: D401
     if os.path.exists(directory):
         shutil.rmtree(directory)
         logging.info(f"Cleared directory: {directory}")
@@ -252,7 +254,7 @@ def clear_directory(directory):
 
 
 def main():
-    """Main function to handle the workflow."""
+    """Main function to handle the workflow."""  # noqa: D401
     # Clear the extracted folder and recreate it
     clear_directory(local_extract_path)
 
