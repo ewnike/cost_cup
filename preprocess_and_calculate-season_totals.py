@@ -1,7 +1,9 @@
 """
-January 5, 2025
+January 5, 2025.
+
 Code to calculate shot statistics
 per team per season.
+
 Eric Winiecke.
 """
 
@@ -192,6 +194,13 @@ def verify_penalty(game_id, time, game_plays, game_shifts):
 
 
 def get_num_players(shift_df):
+    """
+    Compute the number of players on the ice at each timestamp.
+
+    This function processes a DataFrame containing player shift start and end times, melts the data
+    to create a sorted event timeline, and computes the number of players on the ice at each
+    unique time point.
+    """
     shifts_melted = pd.melt(
         shift_df,
         id_vars=["game_id", "player_id"],
@@ -208,6 +217,13 @@ def get_num_players(shift_df):
 
 
 def get_penalty_exclude_times(game_shifts, game_skater_stats, game_plays):
+    """
+    Determine time periods where game events should be excluded due to penalties.
+
+    This function identifies time intervals where penalties create an imbalance in the number
+    of players on the ice. It processes shift data, determines team player counts, and applies
+    penalty-based exclusions based on game events.
+    """
     if game_shifts.empty:
         logging.warning("game_shifts is empty.")
         return pd.DataFrame()
@@ -282,9 +298,9 @@ def assemble_arrays_for_processing(organized_data, exclude_times):
         exclude_times (pd.DataFrame): DataFrame containing penalty exclude times for all game IDs.
 
     Returns:
-        list: A list of tuples, where each tuple contains a game_id and the corresponding filtered plays DataFrame.
+        list: A list of tuples, where each tuple contains a game_id and the corresponding filtered  plays DataFrame.
 
-    """
+    """  # noqa: E501
     all_data = []
 
     # Verify the structure of organized_data
@@ -447,8 +463,8 @@ if __name__ == "__main__":
     seasons = [20152016, 20162017, 20172018]  # Ensure these are integers
 
     # Directory to save results
-    output_dir = "team_event_totals"
-    os.makedirs(output_dir, exist_ok=True)  # Create the directory if it doesn't exist
+    OUTPUT_DIR = "team_event_totals"
+    os.makedirs(OUTPUT_DIR, exist_ok=True)  # Create the directory if it doesn't exist
 
     try:
         for season in seasons:
@@ -475,7 +491,7 @@ if __name__ == "__main__":
                 )
                 continue
             exclude_file = os.path.join(
-                output_dir, f"penalty_exclude_times_{season}.csv"
+                OUTPUT_DIR, f"penalty_exclude_times_{season}.csv"
             )
             exclude_times.to_csv(exclude_file, index=False)
             print(f"Penalty exclude times saved to {exclude_file}")
@@ -495,14 +511,14 @@ if __name__ == "__main__":
 
             # Save game-level results to a CSV file
             game_results_file = os.path.join(
-                output_dir, f"team_event_totals_games_{season}.csv"
+                OUTPUT_DIR, f"team_event_totals_games_{season}.csv"
             )
             season_results.to_csv(game_results_file, index=False)
             print(f"Game-level results saved to {game_results_file}")
 
             # Save season-level totals to another CSV file
             season_totals_file = os.path.join(
-                output_dir, f"team_event_totals_season_{season}.csv"
+                OUTPUT_DIR, f"team_event_totals_season_{season}.csv"
             )
             season_totals.to_csv(season_totals_file, index=False)
             print(f"Season-level totals saved to {season_totals_file}")
