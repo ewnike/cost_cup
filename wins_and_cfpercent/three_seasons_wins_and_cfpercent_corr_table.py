@@ -13,10 +13,11 @@ import sys
 import pandas as pd
 from sqlalchemy import text
 
+from db_utils import get_db_engine, get_metadata
+
 # Dynamically add the parent directory (cost_cup/) to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from db_utils import get_db_engine, get_metadata
 
 # Get database engine and metadata
 engine = get_db_engine()
@@ -31,7 +32,7 @@ df_list = []
 
 # Loop through each season and year to fetch data
 for season, year in zip(seasons, years):
-    sql_query = f"""
+    SQL_QUERY = f"""
     SELECT
         mt."Abbreviation",
         mt."PTS",
@@ -45,7 +46,7 @@ for season, year in zip(seasons, years):
 
     # Execute the query and fetch results into a Pandas DataFrame
     with engine.connect() as connection:
-        result = connection.execute(text(sql_query))
+        result = connection.execute(text(SQL_QUERY))
         df = pd.DataFrame(result.fetchall(), columns=result.keys())
 
         # Append DataFrame to the list
