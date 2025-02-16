@@ -16,12 +16,12 @@ dataframes = []
 
 # Loop through each season and query the data
 for season in seasons:
-    query = f"""
+    QUERY = f"""
     SELECT "player_id", "capHit", "CF_Percent"
     FROM public.aggregated_corsi_{season}
     """
     # Fetch the data from the database for the current season
-    df = pd.read_sql(query, engine)
+    df = pd.read_sql(QUERY, engine)
 
     # Ensure the 'capHit' and 'CF_Percent' columns are numeric
     df["capHit"] = pd.to_numeric(df["capHit"], errors="coerce")

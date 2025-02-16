@@ -1,7 +1,9 @@
 """
-August 11, 2024
+August 11, 2024.
+
 Code for chart displaying exploratory
 data exploration.
+
 Eric Winiecke.
 """
 
@@ -21,11 +23,11 @@ df = pd.DataFrame()
 
 # Loop through each season and query the corresponding table
 for season in seasons:
-    query = f"""
+    QUERY = f"""
     SELECT "capHit", "CF_Percent"
     FROM public.aggregated_corsi_{season}
     """
-    season_df = pd.read_sql(query, engine)
+    season_df = pd.read_sql(QUERY, engine)
     season_df["season"] = season  # Add the season column manually in Python
     df = pd.concat([df, season_df], ignore_index=True)
 

@@ -1,8 +1,10 @@
 """
-August 11, 2024
+August 11, 2024.
+
 code to create aggregated table in database.
 The code also aggregates the stats per season
 per player.
+
 Eric Winiecke.
 """
 
@@ -25,11 +27,46 @@ metadata = get_metadata()
 
 # Define function to get data from the database
 def get_data_from_db(query):
+    """
+    Execute an SQL query and return the results as a Pandas DataFrame.
+
+    Args:
+    ----
+        query (str): The SQL query to execute.
+
+    Returns:
+    -------
+        pd.DataFrame: A DataFrame containing the query results.
+
+    Example:
+    -------
+        ```
+        python
+        df = get_data_from_db("SELECT * FROM player_stats")
+        print(df.head())
+        ```
+
+    """
     with engine.connect() as connection:
         return pd.read_sql(query, connection)
 
 
 def create_aggregated_table(table_name):
+    """
+    Create an aggregated table in the database for storing hockey player statistics.
+
+    Args:
+    ----
+        table_name (str): The name of the table to be created.
+
+    Example:
+    -------
+        ```
+        python
+        create_aggregated_table("aggregated_player_stats")
+        ```
+
+    """
     metadata = MetaData()
     Table(
         table_name,
@@ -57,9 +94,7 @@ for season in ["20152016", "20162017", "20172018"]:
         df_corsi = df_corsi.drop(columns=["Unnamed: 0"])
 
     # Get game skater stats
-    GSS_TOI_QUERY = (
-        'SELECT game_id, player_id, "timeOnIce", team_id FROM game_skater_stats'
-    )
+    GSS_TOI_QUERY = 'SELECT game_id, player_id, "timeOnIce", team_id FROM game_skater_stats'
     df_gss_toi = get_data_from_db(GSS_TOI_QUERY)
 
     # Get player info
@@ -98,9 +133,7 @@ for season in ["20152016", "20162017", "20172018"]:
         .rename(columns={"game_id": "game_count"})
     )
 
-    PLAYER_SALARY_QUERY = (
-        f'SELECT "firstName", "lastName", "capHit" FROM player_cap_hit_{season}'
-    )
+    PLAYER_SALARY_QUERY = f'SELECT "firstName", "lastName", "capHit" FROM player_cap_hit_{season}'
 
     df_player_salary = get_data_from_db(PLAYER_SALARY_QUERY)
 
@@ -110,9 +143,7 @@ for season in ["20152016", "20162017", "20172018"]:
     )
 
     # Merge aggregated stats with salary info
-    df_grouped_all = pd.merge(
-        df_grouped_all, df_player_salary, on=["firstName", "lastName"]
-    )
+    df_grouped_all = pd.merge(df_grouped_all, df_player_salary, on=["firstName", "lastName"])
 
     # Round all relevant columns to four decimal places
     df_grouped_all["corsi_for"] = df_grouped_all["corsi_for"].round(4)
@@ -140,16 +171,14 @@ for season in ["20152016", "20162017", "20172018"]:
     df_grouped_all = df_grouped_all.sort_values("CF_Percent", ascending=False)
 
     # Define table name for aggregated data
-    aggregated_table_name = f"aggregated_corsi_{season}"
+    AGGREGATED_TABLE_NAME = f"aggregated_corsi_{season}"
 
     # Create new table for aggregated data
-    create_aggregated_table(aggregated_table_name)
+    create_aggregated_table(AGGREGATED_TABLE_NAME)
 
     # Insert aggregated data into the new table
-    df_grouped_all.to_sql(
-        aggregated_table_name, con=engine, if_exists="replace", index=False
-    )
+    df_grouped_all.to_sql(AGGREGATED_TABLE_NAME, con=engine, if_exists="replace", index=False)
 
-    print(f"Data inserted successfully into {aggregated_table_name}")
+    print(f"Data inserted successfully into {AGGREGATED_TABLE_NAME}")
 
 print("Data inserted successfully into all tables")

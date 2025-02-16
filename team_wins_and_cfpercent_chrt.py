@@ -1,3 +1,16 @@
+"""
+Visualization of Team Payroll vs Points, Color-Coded by CF%.
+
+This script reads a CSV file containing NHL team statistics and generates an interactive
+scatter plot using Altair. The plot displays team payroll vs. points, with color encoding
+based on CF% (Corsi For percentage). Team abbreviations are added as labels for clarity.
+
+The chart is saved as an HTML file for viewing in a web browser.
+
+Author: Eric Winiecke
+Date: February 2025
+"""
+
 import altair as alt
 import pandas as pd
 
@@ -31,5 +44,5 @@ chart = scatter + text
 chart.save("team_payroll_points_chart.html")
 
 print(
-    "Chart saved as 'team_payroll_points_chart.html'. Open this file in your browser to view the chart."
+    "Chart saved as 'team_payroll_points_chart.html'. Open this file in your browser to view the chart."  # noqa: E501
 )
