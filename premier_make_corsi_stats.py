@@ -156,15 +156,6 @@ def calculate_and_save_corsi_stats(season_game_ids, season):
     # Combine all game data into a single DataFrame
     if season_corsi_stats:
         final_season_df = pd.concat(season_corsi_stats, ignore_index=True)
-        # output_dir = "/Users/ericwiniecke/Documents/github/cost_cup/corsi_stats"
-        # os.makedirs(
-        #     output_dir, exist_ok=True
-        # )  # Create the directory if it doesn't exist
-        # output_file = os.path.join(
-        #     output_dir, f"corsi_stats_{season}.csv"
-        # )  # Set the output path
-        # final_season_df.to_csv(output_file, index=False)
-        # Use a relative path for the output directory
         output_dir = os.path.join(
             os.getcwd(), "corsi_stats"
         )  # Relative to current working directory

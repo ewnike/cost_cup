@@ -126,9 +126,9 @@ for year in years:
                 print(
                     f"Element '{columns_to_extract[key]}' not found for team in year {year}."
                 )
-                team_data[
-                    columns_to_extract[key]
-                ] = "N/A"  # Or use another placeholder value
+                team_data[columns_to_extract[key]] = (
+                    "N/A"  # Or use another placeholder value
+                )
         data.append(team_data)
 
     # Convert the data to a DataFrame

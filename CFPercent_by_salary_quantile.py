@@ -1,6 +1,5 @@
 """Module to analyze CF% by salary quantile."""
 
-
 import altair as alt
 import pandas as pd
 
