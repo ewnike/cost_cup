@@ -11,12 +11,19 @@ Author: Eric Winiecke
 Date: February 2025
 """
 
+import os
+
 import altair as alt
 import pandas as pd
 
-data = pd.read_csv(
-    r"/Users/ericwiniecke/Documents/github/cost_cup/wins_and_cfpercent/team_wins_and_cfpercent_2018.csv"
+# Define the dynamic file path to allow cross-system execution
+base_dir = os.path.dirname(os.path.abspath(__file__))
+file_path = os.path.join(
+    base_dir, "wins_and_cfpercent", "team_wins_and_cfpercent_2018.csv"
 )
+
+# Load data
+data = pd.read_csv(file_path)
 
 # Scatter plot: Points vs Payroll, color-coded by CF%
 scatter = (
@@ -32,7 +39,9 @@ scatter = (
 )
 
 # Add team labels
-text = scatter.mark_text(align="left", baseline="middle", dx=7).encode(text="Abbreviation")
+text = scatter.mark_text(align="left", baseline="middle", dx=7).encode(
+    text="Abbreviation"
+)
 
 
 # Combine the scatter plot and text labels
@@ -42,5 +51,6 @@ chart = scatter + text
 chart.save("team_payroll_points_chart.html")
 
 print(
-    "Chart saved as 'team_payroll_points_chart.html'. Open this file in your browser to view the chart."  # noqa: E501
+    "Chart saved as 'team_payroll_points_chart.html'. "
+    "Open this file in your browser to view the chart."
 )
