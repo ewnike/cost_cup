@@ -298,8 +298,8 @@ def create_corsi_stats(df_corsi, df):  # noqa: D417
         if "time" not in game_plays.columns:
             logging.error("The 'time' column is missing from game_plays after filtering.")
             return
-        else:
-            logging.info("Verified 'time' column exists in game_plays after filtering.")
+
+        logging.info("Verified 'time' column exists in game_plays after filtering.")
     else:
         logging.error("'game_plays' DataFrame missing in df.")
         return
