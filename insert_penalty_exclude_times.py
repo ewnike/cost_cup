@@ -9,7 +9,6 @@ Eric Winiecke
 """
 
 import logging
-import os  # noqa: F401
 from pathlib import Path
 
 import pandas as pd
@@ -26,7 +25,9 @@ from sqlalchemy.orm import sessionmaker
 from db_utils import get_db_engine, get_metadata
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 # Initialize DB Engine and Metadata
 engine = get_db_engine()
@@ -69,7 +70,8 @@ def create_penalty_exclude_table(table_name):
 # Define seasons and create tables dynamically
 seasons = ["20152016", "20162017", "20172018"]
 tables = {
-    season: create_penalty_exclude_table(f"penalty_exclude_times_{season}") for season in seasons
+    season: create_penalty_exclude_table(f"penalty_exclude_times_{season}")
+    for season in seasons
 }
 
 # Create tables in the database
@@ -113,7 +115,10 @@ def insert_data_from_csv(engine, table_name, file_path):
 
 # Generate file paths dynamically
 csv_files_and_mappings = [
-    (DATA_DIR / f"penalty_exclude_times_{season}.csv", f"penalty_exclude_times_{season}")
+    (
+        DATA_DIR / f"penalty_exclude_times_{season}.csv",
+        f"penalty_exclude_times_{season}",
+    )
     for season in seasons
 ]
 

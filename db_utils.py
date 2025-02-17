@@ -71,6 +71,7 @@ def get_db_engine():
     load_environment_variables()
 
     # Retrieve database connection parameters from environment variables
+    # pylint: disable=invalid-name
     DATABASE_TYPE = os.getenv("DATABASE_TYPE")
     DBAPI = os.getenv("DBAPI")
     ENDPOINT = os.getenv("ENDPOINT")
@@ -78,6 +79,7 @@ def get_db_engine():
     PASSWORD = os.getenv("PASSWORD")
     PORT = os.getenv("PORT", 5432)
     DATABASE = os.getenv("DATABASE")
+    # pylint: enable=invalid-name  # Re-enable the rule after this block
 
     # Check if required environment variables are loaded
     if not all([DATABASE_TYPE, DBAPI, ENDPOINT, USER, PASSWORD, DATABASE]):
@@ -85,7 +87,9 @@ def get_db_engine():
         raise ValueError("Missing one or more required environment variables.")
 
     # Create the connection string
-    connection_string = f"{DATABASE_TYPE}+{DBAPI}://{USER}:{PASSWORD}@{ENDPOINT}:{PORT}/{DATABASE}"
+    connection_string = (
+        f"{DATABASE_TYPE}+{DBAPI}://{USER}:{PASSWORD}@{ENDPOINT}:{PORT}/{DATABASE}"
+    )
     logging.info(f"Database connection string created: {connection_string}")
 
     # Return the SQLAlchemy engine
