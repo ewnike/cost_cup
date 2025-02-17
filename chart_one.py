@@ -28,9 +28,7 @@ PORT = int(os.getenv("PORT", 5432))
 DATABASE = os.getenv("DATABASE", "hockey_stats")
 
 # Create the connection string
-connection_string = (
-    f"{DATABASE_TYPE}+{DBAPI}://{USER}:{PASSWORD}@{ENDPOINT}:{PORT}/{DATABASE}"
-)
+connection_string = f"{DATABASE_TYPE}+{DBAPI}://{USER}:{PASSWORD}@{ENDPOINT}:{PORT}/{DATABASE}"
 engine = create_engine(connection_string)
 # Define the seasons to query
 seasons = ["20152016", "20162017", "20172018"]
@@ -71,8 +69,7 @@ for ax, season in zip(axes, seasons):
 
     # Create bin labels for the x-axis
     bin_labels = [
-        f"${edge / 1000:,.0f}k-${(edge + BIN_WIDTH) / 1000:,.0f}k"
-        for edge in bin_edges[:-1]
+        f"${edge / 1000:,.0f}k-${(edge + BIN_WIDTH) / 1000:,.0f}k" for edge in bin_edges[:-1]
     ]
 
     # Plot the histogram

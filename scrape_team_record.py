@@ -123,12 +123,8 @@ for year in years:
                 team_data[columns_to_extract[key]] = element.text
             except NoSuchElementException:
                 # If the element is not found, log it and move on
-                print(
-                    f"Element '{columns_to_extract[key]}' not found for team in year {year}."
-                )
-                team_data[columns_to_extract[key]] = (
-                    "N/A"  # Or use another placeholder value
-                )
+                print(f"Element '{columns_to_extract[key]}' not found for team in year {year}.")
+                team_data[columns_to_extract[key]] = "N/A"  # Or use another placeholder value
         data.append(team_data)
 
     # Convert the data to a DataFrame

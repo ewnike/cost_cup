@@ -49,9 +49,7 @@ PORT = int(os.getenv("PORT", 5432))
 DATABASE = os.getenv("DATABASE", "hockey_stats")
 
 # Create the connection string
-connection_string = (
-    f"{DATABASE_TYPE}+{DBAPI}://{USER}:{PASSWORD}@{ENDPOINT}:{PORT}/{DATABASE}"
-)
+connection_string = f"{DATABASE_TYPE}+{DBAPI}://{USER}:{PASSWORD}@{ENDPOINT}:{PORT}/{DATABASE}"
 
 # Define table schema for game_plays
 metadata = MetaData()
@@ -152,9 +150,7 @@ def insert_data(df, table):
     data = df.to_dict(orient="records")
     with Session() as session:
         try:
-            with tqdm(
-                total=len(data), desc=f"Inserting data into {table.name}"
-            ) as pbar:
+            with tqdm(total=len(data), desc=f"Inserting data into {table.name}") as pbar:
                 for record in data:
                     session.execute(table.insert().values(**record))
                     session.commit()
@@ -169,9 +165,7 @@ def inspect_data(df):
     """Function to inspect data for errors."""
     # Check unique values in critical columns
     logging.info(f"Unique values in 'team_id_for': {df['team_id_for'].unique()}")
-    logging.info(
-        f"Unique values in 'team_id_against': {df['team_id_against'].unique()}"
-    )
+    logging.info(f"Unique values in 'team_id_against': {df['team_id_against'].unique()}")
 
     # Convert columns to numeric and identify problematic rows
     for column in [
@@ -304,9 +298,7 @@ def main():
 
     # Process and insert game_plays.csv
     if os.path.exists(game_plays_csv_file_path):
-        process_and_insert_csv(
-            game_plays_csv_file_path, game_plays, game_plays_column_mapping
-        )
+        process_and_insert_csv(game_plays_csv_file_path, game_plays, game_plays_column_mapping)
     else:
         logging.error(f"CSV file {game_plays_csv_file_path} not found")
 

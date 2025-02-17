@@ -45,8 +45,7 @@ def create_penalty_exclude_table(table_name):
 # Create tables for each season
 seasons = ["20152016", "20162017", "20172018"]
 tables = {
-    season: create_penalty_exclude_table(f"penalty_exclude_times_{season}")
-    for season in seasons
+    season: create_penalty_exclude_table(f"penalty_exclude_times_{season}") for season in seasons
 }
 
 # Create tables in the database

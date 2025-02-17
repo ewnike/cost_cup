@@ -44,9 +44,7 @@ df["Salary_Quantile"] = pd.qcut(df["capHit"], 4, labels=["Q1", "Q2", "Q3", "Q4"]
 
 # Compute the salary range (min and max) for each quantile across seasons
 salary_ranges = (
-    df.groupby("Salary_Quantile", observed=False)["capHit"]
-    .agg(["min", "max"])
-    .reset_index()
+    df.groupby("Salary_Quantile", observed=False)["capHit"].agg(["min", "max"]).reset_index()
 )
 
 # Create a new column with formatted quantile labels that include the salary range
@@ -109,9 +107,7 @@ cf_percent_table = (
             sort=["min", "max", "mean", "std"],
             axis=alt.Axis(labelAngle=-45),
         ),
-        y=alt.Y(
-            "Salary_Quantile:N", title="Salary Quantile"
-        ),  # Quantiles as y-axis categories
+        y=alt.Y("Salary_Quantile:N", title="Salary Quantile"),  # Quantiles as y-axis categories
         text=alt.Text("Value:Q", format=".2f"),  # Format the values
     )
     .properties(
@@ -135,4 +131,4 @@ combined_chart = alt.vconcat(
 alt.renderers.enable("default")
 
 # Display the combined chart
-combined_chart
+combined_chart.show()
