@@ -420,7 +420,7 @@ def create_corsi_stats(df_corsi, df):  # noqa: D417
 
 
 if __name__ == "__main__":
-    script_description = """
+    SCRIPT_DESCRIPTION = """
     Main execution block for processing multiple hockey seasons.
 
     This script:
