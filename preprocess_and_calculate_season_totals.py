@@ -265,7 +265,7 @@ def get_penalty_exclude_times(game_shifts, game_skater_stats, game_plays):
             exclude_list.append(False)
             continue
 
-        penalty_type = verify_penalty(row["game_id"], row["time"], game_plays, game_shifts)
+        penalty_type = verify_penalty(row["game_id"], row["time"], game_plays)
         if penalty_type == "Penalty":
             exclude_list.append(True)
         elif penalty_type == "Offsetting":
