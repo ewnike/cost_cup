@@ -68,7 +68,9 @@ def get_num_players(shift_df):
         id_vars=["game_id", "player_id"],
         value_vars=["shift_start", "shift_end"],
     ).sort_values("value", ignore_index=True)
-    shifts_melted["change"] = 2 * (shifts_melted["variable"] == "shift_start").astype(int) - 1
+    shifts_melted["change"] = (
+        2 * (shifts_melted["variable"] == "shift_start").astype(int) - 1
+    )
     shifts_melted["num_players"] = shifts_melted["change"].cumsum()
     df_num_players = shifts_melted.groupby("value")["num_players"].last().reset_index()
     return df_num_players[
@@ -87,7 +89,7 @@ def get_penalty_exclude_times(game_shifts, game_skater_stats):
     Args:
     ----
         game_shifts (pd.DataFrame): DataFrame with shift data for a game.
-        game_skater_stats (pd.DataFrame): DataFrame containing skater statistics, including 'team_id'.
+        game_skater_stats (pd.DataFrame): DataFrame containing skater statistics, includes 'team_id'.
 
     Returns:
     -------
@@ -106,7 +108,9 @@ def get_penalty_exclude_times(game_shifts, game_skater_stats):
         on=["game_id", "player_id"],
         how="left",
     )
-    game_shifts = game_shifts.drop(columns=["team_id_y"]).rename(columns={"team_id_x": "team_id"})
+    game_shifts = game_shifts.drop(columns=["team_id_y"]).rename(
+        columns={"team_id_x": "team_id"}
+    )
 
     # Divide shifts by team
     team_1 = game_shifts.iloc[0]["team_id"]
@@ -119,8 +123,12 @@ def get_penalty_exclude_times(game_shifts, game_skater_stats):
     df_num_players_2 = get_num_players(shifts_2)
 
     # Rename and merge the player counts for each team
-    df_num_players_1 = df_num_players_1.rename(columns={"value": "time", "num_players": "team_1"})
-    df_num_players_2 = df_num_players_2.rename(columns={"value": "time", "num_players": "team_2"})
+    df_num_players_1 = df_num_players_1.rename(
+        columns={"value": "time", "num_players": "team_1"}
+    )
+    df_num_players_2 = df_num_players_2.rename(
+        columns={"value": "time", "num_players": "team_2"}
+    )
 
     df_exclude = pd.concat([df_num_players_1, df_num_players_2]).sort_values(
         "time", ignore_index=True
@@ -140,7 +148,8 @@ def get_penalty_exclude_times(game_shifts, game_skater_stats):
     logging.info("Penalty Exclude Times:")
     for _, row in df_exclude.iterrows():
         logging.info(
-            f"Time: {row['time']}, Team 1 Players: {row['team_1']}, Team 2 Players: {row['team_2']}, Exclude: {row['exclude']}"  # noqa: E501
+            f"Time: {row['time']}, Team 1 Players: {row['team_1']}, "
+            f"Team 2 Players: {row['team_2']}, Exclude: {row['exclude']}"
         )
 
     return df_exclude
@@ -171,7 +180,9 @@ def calculate_and_save_corsi_stats(season_game_ids, season):
         or "game_shifts" not in df_master
         or "game_skater_stats" not in df_master
     ):
-        logging.error("One or more required dataframes are missing from the loaded data.")
+        logging.error(
+            "One or more required dataframes are missing from the loaded data."
+        )
         return
 
     season_corsi_stats = []
@@ -186,11 +197,15 @@ def calculate_and_save_corsi_stats(season_game_ids, season):
             or df_game["game_plays"].empty
             or df_game["game_skater_stats"].empty
         ):
-            logging.warning(f"Skipping game {game_id}: One or more required DataFrames are empty.")
+            logging.warning(
+                f"Skipping game {game_id}: One or more required DataFrames are empty."
+            )
             continue
 
         # Calculate Corsi stats for the current game
-        df_corsi = df_game["game_skater_stats"][["game_id", "player_id", "team_id"]].copy()
+        df_corsi = df_game["game_skater_stats"][
+            ["game_id", "player_id", "team_id"]
+        ].copy()
         corsi_stats = create_corsi_stats(df_corsi, df_game)
 
         if corsi_stats is not None and not corsi_stats.empty:
@@ -205,7 +220,9 @@ def calculate_and_save_corsi_stats(season_game_ids, season):
         )  # Relative to current working directory
         os.makedirs(output_dir, exist_ok=True)  # Ensure directory exists
 
-        output_file = os.path.join(output_dir, f"corsi_stats_{season}.csv")  # Set output path
+        output_file = os.path.join(
+            output_dir, f"corsi_stats_{season}.csv"
+        )  # Set output path
         final_season_df.to_csv(output_file, index=False)
         logging.info(f"Saved Corsi data for the {season} season to {output_file}.")
     else:
@@ -246,9 +263,9 @@ def organize_by_season(seasons, df):
                 on="game_id",
             ).drop_duplicates()
 
-        df_corsi = df["game_skater_stats"].sort_values(["game_id", "player_id"], ignore_index=True)[
-            ["game_id", "player_id", "team_id"]
-        ]
+        df_corsi = df["game_skater_stats"].sort_values(
+            ["game_id", "player_id"], ignore_index=True
+        )[["game_id", "player_id", "team_id"]]
         nhl_dfs.append([season, create_corsi_stats(df_corsi, df)])
 
     return nhl_dfs
@@ -279,7 +296,10 @@ def create_corsi_stats(df_corsi, df):  # noqa: D417
 
     # Ensure the 'time' column is created and available in game_plays
     if "game_plays" in df:
-        if "periodTime" in df["game_plays"].columns and "period" in df["game_plays"].columns:
+        if (
+            "periodTime" in df["game_plays"].columns
+            and "period" in df["game_plays"].columns
+        ):
             # Calculate 'time' based on period and periodTime
             df["game_plays"]["time"] = (
                 df["game_plays"]["periodTime"] + (df["game_plays"]["period"] - 1) * 1200
@@ -295,7 +315,9 @@ def create_corsi_stats(df_corsi, df):  # noqa: D417
 
         # Verify 'time' column presence after filtering
         if "time" not in game_plays.columns:
-            logging.error("The 'time' column is missing from game_plays after filtering.")
+            logging.error(
+                "The 'time' column is missing from game_plays after filtering."
+            )
             return
         else:
             logging.info("Verified 'time' column exists in game_plays after filtering.")
@@ -317,10 +339,14 @@ def create_corsi_stats(df_corsi, df):  # noqa: D417
 
             # Log the 'time' column in plays_game to verify its presence
             if "time" not in plays_game.columns:
-                logging.error("'time' column missing in plays_game after filtering by game_id.")
+                logging.error(
+                    "'time' column missing in plays_game after filtering by game_id."
+                )
                 return
             else:
-                logging.info(f"'time' column verified in plays_game for game_id {game_id}.")
+                logging.info(
+                    f"'time' column verified in plays_game for game_id {game_id}."
+                )
 
             # Continue with the rest of the function as needed, adding further logs as appropriate
 
@@ -336,7 +362,9 @@ def create_corsi_stats(df_corsi, df):  # noqa: D417
             game_shifts["shift_end"] = game_shifts["shift_end"].astype(int)
 
             gss = df["game_skater_stats"].query(f"game_id == {game_id}")
-            df_num_players = get_penalty_exclude_times(game_shifts, gss).reset_index(drop=True)
+            df_num_players = get_penalty_exclude_times(game_shifts, gss).reset_index(
+                drop=True
+            )
 
             idx = df_num_players["time"].searchsorted(plays_game["time"]) - 1
             idx[idx < 0] = 0
@@ -350,7 +378,8 @@ def create_corsi_stats(df_corsi, df):  # noqa: D417
 
         # Find all players on ice for both teams at this event time
         players_on_ice = game_shifts[
-            (game_shifts["shift_start"] <= event_time) & (game_shifts["shift_end"] >= event_time)
+            (game_shifts["shift_start"] <= event_time)
+            & (game_shifts["shift_end"] >= event_time)
         ]
 
         # Separate players by team
@@ -369,7 +398,8 @@ def create_corsi_stats(df_corsi, df):  # noqa: D417
             f"Player IDs for team {team_for} on ice: {players_for_team['player_id'].tolist()}"
         )
         logging.info(
-            f"Player IDs for team {team_against} on ice: {players_against_team['player_id'].tolist()}"  # noqa: E501
+            f"Player IDs for team {team_against} on ice: "
+            f"{players_against_team['player_id'].tolist()}"
         )
 
         # Corsi calculations and log updates
@@ -406,7 +436,13 @@ def create_corsi_stats(df_corsi, df):  # noqa: D417
     df_corsi["corsi"] = df_corsi["corsi_for"] - df_corsi["corsi_against"]
 
     df_corsi["CF_Percent"] = (
-        ((df_corsi["corsi_for"] / (df_corsi["corsi_for"] + df_corsi["corsi_against"])) * 100)
+        (
+            (
+                df_corsi["corsi_for"]
+                / (df_corsi["corsi_for"] + df_corsi["corsi_against"])
+            )
+            * 100
+        )
         .fillna(0)
         .round(4)
     )
@@ -439,14 +475,20 @@ if __name__ == "__main__":
         for season in seasons:
             # Filter for the current season and get unique game IDs
             season_game_ids = (
-                df_master["game"].loc[df_master["game"]["season"] == season, "game_id"].unique()
+                df_master["game"]
+                .loc[df_master["game"]["season"] == season, "game_id"]
+                .unique()
             )
 
             if len(season_game_ids) > 0:
-                logging.info(f"Found {len(season_game_ids)} games for the {season} season.")
+                logging.info(
+                    f"Found {len(season_game_ids)} games for the {season} season."
+                )
                 # Pass the game IDs and the season to the function to process and save Corsi stats
                 calculate_and_save_corsi_stats(season_game_ids, season)
             else:
                 logging.warning(f"No games found for the {season} season. Skipping.")
     else:
-        logging.error("The 'game' DataFrame is missing from the loaded data. Cannot proceed.")
+        logging.error(
+            "The 'game' DataFrame is missing from the loaded data. Cannot proceed."
+        )
