@@ -1,8 +1,11 @@
 """
-October 24, 2024
+October 24, 2024.
+
 writing code to upload game_plays_player
 file from aws s3 bucket, clean data, and
 insert data into the hockey_stats data table.
+
+Eric Winiecke
 """
 
 import logging
@@ -17,7 +20,7 @@ from sqlalchemy.orm import sessionmaker
 from tqdm import tqdm
 
 from db_utils import get_db_engine, get_metadata
-from S3_Utils import download_from_s3
+from s3_utils import download_from_s3
 
 # Initialize database connection
 engine = get_db_engine()
@@ -105,14 +108,14 @@ data_path = os.getenv("DATA_PATH", "data")  # Path to the data folder
 
 
 def extract_zip(zip_path, extract_to):
-    """Function to extract zip files."""
+    """Function to extract zip files."""  # noqa: D401
     shutil.unpack_archive(zip_path, extract_to)
     logging.info(f"Extracted {zip_path} to {extract_to}")
     return os.listdir(extract_to)
 
 
 def clear_directory(directory):
-    """Function to clear a directory."""
+    """Function to clear a directory."""  # noqa: D401
     if os.path.exists(directory):
         shutil.rmtree(directory)
         logging.info(f"Cleared directory: {directory}")
@@ -120,7 +123,7 @@ def clear_directory(directory):
 
 
 def process_and_clean_data(file_path, column_mapping):
-    """Loads, verifies, and cleans the CSV data."""
+    """Loads, verifies, and cleans the CSV data."""  # noqa: D401
     # Load data with all columns as strings for flexibility
     df = pd.read_csv(file_path, dtype=str)
     logging.info(f"Columns in loaded CSV: {list(df.columns)}")
@@ -187,12 +190,12 @@ def add_suffix_to_duplicate_play_ids(df):
 
 
 def create_table(engine):
-    """Function to create the table if it does not exist."""
+    """Function to create the table if it does not exist."""  # noqa: D401
     metadata.create_all(engine)
 
 
 def clear_table(engine, table):
-    """Function to clear the table if it exists."""
+    """Function to clear the table if it exists."""  # noqa: D401
     with engine.connect() as connection:
         connection.execute(table.delete())
         connection.commit()
@@ -200,7 +203,7 @@ def clear_table(engine, table):
 
 
 def insert_data(df, table):
-    """Function to insert data into the database."""
+    """Function to insert data into the database."""  # noqa: D401
     data = df.to_dict(orient="records")
     session = Session()  # Properly instantiate a session
     try:
@@ -226,7 +229,7 @@ def insert_data(df, table):
 
 
 def process_and_insert_csv(csv_file_path, table, column_mapping):
-    """Function to process and insert data from a CSV file."""
+    """Function to process and insert data from a CSV file."""  # noqa: D401
     try:
         logging.info(f"Processing {csv_file_path} for table {table.name}")
         # Load CSV data
@@ -280,7 +283,7 @@ def test_db_connection():
 
 
 def main():
-    """Main function to handle downloading, extracting, cleaning, and inserting data."""
+    """Main function to handle downloading, extracting, cleaning, and inserting data."""  # noqa: D401
     # Test database connection
     test_db_connection()
 
