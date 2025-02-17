@@ -75,9 +75,7 @@ def clean_data(df, column_mapping):
 
     # Clean object-type columns, truncating strings and removing whitespace
     for column in df.select_dtypes(include=["object"]).columns:
-        df[column] = df[column].apply(
-            lambda x: str(x).strip()[:255] if isinstance(x, str) else x
-        )
+        df[column] = df[column].apply(lambda x: str(x).strip()[:255] if isinstance(x, str) else x)
 
     return df
 
@@ -179,9 +177,7 @@ def add_suffix_to_duplicate_play_ids(df):
             play_id_counts[play_id] += 1
             suffix = string.ascii_lowercase[play_id_counts[play_id] - 1]
             df.at[idx, "play_id"] = f"{play_id}{suffix}"
-            logging.debug(
-                f"Updated play_id: {df.at[idx, 'play_id']}"
-            )  # Log updated play_id
+            logging.debug(f"Updated play_id: {df.at[idx, 'play_id']}")  # Log updated play_id
         else:
             # Initialize the count for this play_id
             play_id_counts[play_id] = 1

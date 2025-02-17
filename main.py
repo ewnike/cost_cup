@@ -23,9 +23,7 @@ def run_script(script_name):
     inserting data into datatables in the hockey_stats database.
     """
     try:
-        result = subprocess.run(
-            ["python", script_name], capture_output=True, text=True, check=True
-        )
+        result = subprocess.run(["python", script_name], capture_output=True, text=True, check=True)
         logging.info(f"Output of {script_name}:\n{result.stdout}")
         if result.stderr:
             logging.error(f"Errors in {script_name}:\n{result.stderr}")
