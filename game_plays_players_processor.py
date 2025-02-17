@@ -279,7 +279,7 @@ def test_db_connection():
 
 
 def main():
-    """Main function to handle downloading, extracting, cleaning, and inserting data."""  # noqa: D401
+    """Handles downloading, extracting, cleaning, and inserting data."""  # noqa: D401
     # Test database connection
     test_db_connection()
 
