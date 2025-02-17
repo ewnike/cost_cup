@@ -95,10 +95,12 @@ def preprocess_exclude_times(organized_data, season_game_ids):
     Compute penalty exclude times for all games in a season.
 
     Args:
+    ----
         organized_data (dict): Organized data for the season.
         season_game_ids (list): List of game IDs for the season.
 
     Returns:
+    -------
         pd.DataFrame: Combined penalty exclude times for all games.
 
     """
@@ -142,12 +144,14 @@ def verify_penalty(game_id, time, game_plays):
     Verify if a penalty exists at the given time, checking for offsetting minors.
 
     Args:
+    ----
         game_id (int): The ID of the game to verify.
         time (float): The time in seconds to check.
         game_plays (pd.DataFrame): The DataFrame containing game play events.
 
 
     Returns:
+    -------
         str: 'Penalty' for regular penalties, 'Offsetting' for offsetting minors, 'None' otherwise.
 
     """
@@ -280,11 +284,17 @@ def assemble_arrays_for_processing(organized_data, exclude_times):
     Assemble arrays of processed data for all game IDs in a season.
 
     Args:
-        organized_data (dict): Dictionary containing game_shifts, game_plays, and game_skater_stats as DataFrames.
-        exclude_times (pd.DataFrame): DataFrame containing penalty exclude times for all game IDs.
+    ----
+        organized_data (dict):
+            Dictionary containing game_shifts, game_plays, and game_skater_stats as DataFrames.
+        exclude_times (pd.DataFrame):
+            DataFrame containing penalty exclude times for all game IDs.
 
     Returns:
-        list: A list of tuples, where each tuple contains a game_id and the corresponding filtered  plays DataFrame.
+    -------
+        list:
+            A list of tuples, where each tuple contains a game_id and the corresponding
+            filtered plays DataFrame.
 
     """  # noqa: E501
     all_data = []
@@ -356,10 +366,12 @@ def process_season_team_event_totals(assembled_data):
     Process team event totals for the entire season and calculate season-level statistics.
 
     Args:
+    ----
         assembled_data (list): A list of tuples (game_id, game_data) where
         game_data contains play events.
 
     Returns:
+    -------
         tuple: A tuple containing:
             - DataFrame with game-level results for each team.
             - DataFrame with season-level totals for each team.
