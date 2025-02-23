@@ -87,8 +87,16 @@ def process_and_clean_data(file_path, column_mapping):
     # Standardize column names (lowercase and remove spaces)
     df.columns = df.columns.str.strip().str.lower()
 
+    # # Convert expected column names to lowercase for comparison
+    # expected_columns = set([col.lower() for col in column_mapping.keys()])
+    # actual_columns = set(df.columns)
+
+    # missing_cols = expected_columns - actual_columns
+    # if missing_cols:
+    #     raise KeyError(f"Missing expected columns: {missing_cols}")
+
     # Convert expected column names to lowercase for comparison
-    expected_columns = set([col.lower() for col in column_mapping.keys()])
+    expected_columns = {col.lower() for col in column_mapping.keys()}  # Using set comprehension
     actual_columns = set(df.columns)
 
     missing_cols = expected_columns - actual_columns
