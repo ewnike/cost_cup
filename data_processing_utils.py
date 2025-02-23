@@ -215,7 +215,7 @@ def process_and_insert_csv(csv_file_path, table, column_mapping, engine):
             logging.info(f"Cleared existing data in {table.name}")
 
         # Insert cleaned data
-        Session = sessionmaker(bind=engine)
+        Session = sessionmaker(bind=engine)  # pylint: disable=invalid-name
         session = Session()
         insert_data(df, table, session)
 
