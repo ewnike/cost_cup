@@ -6,12 +6,12 @@ It initializes an S3 client and retrieves environment variables for the bucket n
 and file paths.
 
 Example Usage:
-    Set the following environment variables before running the script:
+    Ensure the following environment variables are set:
         - S3_BUCKET_NAME: The name of the S3 bucket
         - S3_FILE_KEY: The key (path) of the file in S3
         - LOCAL_FILE_PATH: The local path where the file should be saved
 
-    Run the script to download the specified file:
+    Run the script:
         ```python
         python s3_utils.py
         ```
@@ -26,12 +26,22 @@ import os
 import boto3
 import botocore
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
+
 # Initialize the S3 client
 s3_client = boto3.client("s3")
-bucket_name = os.getenv("S3_BUCKET_NAME")  # Get the bucket name from environment variables
+bucket_name = os.getenv(
+    "S3_BUCKET_NAME"
+)  # Get the bucket name from environment variables
 
 
-def download_from_s3(bucket: str, key: str, download_path: str) -> None:
+def download_from_s3(
+    bucket: str, key: str, download_path: str, overwrite: bool = False
+) -> None:
     """
     Download a file from an S3 bucket and save it to a local path.
 
@@ -40,41 +50,80 @@ def download_from_s3(bucket: str, key: str, download_path: str) -> None:
         bucket (str): Name of the S3 bucket.
         key (str): S3 object key (file path inside the bucket).
         download_path (str): Local file path to save the downloaded file.
+        overwrite (bool): If True, overwrite existing files (default: False).
 
     Raises:
     ------
-        botocore.exceptions.ClientError:
-        If the file does not exist in S3 or another S3 error occurs.
+        botocore.exceptions.ClientError: If the file does not exist in S3 or another S3 error occurs.
+        PermissionError: If the script lacks permission to write to the directory.
 
     Logs:
     ------
         - INFO: When a download starts and completes.
+        - WARNING: If the file already exists and overwrite is False.
         - ERROR: If the file is not found or another error occurs.
 
     """
-    logging.info(f"Downloading from bucket: {bucket}, key: {key}, to: {download_path}")
     try:
+        # Check if the file already exists
+        if os.path.exists(download_path) and not overwrite:
+            logging.warning(f"File already exists: {download_path}. Skipping download.")
+            return
+
+        # Ensure the directory exists before downloading
+        os.makedirs(os.path.dirname(download_path), exist_ok=True)
+
+        logging.info(
+            f"Downloading from bucket: {bucket}, key: {key}, to: {download_path}"
+        )
         s3_client.download_file(bucket, key, download_path)
-        logging.info(f"Downloaded {key} from S3 to {download_path}")
+        logging.info(f"Download complete: {download_path}")
+
+    except botocore.exceptions.NoCredentialsError:
+        logging.error(
+            "AWS credentials not found. Ensure they are set in the environment."
+        )
+        raise
+
+    except botocore.exceptions.PartialCredentialsError:
+        logging.error("AWS credentials are incomplete. Check your AWS configuration.")
+        raise
+
     except botocore.exceptions.ClientError as e:
-        logging.error(f"Error downloading file from S3: {e}")
-        if e.response["Error"]["Code"] == "404":
-            logging.error(f"The object {key} does not exist in bucket {bucket}.")
+        error_code = e.response["Error"]["Code"]
+        if error_code == "404":
+            logging.error(f"File not found: {key} in bucket {bucket}.")
+        elif error_code == "403":
+            logging.error(
+                f"Access denied to {key} in bucket {bucket}. Check permissions."
+            )
         else:
-            raise
+            logging.error(f"Unexpected S3 error: {e}")
+        raise
+
+    except PermissionError:
+        logging.error(f"Permission denied: Cannot write to {download_path}.")
+        raise
+
+    except Exception as e:
+        logging.error(f"An unexpected error occurred while downloading {key}: {e}")
+        raise
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    """Run as a standalone script if needed."""
 
-    # Example usage:
-    # Ensure the environment variable S3_BUCKET_NAME is set
-    # Set file key and download path manually or via environment variables
-    s3_file_key = os.getenv("S3_FILE_KEY", "example_file.zip")
-    local_file_path = os.getenv("LOCAL_FILE_PATH", "data/example_file.zip")
+    # Read environment variables for bucket and file paths
+    s3_file_key = os.getenv("S3_FILE_KEY")
+    local_file_path = os.getenv("LOCAL_FILE_PATH")
 
-    # Download the file if the bucket name is available
-    if bucket_name:
-        download_from_s3(bucket_name, s3_file_key, local_file_path)
+    if not bucket_name:
+        logging.error(
+            "Bucket name not found. Please set the S3_BUCKET_NAME environment variable."
+        )
+    elif not s3_file_key or not local_file_path:
+        logging.error(
+            "S3_FILE_KEY or LOCAL_FILE_PATH not set. Ensure these are provided in the environment."
+        )
     else:
-        logging.error("Bucket name not found. Please set the S3_BUCKET_NAME environment variable.")
+        download_from_s3(bucket_name, s3_file_key, local_file_path, overwrite=False)
