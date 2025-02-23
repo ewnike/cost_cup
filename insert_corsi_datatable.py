@@ -1,8 +1,10 @@
 """
-August 11, 2024
+August 11, 2024.
+
 Code for inserting newly created
 corsi data into defined tables in the
 hockey_stats database.
+
 Eric Winiecke.
 """
 

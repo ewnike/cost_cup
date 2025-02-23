@@ -1,8 +1,10 @@
 """
-July 30, 2024
+July 30, 2024.
+
 Code to load data from database into working env
 so that code can access data, calculate corsi,
 aggregate data, and insert data back into data table.
+
 Eric Winiecke.
 """
 
@@ -37,11 +39,6 @@ def get_db_engine(env_vars):
         f"{env_vars['DATABASE']}"
     )
     return create_engine(connection_string)
-
-
-# load_data.py
-
-# load_data.py
 
 
 def fetch_game_ids_20152016(engine):

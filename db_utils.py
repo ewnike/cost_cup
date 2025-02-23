@@ -12,7 +12,124 @@ import logging
 import os
 
 from dotenv import load_dotenv
-from sqlalchemy import MetaData, create_engine
+from sqlalchemy import (
+    BigInteger,
+    Column,
+    DateTime,
+    Float,
+    Integer,
+    MetaData,
+    String,
+    Table,
+    create_engine,
+)
+
+
+def define_game_plays_processor_test(metadata):
+    """Define the table schema for game_plays_processor_test."""
+    return Table(
+        "game_plays_processor_test",
+        metadata,
+        Column("play_id", String(20), primary_key=True),
+        Column("game_id", BigInteger),
+        Column("team_id_for", Integer, nullable=True),
+        Column("team_id_against", Integer, nullable=True),
+        Column("event", String(50)),
+        Column("secondaryType", String(50)),
+        Column("x", Float, nullable=True),
+        Column("y", Float, nullable=True),
+        Column("period", Integer),
+        Column("periodType", String(50)),
+        Column("periodTime", Integer),
+        Column("periodTimeRemaining", Integer),
+        Column("dateTime", DateTime(timezone=False)),
+        Column("goals_away", Integer, nullable=True),
+        Column("goals_home", Integer, nullable=True),
+        Column("description", String(255)),
+        Column("st_x", Integer, nullable=True),
+        Column("st_y", Integer, nullable=True),
+    )
+
+
+def define_game_plays_players_test(metadata):
+    """Define the table schema for game_plays_players_test."""
+    return Table(
+        "game_plays_players_test",
+        metadata,
+        Column("play_id", String(20)),
+        Column("game_id", BigInteger, nullable=False),
+        Column("player_id", BigInteger, nullable=False),
+        Column("playerType", String(20)),
+    )
+
+
+def define_game_processor_test(metadata):
+    """Define the table schema for game_processor_test."""
+    return Table(
+        "game_processor_test",
+        metadata,
+        Column("game_id", BigInteger, primary_key=True),
+        Column("season", Integer),
+        Column("type", String(20)),
+        Column("date_time_GMT", DateTime(timezone=False)),
+        Column("away_team_id", Integer),
+        Column("home_team_id", Integer),
+        Column("away_goals", Integer),
+        Column("home_goals", Integer),
+        Column("outcome", String(50)),
+        Column("home_rink_side_start", String(20)),
+        Column("venue", String(100)),
+        Column("venue_link", String(255)),
+        Column("venue_time_zone_id", String(50)),
+        Column("venue_time_zone_offset", Integer),
+        Column("venue_time_zone_tz", String(10)),
+    )
+
+
+def define_game_shifts_test_table(metadata):
+    """Define the table schema for game_shifts_test."""
+    return Table(
+        "game_shifts_test",
+        metadata,
+        Column("game_id", BigInteger),
+        Column("player_id", BigInteger),
+        Column("period", Integer),
+        Column("shift_start", Integer),
+        Column("shift_end", Integer),
+    )
+
+
+def define_game_skater_stats_test(metadata):
+    """Define the table schema for game_skater_stats_test."""
+    return Table(
+        "game_skater_stats_test",
+        metadata,
+        Column("game_id", BigInteger),
+        Column("player_id", BigInteger),
+        Column("team_id", Integer),
+        Column("timeOnIce", Integer),
+        Column("assists", Integer),
+        Column("goals", Integer),
+        Column("shots", Integer),
+        Column("hits", Integer),
+        Column("powerPlayGoals", Integer),
+        Column("powerPlayAssists", Integer),
+        Column("penaltyMinutes", Integer),
+        Column("faceOffWins", Integer),
+        Column("faceoffTaken", Integer),
+        Column("takeaways", Integer),
+        Column("giveaways", Integer),
+        Column("shortHandedGoals", Integer),
+        Column("shortHandedAssists", Integer),
+        Column("blocked", Integer),
+        Column("plusMinus", Integer),
+        Column("evenTimeOnIce", Integer),
+        Column("shortHandedTimeOnIce", Integer),
+        Column("powerPlayTimeOnIce", Integer),
+    )
+
+
+# Add additional table definitions as needed
 
 
 # Load environment variables from the .env file
@@ -115,3 +232,23 @@ def get_metadata():
 
     """  # noqa: D401
     return MetaData()
+
+
+def create_table(engine, metadata):
+    """
+    Create all tables defined in the given SQLAlchemy MetaData object.
+
+    Parameters
+    ----------
+    engine : sqlalchemy.engine.Engine
+        The SQLAlchemy database engine instance.
+    metadata : sqlalchemy.MetaData
+        The SQLAlchemy MetaData instance that holds the table definitions.
+
+    Returns
+    -------
+    None
+
+    """
+    metadata.create_all(engine)
+    logging.info("Database tables created or verified.")
