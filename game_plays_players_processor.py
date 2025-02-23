@@ -56,7 +56,7 @@ column_mapping = {
 
 # AWS S3 Config
 bucket_name = os.getenv("S3_BUCKET_NAME")
-s3_file_key = "game_plays_players.csv.zip"
+S3_FILE_KEY = "game_plays_players.csv.zip"
 
 # Local Paths
 local_extract_path = os.getenv("LOCAL_EXTRACT_PATH", "data/download")
@@ -99,9 +99,7 @@ def add_suffix_to_duplicate_play_ids(df):
                 suffix = f"_{suffix_index}"  # Numeric fallback beyond 'z'
 
             df.at[idx, "play_id"] = f"{play_id}{suffix}"
-            logging.debug(
-                f"Updated play_id: {df.at[idx, 'play_id']}"
-            )  # Log updated play_id
+            logging.debug(f"Updated play_id: {df.at[idx, 'play_id']}")  # Log updated play_id
         else:
             # Initialize the count for this play_id
             play_id_counts[play_id] = 1
@@ -138,7 +136,7 @@ def process_and_clean_data(file_path, column_mapping):
     logging.info(f"Processed Data Sample:\n{df.head()}")
     logging.info(f"Processed Data Shape: {df.shape}")
 
-    return df  # ✅ Now with unique play_ids
+    return df  # Now with unique play_ids
 
 
 def process_and_insert_data():
@@ -149,7 +147,7 @@ def process_and_insert_data():
     clear_directory(local_extract_path)
 
     # Step 2: Download ZIP from S3
-    download_from_s3(bucket_name, s3_file_key, local_zip_path)
+    download_from_s3(bucket_name, S3_FILE_KEY, local_zip_path)
 
     # Step 3: Extract ZIP file
     extracted_files = extract_zip(local_zip_path, local_extract_path)
@@ -177,12 +175,10 @@ def process_and_insert_data():
 
     try:
         logging.info("Inserting data into table: game_plays_players_test")
-        insert_data(df, game_plays_players_test, session)  # ✅ Correct table
+        insert_data(df, game_plays_players_test, session)  # Correct table
         logging.info("Data successfully inserted into game_plays_players.")
     except Exception as e:
-        logging.error(
-            f"Error inserting data into game_plays_players: {e}", exc_info=True
-        )
+        logging.error(f"Error inserting data into game_plays_players: {e}", exc_info=True)
 
     session.close()
     logging.info("Processing completed successfully.")
