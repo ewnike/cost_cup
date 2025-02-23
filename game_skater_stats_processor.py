@@ -71,7 +71,7 @@ game_skater_stats_column_mapping = {
 
 # AWS S3 Config
 bucket_name = os.getenv("S3_BUCKET_NAME")
-s3_file_key = "game_skater_stats.csv.zip"
+S3_FILE_KEY = "game_skater_stats.csv.zip"
 
 # Local Paths
 local_extract_path = os.getenv("LOCAL_EXTRACT_PATH", "data/download")
@@ -104,9 +104,7 @@ def process_and_clean_data(file_path, column_mapping):
     # Drop rows with missing essential values
     initial_row_count = len(df)
     df = df.dropna(subset=["game_id", "player_id", "team_id"])
-    logging.info(
-        f"Dropped {initial_row_count - len(df)} rows with missing essential values."
-    )
+    logging.info(f"Dropped {initial_row_count - len(df)} rows with missing essential values.")
 
     # Remove duplicates
     df = df.drop_duplicates(ignore_index=True)
@@ -125,7 +123,7 @@ def process_and_insert_data():
     clear_directory(local_extract_path)
 
     # Step 2: **Download and Extract Data**
-    download_from_s3(bucket_name, s3_file_key, local_zip_path)
+    download_from_s3(bucket_name, S3_FILE_KEY, local_zip_path)
     extracted_files = extract_zip(local_zip_path, local_extract_path)
     logging.info(f"Extracted files: {extracted_files}")
 
@@ -148,12 +146,10 @@ def process_and_insert_data():
     # Step 5: **Insert Data**
     try:
         logging.info("Inserting data into table: game_skater_stats_test")
-        insert_data(df, game_skater_stats_test, session)  # ✅ Correct table reference
+        insert_data(df, game_skater_stats_test, session)
         logging.info("Data successfully inserted into game_skater_stats_test.")
     except Exception as e:
-        logging.error(
-            f"Error inserting data into game_skater_stats_test: {e}", exc_info=True
-        )
+        logging.error(f"Error inserting data into game_skater_stats_test: {e}", exc_info=True)
 
     session.close()
     logging.info("Processing completed successfully.")

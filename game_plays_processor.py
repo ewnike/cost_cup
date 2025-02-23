@@ -47,7 +47,7 @@ TABLE_NAME = "game_plays_processor_test"
 
 # AWS S3 Config
 bucket_name = os.getenv("S3_BUCKET_NAME")
-s3_file_key = "game_plays.csv.zip"
+S3_FILE_KEY = "game_plays.csv.zip"
 
 # Local Paths
 local_extract_path = os.getenv("LOCAL_EXTRACT_PATH", "data/extracted")
@@ -97,16 +97,12 @@ def process_and_clean_data(file_path, column_mapping):
 
     # Truncate long strings and remove whitespace
     for column in df.select_dtypes(include=["object"]).columns:
-        df[column] = df[column].apply(
-            lambda x: str(x).strip()[:255] if isinstance(x, str) else x
-        )
+        df[column] = df[column].apply(lambda x: str(x).strip()[:255] if isinstance(x, str) else x)
 
     # Drop rows where 'play_id' or 'event' is missing (specific to game_plays)
     initial_row_count = len(df)
     df = df.dropna(subset=["play_id", "event"])
-    logging.info(
-        f"Dropped {initial_row_count - len(df)} rows with missing 'play_id' or 'event'."
-    )
+    logging.info(f"Dropped {initial_row_count - len(df)} rows with missing 'play_id' or 'event'.")
 
     # Remove duplicates
     df = df.drop_duplicates(ignore_index=True)

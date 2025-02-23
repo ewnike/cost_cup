@@ -429,7 +429,7 @@ TABLE_NAME = "game_processor_test"
 
 # AWS S3 Config
 bucket_name = os.getenv("S3_BUCKET_NAME")
-s3_file_key = "game.csv.zip"
+S3_FILE_KEY = "game.csv.zip"
 
 # Local Paths
 local_extract_path = os.getenv("LOCAL_EXTRACT_PATH", "data/extracted")
@@ -470,16 +470,12 @@ def process_and_clean_data(file_path, column_mapping):
 
     # Truncate long strings and remove whitespace
     for column in df.select_dtypes(include=["object"]).columns:
-        df[column] = df[column].apply(
-            lambda x: str(x).strip()[:255] if isinstance(x, str) else x
-        )
+        df[column] = df[column].apply(lambda x: str(x).strip()[:255] if isinstance(x, str) else x)
 
     # Drop rows where 'game_id' or 'season' is missing (specific to game table)
     initial_row_count = len(df)
     df = df.dropna(subset=["game_id", "season"])
-    logging.info(
-        f"Dropped {initial_row_count - len(df)} rows with missing 'game_id' or 'season'."
-    )
+    logging.info(f"Dropped {initial_row_count - len(df)} rows with missing 'game_id' or 'season'.")
 
     # Remove duplicates
     df = df.drop_duplicates(ignore_index=True)
@@ -499,7 +495,7 @@ def process_and_insert_data():
     clear_directory(local_extract_path)
 
     # Step 2: Download ZIP from S3
-    download_from_s3(bucket_name, s3_file_key, local_zip_path)
+    download_from_s3(bucket_name, S3_FILE_KEY, local_zip_path)
 
     # Step 3: Extract ZIP file
     extracted_files = extract_zip(local_zip_path, local_extract_path)
