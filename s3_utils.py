@@ -101,16 +101,15 @@ def download_from_s3(bucket: str, key: str, download_path: str, overwrite: bool 
 
 
 if __name__ == "__main__":
-    """Run as a standalone script if needed."""
     # Read environment variables for bucket and file paths
-    s3_file_key = os.getenv("S3_FILE_KEY")
+    S3_FILE_KEY = os.getenv("S3_FILE_KEY")
     local_file_path = os.getenv("LOCAL_FILE_PATH")
 
     if not bucket_name:
         logging.error("Bucket name not found. Please set the S3_BUCKET_NAME environment variable.")
-    elif not s3_file_key or not local_file_path:
+    elif not S3_FILE_KEY or not local_file_path:
         logging.error(
             "S3_FILE_KEY or LOCAL_FILE_PATH not set. Ensure these are provided in the environment."
         )
     else:
-        download_from_s3(bucket_name, s3_file_key, local_file_path, overwrite=False)
+        download_from_s3(bucket_name, S3_FILE_KEY, local_file_path, overwrite=False)

@@ -17,7 +17,6 @@ import shutil
 import boto3
 import botocore
 import pandas as pd
-from sqlalchemy import MetaData, Table
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 from tqdm import tqdm
@@ -60,35 +59,6 @@ def ensure_table_exists(engine, metadata, table_name):
         metadata.reflect(bind=engine)  # Refresh metadata
 
 
-# def clean_data(df, numeric_columns):
-#     """
-#     Clean a DataFrame by replacing NaNs, converting types, and removing duplicates.
-
-#     Args:
-#     ----
-#         df (pd.DataFrame): The input DataFrame.
-#         numeric_columns (list): List of numeric columns to convert.
-
-#     Returns:
-#     -------
-#         pd.DataFrame: The cleaned DataFrame.
-
-#     """
-#     df = df.where(pd.notnull(df), None)  # Replace NaN with None
-
-#     # Convert specified columns to numeric types
-#     for column in numeric_columns:
-#         if column in df.columns:
-#             df[column] = (
-#                 pd.to_numeric(df[column], errors="coerce")
-#                 .fillna(pd.NA)
-#                 .astype(pd.Int64Dtype())  # Ensures integer type with NA support
-#             )
-
-#     df = df.drop_duplicates(ignore_index=True)  # Remove duplicates
-#     return df
-
-
 def clean_data(df, column_mapping):
     """Generically clean and format a DataFrame based on column mappings."""
     # Replace NaN values with None
@@ -102,9 +72,7 @@ def clean_data(df, column_mapping):
     for db_column, csv_column in column_mapping.items():
         if csv_column in df.columns:
             if db_column in ["x", "y"]:
-                df[csv_column] = pd.to_numeric(df[csv_column], errors="coerce").fillna(
-                    0
-                )
+                df[csv_column] = pd.to_numeric(df[csv_column], errors="coerce").fillna(0)
             elif db_column == "dateTime":
                 df[csv_column] = pd.to_datetime(df[csv_column], errors="coerce")
             elif db_column in [
@@ -114,9 +82,7 @@ def clean_data(df, column_mapping):
                 "team_id_against",
                 "period",
             ]:
-                df[csv_column] = pd.to_numeric(
-                    df[csv_column], downcast="integer", errors="coerce"
-                )
+                df[csv_column] = pd.to_numeric(df[csv_column], downcast="integer", errors="coerce")
             else:
                 df[csv_column] = (
                     df[csv_column].astype(str).str.strip()
@@ -148,34 +114,6 @@ def inspect_data(df, numeric_columns):
             logging.warning(df[df[column] < 0])
 
 
-# def insert_data(df, table, session):
-#     """
-# Insert data into the database table.
-
-# Args:
-# ----
-#     df (pd.DataFrame): The DataFrame to insert.
-#     table (sqlalchemy.Table): The table object.
-#     session (sqlalchemy.orm.session.Session): The database session.
-
-# Returns:
-# -------
-#     None
-
-# """
-# data = df.to_dict(orient="records")
-# try:
-#     with tqdm(total=len(data), desc=f"Inserting data into {table.name}") as pbar:
-#         for record in data:
-#             session.execute(table.insert().values(**record))
-#             session.commit()
-#             pbar.update(1)
-#     logging.info(f"Data inserted successfully into {table.name}")
-# except SQLAlchemyError as e:
-#     session.rollback()
-#     logging.error(f"Error inserting data into {table.name}: {e}")
-
-
 def insert_data(df, table, session):
     """Insert DataFrame into the database table."""
     if df.shape[0] == 0:
@@ -198,9 +136,7 @@ def insert_data(df, table, session):
         session.rollback()  # Prevent partial inserts
         logging.error(f"Error inserting data into {table.name}: {e}", exc_info=True)
     except Exception as e:
-        logging.error(
-            f"Unexpected error inserting into {table.name}: {e}", exc_info=True
-        )
+        logging.error(f"Unexpected error inserting into {table.name}: {e}", exc_info=True)
     finally:
         session.close()  # Ensure session closes
 

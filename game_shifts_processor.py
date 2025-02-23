@@ -54,7 +54,7 @@ game_shifts_column_mapping = {
 
 # AWS S3 Config
 bucket_name = os.getenv("S3_BUCKET_NAME")
-s3_file_key = "game_shifts.csv.zip"
+S3_FILE_KEY = "game_shifts.csv.zip"
 
 # Local Paths
 local_extract_path = os.getenv("LOCAL_EXTRACT_PATH", "data/download")
@@ -82,9 +82,7 @@ def process_and_clean_data(file_path, column_mapping):
     # Drop rows with missing essential values
     initial_row_count = len(df)
     df = df.dropna(subset=["game_id", "player_id", "shift_start", "shift_end"])
-    logging.info(
-        f"Dropped {initial_row_count - len(df)} rows with missing essential values."
-    )
+    logging.info(f"Dropped {initial_row_count - len(df)} rows with missing essential values.")
 
     # Remove duplicates
     df = df.drop_duplicates(ignore_index=True)
@@ -103,7 +101,7 @@ def process_and_insert_data():
     clear_directory(local_extract_path)
 
     # Step 2: Download ZIP from S3
-    download_from_s3(bucket_name, s3_file_key, local_zip_path)
+    download_from_s3(bucket_name, S3_FILE_KEY, local_zip_path)
 
     # Step 3: Extract ZIP file
     extracted_files = extract_zip(local_zip_path, local_extract_path)
