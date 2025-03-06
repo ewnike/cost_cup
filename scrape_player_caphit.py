@@ -1,8 +1,10 @@
 """
-August 11, 2024
+August 11, 2024.
+
 Script to scrape payer caphit, first name, and
 last name from spotrac. Used selenium and set webdriver
 to safari.
+
 Eric Winiecke.
 """
 
@@ -35,7 +37,7 @@ dfs_by_year = {}
 
 
 def split_player_name(name):
-    """Function to clean and split player name."""
+    """Clean data and split player name."""
     name_parts = name.split()
     first_name = name_parts[0]
     last_name = " ".join(name_parts[1:]) if len(name_parts) > 1 else ""

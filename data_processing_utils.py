@@ -223,3 +223,54 @@ def process_and_insert_csv(csv_file_path, table, column_mapping, engine):
         logging.error(f"File not found: {csv_file_path} - {e}")
     except Exception as e:
         logging.error(f"Error processing CSV file {csv_file_path}: {e}")
+
+
+def insert_data_from_csv(engine, table_name, file_path, delete_after=True):
+    """
+    Insert data from a CSV file into the specified database table.
+
+    Args:
+    ----
+        engine (sqlalchemy.Engine): The database engine.
+        table_name (str): The name of the table to insert data into.
+        file_path (str): The path to the CSV file.
+        delete_after (bool): If True, deletes the file after insertion.
+
+    Raises:
+    ------
+        SQLAlchemyError: If an error occurs while inserting data.
+        FileNotFoundError: If the CSV file is not found.
+
+    """
+    # Create session factory, though not needed for `to_sql()`
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    try:
+        # Load CSV into DataFrame
+        df = pd.read_csv(file_path)
+
+        if df.empty:
+            print(f"Skipping {file_path}: No data to insert.")
+            return
+
+        # Insert data into the database
+        df.to_sql(table_name, con=engine, if_exists="append", index=False)
+        print(f"Data inserted successfully into {table_name}")
+
+        # Delete file after successful insertion (if enabled)
+        if delete_after:
+            os.remove(file_path)
+            print(f"File {file_path} deleted successfully.")
+
+    except FileNotFoundError as e:
+        print(f"File not found: {file_path} - {e}")
+
+    except SQLAlchemyError as e:
+        print(f"SQLAlchemy Error inserting data into {table_name}: {e}")
+
+    except Exception as e:
+        print(f"Unexpected error processing file '{file_path}': {e}")
+
+    finally:
+        session.close()

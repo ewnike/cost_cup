@@ -1,32 +1,32 @@
 """
-August 11, 2024
-Code to insert data scraped from spotrac
-website into data table in hockey_stats
-database.
+August 11, 2024.
+
+Code to insert data scraped from Spotrac
+website into the hockey_stats database.
+
 Eric Winiecke.
 """
 
 import os
 
-import pandas as pd
-from sqlalchemy import (
-    Column,
-    MetaData,
-    String,
-    Table,
-)
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import Column, MetaData, String, Table
 from sqlalchemy.orm import sessionmaker
 
+from data_processing_utils import insert_data_from_csv
 from db_utils import get_db_engine, get_metadata
 
+# Initialize database connection
 engine = get_db_engine()
 metadata = get_metadata()
 
 # Define metadata and tables
 metadata = MetaData()
 
+# Define seasons
+seasons = ["20152016", "20162017", "20172018"]
 
+
+# Function to create player cap hit tables
 def create_caphit_table(table_name):
     """Define table creation function to avoid repetition."""
     return Table(
@@ -39,52 +39,28 @@ def create_caphit_table(table_name):
 
 
 # Create tables for each season
-seasons = ["20152016", "20162017", "20172018"]
 tables = {season: create_caphit_table(f"player_cap_hit_{season}") for season in seasons}
-
-# Create tables in the database
 metadata.create_all(engine)
 
+# Initialize database session
 Session = sessionmaker(bind=engine)
 
+# Dynamically construct file paths (makes the code portable)
+base_dir = os.getcwd()  # Get the current working directory
+csv_dir = os.path.join(base_dir, "player_cap_hits")  # Path to CSV directory
 
-def insert_data_from_csv(engine, table_name, file_path):
-    """Insert data."""
-    try:
-        df = pd.read_csv(file_path)
-        df.to_sql(table_name, con=engine, if_exists="replace", index=False)
-        print(f"Data inserted successfully into {table_name}")
-
-        # Remove the file after successful insertion
-        os.remove(file_path)
-        print(f"File {file_path} deleted successfully.")
-
-    except SQLAlchemyError as e:
-        print(f"Error inserting data into {table_name}: {e}")
-    except FileNotFoundError as e:
-        print(f"File not found: {file_path} - {e}")
-    except Exception as e:
-        print(f"Error occurred while processing file '{file_path}': {e}")
-
-
-# Define directories and mappings
+# Define CSV file paths and table names dynamically
 csv_files_and_mappings = [
-    (
-        "/Users/ericwiniecke/Documents/github/cost_cup/player_cap_hits/player_cap_hits_2015.csv",
-        "player_cap_hit_20152016",
-    ),
-    (
-        "/Users/ericwiniecke/Documents/github/cost_cup/player_cap_hits/player_cap_hits_2016.csv",
-        "player_cap_hit_20162017",
-    ),
-    (
-        "/Users/ericwiniecke/Documents/github/cost_cup/player_cap_hits/player_cap_hits_2017.csv",
-        "player_cap_hit_20172018",
-    ),
+    (os.path.join(csv_dir, f"player_cap_hits_{year}.csv"), f"player_cap_hit_{season}")
+    for year, season in zip([2015, 2016, 2017], seasons)
 ]
 
+# Insert data from CSV files
 with Session() as session:
     for file_path, table_name in csv_files_and_mappings:
-        insert_data_from_csv(engine, table_name, file_path)
+        if os.path.exists(file_path):  # Ensure the file exists before inserting
+            insert_data_from_csv(engine, table_name, file_path)
+        else:
+            print(f"File not found: {file_path}, skipping...")
 
-    print("Data inserted successfully into all tables")
+print("Data inserted successfully into all tables.")
