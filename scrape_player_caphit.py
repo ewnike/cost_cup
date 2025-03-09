@@ -9,13 +9,11 @@ Eric Winiecke.
 """
 
 import os
-import time
 
 import pandas as pd
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
@@ -101,4 +99,4 @@ for year, df in dfs_by_year.items():
 
 print(f"Data saved to {OUTPUT_DIR} directory.")
 
-("Data saved to {OUTPUT_DIR} directory.")
+# ("Data saved to {OUTPUT_DIR} directory.")
