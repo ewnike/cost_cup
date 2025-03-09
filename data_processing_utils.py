@@ -243,11 +243,8 @@ def insert_data_from_csv(engine, table_name, file_path, delete_after=True):
 
     """
     # Create session factory, though not needed for `to_sql()`
-    # Session = sessionmaker(bind=engine)
-    # session = Session()
-
-    session_maker = sessionmaker(bind=engine)  # Use snake_case
-    session = session_maker()
+    Session = sessionmaker(bind=engine)
+    session = Session()
 
     try:
         # Load CSV into DataFrame
