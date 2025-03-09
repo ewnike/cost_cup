@@ -19,6 +19,9 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
+# Import the shared scrolling function
+from scraping_utils import scroll_to_bottom
+
 # Set up the Safari WebDriver
 driver = webdriver.Safari()
 
@@ -54,14 +57,8 @@ for year in years:
         EC.presence_of_element_located((By.CLASS_NAME, "list-group-item"))
     )
 
-    # Scroll to the bottom of the page to load all content (if applicable)
-    while True:
-        previous_height = driver.execute_script("return document.body.scrollHeight")
-        driver.find_element(By.TAG_NAME, "body").send_keys(Keys.END)
-        time.sleep(2)  # Wait for new data to load
-        new_height = driver.execute_script("return document.body.scrollHeight")
-        if new_height == previous_height:
-            break  # Exit the loop when no more new content is loaded
+    # Call the shared scroll_to_bottom function
+    scroll_to_bottom(driver, wait_time=2)
 
     # Get page source and parse with BeautifulSoup
     html = driver.page_source
@@ -103,3 +100,5 @@ for year, df in dfs_by_year.items():
     df.to_csv(csv_path, index=False, mode="w")
 
 print(f"Data saved to {OUTPUT_DIR} directory.")
+
+("Data saved to {OUTPUT_DIR} directory.")
