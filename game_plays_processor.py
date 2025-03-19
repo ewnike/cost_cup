@@ -16,19 +16,8 @@ Date: February 2025
 import logging
 import os
 
-import pandas as pd
-from sqlalchemy import Table
-from sqlalchemy.orm import sessionmaker
-
-from data_processing_utils import (
-    clean_data,
-    clear_directory,
-    ensure_table_exists,
-    extract_zip,
-    insert_data,
-)
-from db_utils import get_db_engine, get_metadata
-from s3_utils import download_from_s3
+from data_processing_utils import clean_data, process_and_insert_data
+from db_utils import define_game_plays_processor_test, get_db_engine, get_metadata
 
 # Configure logging
 logging.basicConfig(
@@ -37,25 +26,12 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
 
-# Initialize database connection
+# ✅ Initialize database connection
 engine = get_db_engine()
 metadata = get_metadata()
-Session = sessionmaker(bind=engine)
 
-# Define test table name
-TABLE_NAME = "game_plays_processor_test"
-
-# AWS S3 Config
-bucket_name = os.getenv("S3_BUCKET_NAME")
-S3_FILE_KEY = "game_plays.csv.zip"
-
-# Local Paths
-local_extract_path = os.getenv("LOCAL_EXTRACT_PATH", "data/extracted")
-local_zip_path = os.path.join(local_extract_path, "game_plays.zip")
-csv_file_path = os.path.join(local_extract_path, "game_plays.csv")
-
-# Define column mapping
-column_mapping = {
+# ✅ Define column mapping for cleaning
+game_plays_column_mapping = {
     "play_id": "str",
     "game_id": "int64",
     "team_id_for": "int64",
@@ -76,6 +52,16 @@ column_mapping = {
     "st_y": "int64",
 }
 
+# ✅ AWS S3 Config
+bucket_name = os.getenv("S3_BUCKET_NAME")
+s3_file_key = "game_plays.csv.zip"
+
+# ✅ Local Paths
+local_download_path = os.getenv("LOCAL_DOWNLOAD_PATH", "data/download")
+local_extract_path = os.getenv("LOCAL_EXTRACT_PATH", "data/extracted")
+local_zip_path = os.path.join(local_download_path, "game_plays.zip")
+csv_file_path = os.path.join(local_extract_path, "game_plays.csv")
+
 
 def process_and_clean_data(file_path, column_mapping):
     """Load, verify, and apply game_plays-specific cleaning to the CSV data."""
@@ -90,10 +76,8 @@ def process_and_clean_data(file_path, column_mapping):
     df = clean_data(df, column_mapping)
 
     # Step 3: Game-Specific Cleaning
-    if "x" in df.columns:
-        df["x"] = df["x"].fillna(0)
-    if "y" in df.columns:
-        df["y"] = df["y"].fillna(0)
+    df["x"] = df["x"].fillna(0) if "x" in df.columns else df.get("x", 0)
+    df["y"] = df["y"].fillna(0) if "y" in df.columns else df.get("y", 0)
 
     # Truncate long strings and remove whitespace
     for column in df.select_dtypes(include=["object"]).columns:
@@ -114,47 +98,15 @@ def process_and_clean_data(file_path, column_mapping):
     return df
 
 
-def process_and_insert_data():
-    """Execute downloading, extracting, cleaning, and inserting data into the test table."""
-    session = Session()
-
-    # Step 1: Clear extraction directory
-    clear_directory(local_extract_path)
-
-    # Step 2: Download ZIP from S3
-    download_from_s3(bucket_name, s3_file_key, local_zip_path)
-
-    # Step 3: Extract ZIP file
-    extracted_files = extract_zip(local_zip_path, local_extract_path)
-    logging.info(f"Extracted files: {extracted_files}")
-
-    if "game_plays.csv" not in extracted_files:
-        logging.error(f"Missing expected file: {csv_file_path}")
-        return
-
-    # Step 4: Ensure the test table exists
-    ensure_table_exists(engine, metadata, TABLE_NAME)
-
-    # Step 5: Fetch table reference
-    game_plays_test = Table(TABLE_NAME, metadata, autoload_with=engine)
-
-    # Step 6: Process and clean data
-    df = process_and_clean_data(csv_file_path, column_mapping)
-
-    # Step 7: Log cleaned data details
-    logging.info(f"Processed Data Sample:\n{df.head()}")
-    logging.info(f"Processed Data Shape: {df.shape}")
-
-    try:
-        logging.info(f"Inserting data into table: {TABLE_NAME}")
-        insert_data(df, game_plays_test, session)
-        logging.info(f"Data successfully inserted into {TABLE_NAME}.")
-    except Exception as e:
-        logging.error(f"Error inserting data into {TABLE_NAME}: {e}", exc_info=True)
-
-    session.close()
-    logging.info("Processing completed successfully.")
-
-
-if __name__ == "__main__":
-    process_and_insert_data()
+# ✅ Call the generic `process_and_insert_data()`
+process_and_insert_data(
+    bucket_name=bucket_name,
+    s3_file_key=s3_file_key,
+    local_zip_path=local_zip_path,  # ✅ ZIP goes into `data/download/`
+    local_extract_path=local_extract_path,  # ✅ Extracted CSV goes into `data/extracted/`
+    expected_csv_filename="game_plays.csv",
+    table_definition_function=define_game_plays_processor_test,
+    table_name="game_plays_processor_test",
+    column_mapping=game_plays_column_mapping,
+    engine=engine,
+)
