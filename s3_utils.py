@@ -60,6 +60,11 @@ def download_from_s3(bucket: str, key: str, download_path: str, overwrite: bool 
         - ERROR: If the file is not found or another error occurs.
 
     """
+    logging.debug(f"Initiating download with path: {download_path}")  # Additional debug logging
+    if not download_path:
+        logging.error("Download path is empty. Skipping download.")
+        return
+
     try:
         # Check if the file already exists
         if os.path.exists(download_path) and not overwrite:

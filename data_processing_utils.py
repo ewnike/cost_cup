@@ -13,6 +13,7 @@ February 17, 2025
 import logging
 import os
 import shutil
+import string
 
 import boto3
 import botocore
@@ -109,6 +110,84 @@ def clean_data(df, column_mapping, drop_duplicates=True):
     return df
 
 
+def convert_height(height_str):
+    """Convert height from "6' 1"" format to total inches."""
+    if pd.isnull(height_str):
+        return None
+    try:
+        feet, inches = height_str.split("'")
+        inches = inches.strip().replace('"', "")
+        total_inches = int(feet) * 12 + int(inches)
+        return total_inches
+    except ValueError:
+        return None
+
+
+def add_suffix_to_duplicate_play_ids(df):
+    """Add alphabetical suffixes to duplicate 'play_id' values to ensure uniqueness."""
+    # Debugging output for column names
+    print(
+        "Columns in DataFrame when entering add_suffix_to_duplicate_play_ids:",
+        list(df.columns),
+    )
+
+    # Verify the existence of 'play_id' column before proceeding
+    if "play_id" not in df.columns:
+        raise KeyError("The 'play_id' column is missing in the DataFrame!")
+
+    # ✅ Log unique play_ids before processing
+    logging.info(f"Before Suffix Addition - Unique play_ids: {df['play_id'].nunique()}")
+
+    play_id_counts = {}  # Dictionary to track occurrences of each play_id
+
+    # Iterate over the DataFrame index to avoid issues with Series indexing
+    for idx in df.index:
+        play_id = df.at[idx, "play_id"]  # Access play_id directly by index
+        logging.debug(f"Processing play_id: {play_id}")  # Debug log for each play_id
+
+        # Check if play_id has already been seen
+        if play_id in play_id_counts:
+            # Increment count and add the appropriate suffix
+            play_id_counts[play_id] += 1
+            suffix = string.ascii_lowercase[play_id_counts[play_id] - 1]
+            df.at[idx, "play_id"] = f"{play_id}{suffix}"
+            logging.debug(f"Updated play_id: {df.at[idx, 'play_id']}")  # Log updated play_id
+        else:
+            # Initialize the count for this play_id
+            play_id_counts[play_id] = 1
+
+    #     # ✅ Log unique play_ids after processing
+    logging.info(f"After Suffix Addition - Unique play_ids: {df['play_id'].nunique()}")
+    print(df.tail(100))
+    return df
+
+
+def clean_and_transform_data(df, column_mapping):
+    """Apply specific transformations and further clean data."""
+    # Start with general cleaning
+    df = clean_data(df, column_mapping, drop_duplicates=False)
+
+    # Check for the need to add suffixes to 'play_id' if the column exists
+    if "play_id" in df.columns:
+        df = add_suffix_to_duplicate_play_ids(df)
+
+    # Apply specific transformations
+    if "height" in df.columns:
+        df["height"] = df["height"].apply(convert_height)  # Custom transformation example
+
+    # Convert datetime fields
+    if "birthDate" in df.columns:
+        df["birthDate"] = pd.to_datetime(df["birthDate"])
+
+    # Rename columns to match database schema
+    df.rename(columns={"shootsCatches": "shootCatches"}, inplace=True)
+
+    # Further sophisticated handling
+    df = df.where(pd.notnull(df), None)  # Convert NaNs to None for database compatibility
+
+    return df
+
+
 def insert_data(df, table, session):
     """Insert DataFrame into a database table."""
     if df.shape[0] == 0:
@@ -135,60 +214,73 @@ def insert_data(df, table, session):
 
 
 def clear_directory(directory):
-    """Clear a directory and recreate it."""
-    if os.path.exists(directory):
-        shutil.rmtree(directory)
-        logging.info(f"Cleared directory: {directory}")
-    os.makedirs(directory, exist_ok=True)
-
-
-def download_zip_from_s3(bucket, key, download_path):
-    """Download a ZIP file from S3 and save it as a file, ensuring correct behavior."""
-    logging.info(f"Downloading {key} from S3 bucket {bucket} to {download_path}")
-
-    # ✅ Ensure the download directory exists
-    os.makedirs(os.path.dirname(download_path), exist_ok=True)
-
+    """Clear directory if it exists."""
     try:
-        # ✅ If download_path exists as a directory, remove it
-        if os.path.exists(download_path) and os.path.isdir(download_path):
-            shutil.rmtree(download_path)
+        if os.path.exists(directory):
+            shutil.rmtree(directory)
+            logging.info(f"Cleared directory: {directory}")
+        os.makedirs(directory, exist_ok=True)
+    except Exception as e:
+        logging.error(f"Failed to clear directory {directory}: {e}")
 
-        # ✅ Download the file from S3
-        s3_client.download_file(bucket, key, download_path)
 
-        # ✅ Verify the file is correctly downloaded
-        if not os.path.isfile(download_path):
-            raise FileNotFoundError(f"S3 download failed: {download_path} is not a file.")
+def download_zip_from_s3(bucket_name, s3_file_key, local_download_path):
+    """Download a ZIP file from S3 and save it as a file, ensuring correct behavior."""
+    if not local_download_path:  # Check if the download path is empty
+        logging.error("Download path is empty. Skipping download operation.")
+        return
 
-        logging.info(f"Successfully downloaded {key} from S3 to {download_path}")
+    # Ensuring the directory exists
+    directory = os.path.dirname(local_download_path)
+    if directory:  # Only attempt to create the directory if it's not empty
+        os.makedirs(directory, exist_ok=True)
+    else:
+        logging.error("Derived directory path is empty. Cannot ensure directory existence.")
+        return
 
+    # Proceed with the download if the path checks out
+    try:
+        s3_client.download_file(bucket_name, s3_file_key, local_download_path)
+        logging.info(f"Successfully downloaded {s3_file_key} to {local_download_path}")
     except botocore.exceptions.ClientError as e:
-        logging.error(f"Error downloading file from S3: {e}")
         if e.response["Error"]["Code"] == "404":
-            logging.error(f"ERROR: The object {key} does not exist in bucket {bucket}.")
+            logging.error(f"File not found: {s3_file_key} in bucket {bucket_name}.")
+        elif e.response["Error"]["Code"] == "403":
+            logging.error(
+                f"Access denied to {s3_file_key} in bucket {bucket_name}. Check permissions."
+            )
         else:
-            raise
+            logging.error(f"Error downloading file from S3: {e}")
+        raise
+    except Exception as e:
+        logging.error(f"Failed to download file from S3: {e}")
+        raise
 
 
 def extract_zip(zip_path, extract_to):
     """Extract a ZIP file to the specified directory, ensuring correct file structure."""
-    if not os.path.exists(zip_path):
-        logging.error(f"ERROR: ZIP file not found: {zip_path}")
+    # Check if the zip_path is provided and it exists
+    if not zip_path or not os.path.exists(zip_path):
+        if not zip_path:
+            logging.info("No ZIP path provided; skipping extraction.")
+        else:
+            logging.error(f"ERROR: ZIP file not found: {zip_path}")
         return []
 
-    # ✅ Ensure the extraction directory exists
+    # Ensure the extraction directory exists
     os.makedirs(extract_to, exist_ok=True)
 
     try:
-        # ✅ Extract the ZIP file into `data/extracted/`
+        # Extract the ZIP file into `data/extracted/`
         shutil.unpack_archive(zip_path, extract_to)
         logging.info(f"Extracted {zip_path} to {extract_to}")
 
-        # ✅ Return list of extracted files
+        # Return list of extracted files
         return os.listdir(extract_to)
     except Exception as e:
         logging.error(f"ERROR: Failed to extract {zip_path} - {e}")
+        logging.info(f"{extract_to}")
+        logging.info(f"{zip_path}")
         return []
 
 
@@ -196,12 +288,14 @@ def process_and_insert_data(
     bucket_name,
     s3_file_key,
     local_zip_path,
-    local_extract_path,  # ✅ New parameter for extraction
+    local_extract_path,
+    local_download_path,
     expected_csv_filename,
     table_definition_function,
     table_name,
     column_mapping,
     engine,
+    handle_zip,
 ):
     """
     Download, extract, clean, and insert data into a database table.
@@ -222,41 +316,65 @@ def process_and_insert_data(
     session_factory = sessionmaker(bind=engine)
     session = session_factory()
 
-    # **Step 1: Clear Old Data**
-    clear_directory(local_extract_path)  # ✅ Extracted files go here
+    # Clear old data
+    clear_directory(local_extract_path)
 
-    # **Step 2: Download and Extract Data**
-    download_zip_from_s3(bucket_name, s3_file_key, local_zip_path)
-    extracted_files = extract_zip(
-        local_zip_path, local_extract_path
-    )  # ✅ Extract to `local_extract_path`
-    logging.info(f"Extracted files: {extracted_files}")
+    # Define the correct download path based on whether handling a ZIP
+    download_path = (
+        local_zip_path if handle_zip else os.path.join(local_download_path, expected_csv_filename)
+    )
 
-    csv_file_path = os.path.join(
-        local_extract_path, expected_csv_filename
-    )  # ✅ Use `local_extract_path`
+    # Download the file from S3
+    download_zip_from_s3(bucket_name, s3_file_key, download_path)
 
-    if expected_csv_filename not in extracted_files:
-        logging.error(f"Missing expected file: {csv_file_path}")
+    # Handle file based on ZIP flag
+    if handle_zip:
+        # Extract files to the extraction path
+        extract_zip(download_path, local_extract_path)
+        # Set the path to the extracted CSV
+        csv_file_path = os.path.join(local_extract_path, expected_csv_filename)
+        if not os.path.exists(csv_file_path):
+            logging.error(f"Extracted file not found after extraction: {csv_file_path}")
+            return
+        # Clear the download directory after extraction
+        clear_directory(local_download_path)
+    else:
+        # Use the directly downloaded CSV/XLS file
+        csv_file_path = download_path
+        if not os.path.exists(csv_file_path):
+            logging.error(f"Downloaded file not found at path: {csv_file_path}")
+            return
+
+    try:
+        if csv_file_path.endswith(".csv") or csv_file_path.endswith(".csv.xls"):
+            df = pd.read_csv(csv_file_path)
+        else:
+            df = pd.read_excel(csv_file_path, engine="openpyxl")
+    except Exception as e:
+        logging.error(f"Error reading file {csv_file_path}: {e}")
         return
 
-    # **Step 3: Ensure Table Exists**
+    # Clean and transform the data
+    df = clean_and_transform_data(df, column_mapping)
+
+    # Ensure the table exists
     ensure_table_exists(engine, get_metadata(), table_name, table_definition_function)
 
-    # **Step 4: Process and Clean Data**
-    df = pd.read_csv(csv_file_path)
-    df = clean_data(df, column_mapping)
-
-    # **Step 5: Insert Data**
+    # Insert data into the database
     try:
         logging.info(f"Inserting data into table: {table_name}")
         insert_data(df, get_metadata().tables[table_name], session)
         logging.info(f"Data successfully inserted into {table_name}.")
     except Exception as e:
-        logging.error(f"Error inserting data into {table_name}: {e}", exc_info=True)
+        session.rollback()
+        logging.error(f"Error inserting data into {table_name}: {e}")
     finally:
         session.close()
-        logging.info("Processing completed successfully.")
 
-    # **Step 6: Clean Up Extracted Data**
-    clear_directory(local_extract_path)  # ✅ Only clean extracted files, not zip
+    # Clean up
+    clear_directory(local_download_path)
+
+    if handle_zip:
+        clear_directory(local_extract_path)
+
+    logging.info("Processing completed successfully. Directories cleared.")

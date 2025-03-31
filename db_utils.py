@@ -140,6 +140,29 @@ def define_game_skater_stats_test(metadata):
     )
 
 
+def define_game_table_test(metadata):
+    """Define the game table schema."""
+    return Table(
+        "game_table_test",
+        metadata,
+        Column("game_id", Integer),
+        Column("season", Integer),
+        Column("type", String),
+        Column("date_time_GMT", DateTime),
+        Column("away_team_id", Integer),
+        Column("home_team_id", Integer),
+        Column("away_goals", Integer),
+        Column("home_goals", Integer),
+        Column("outcome", String),
+        Column("home_rink_side_start", String),
+        Column("venue", String),
+        Column("venue_link", String),
+        Column("venue_time_zone_id", String),
+        Column("venue_time_zone_offset", Integer),
+        Column("venue_time_zone_tz", String),
+    )
+
+
 def define_game_shifts_test_table(metadata):
     """Define the table schema for game_shifts_test."""
     return Table(
@@ -188,6 +211,26 @@ def define_game_plays_players_test(metadata):
         Column("game_id", BigInteger, nullable=False),
         Column("player_id", BigInteger, nullable=False),
         Column("playerType", String(20)),
+    )
+
+
+def define_player_info_table_test(metadata):
+    """Define the player_info_test table schema."""
+    return Table(
+        "player_info_table_test",
+        metadata,
+        Column("player_id", BigInteger, primary_key=True),  # Unique player identifier
+        Column("firstName", String(50)),
+        Column("lastName", String(50)),
+        Column("nationality", String(50)),
+        Column("birthCity", String(50)),
+        Column("primaryPosition", String(50)),
+        Column("birthDate", DateTime),  # Date of birth
+        Column("birthStateProvince", String(50)),
+        Column("height", Float),  # Height in inches
+        Column("height_cm", Float),  # Height in centimeters
+        Column("weight", Float),  # Weight in pounds
+        Column("shootCatches", String(10)),  # Shooting/Catching hand
     )
 
 
