@@ -306,11 +306,13 @@ def process_and_insert_data(
         s3_file_key (str): The file key in S3.
         local_zip_path (str): The path to save the downloaded zip file.
         local_extract_path (str): The directory to extract files into. ✅
+        local_download_path: The path to download file from S3 into the download folder.
         expected_csv_filename (str): The expected CSV file name inside the extracted files.
         table_definition_function (function): Function to define the table schema.
         table_name (str): The target database table name.
         column_mapping (dict): Column mapping for data cleaning.
         engine (sqlalchemy.engine.Engine): The database engine instance.
+        handle_zip: flag to handle csv or zip file.
 
     """
     session_factory = sessionmaker(bind=engine)
