@@ -16,8 +16,6 @@ Date: February 2025
 import logging
 import os
 
-import pandas as pd
-
 from data_processing_utils import process_and_insert_data
 from db_utils import define_game_plays_players_test, get_db_engine, get_metadata
 
@@ -43,7 +41,7 @@ game_plays_players_column_mapping = {
 
 # ✅ AWS S3 Config
 bucket_name = os.getenv("S3_BUCKET_NAME")
-s3_file_key = "game_plays_players.csv.zip"
+S3_FILE_KEY = "game_plays_players.csv.zip"
 
 # ✅ Local Paths
 local_download_path = os.getenv("LOCAL_DOWNLOAD_PATH", "data/download")
@@ -53,14 +51,14 @@ csv_file_path = os.path.join(local_extract_path, "game_plays_players.csv")
 
 
 # Decide whether to process a ZIP file or a direct CSV/XLS file
-handle_zip = bool(local_zip_path)  # True if local_zip_path is not empty
+HANDLE_ZIP = bool(local_zip_path)  # True if local_zip_path is not empty
 print(bool(local_zip_path))
 
 
 # ✅ Run the standardized `process_and_insert_data()` function
 process_and_insert_data(
     bucket_name=bucket_name,
-    s3_file_key=s3_file_key,
+    s3_file_key=S3_FILE_KEY,
     local_zip_path=local_zip_path,
     local_extract_path=local_extract_path,
     local_download_path=local_download_path,
@@ -69,5 +67,5 @@ process_and_insert_data(
     table_name="game_plays_players_test",
     column_mapping=game_plays_players_column_mapping,
     engine=engine,
-    handle_zip=handle_zip,
+    handle_zip=HANDLE_ZIP,
 )
