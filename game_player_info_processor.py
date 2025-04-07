@@ -62,17 +62,20 @@ print(csv_file_path)
 HANDLE_ZIP = bool(LOCAL_ZIP_PATH)  # True if local_zip_path is not empty
 print(bool(LOCAL_ZIP_PATH))
 
+
+config = {
+    "bucket_name": bucket_name,
+    "s3_file_key": S3_FILE_KEY,
+    "local_zip_path": LOCAL_ZIP_PATH,
+    "local_extract_path": local_extract_path,
+    "expected_csv_filename": "player_info.csv.xls",
+    "table_definition_function": define_player_info_table_test,
+    "table_name": "player_info_table_test",
+    "column_mapping": player_info_column_mapping,
+    "engine": engine,
+    "handle_zip": HANDLE_ZIP,
+    "local_download_path": local_download_path,
+}
 # ✅ Run the standardized `process_and_insert_data()` function
-process_and_insert_data(
-    bucket_name=bucket_name,
-    s3_file_key=S3_FILE_KEY,
-    local_zip_path=LOCAL_ZIP_PATH,
-    local_extract_path=local_extract_path,
-    expected_csv_filename="player_info.csv.xls",
-    table_definition_function=define_player_info_table_test,
-    table_name="player_info_table_test",
-    column_mapping=player_info_column_mapping,
-    engine=engine,
-    handle_zip=HANDLE_ZIP,
-    local_download_path=local_download_path,
-)
+process_and_insert_data(config)
+"""Download, extract, clean, and insert data into a database table."""
