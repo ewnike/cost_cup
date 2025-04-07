@@ -68,7 +68,9 @@ def clean_data(df, column_mapping, drop_duplicates=True):
     for db_column, csv_column in column_mapping.items():
         if csv_column in df.columns:
             if db_column in ["x", "y"]:
-                df[csv_column] = pd.to_numeric(df[csv_column], errors="coerce").fillna(0)
+                df[csv_column] = pd.to_numeric(df[csv_column], errors="coerce").fillna(
+                    0
+                )
             elif db_column == "dateTime":
                 df[csv_column] = pd.to_datetime(df[csv_column], errors="coerce")
             elif db_column in [
@@ -151,7 +153,9 @@ def add_suffix_to_duplicate_play_ids(df):
             play_id_counts[play_id] += 1
             suffix = string.ascii_lowercase[play_id_counts[play_id] - 1]
             df.at[idx, "play_id"] = f"{play_id}{suffix}"
-            logging.debug(f"Updated play_id: {df.at[idx, 'play_id']}")  # Log updated play_id
+            logging.debug(
+                f"Updated play_id: {df.at[idx, 'play_id']}"
+            )  # Log updated play_id
         else:
             # Initialize the count for this play_id
             play_id_counts[play_id] = 1
@@ -173,7 +177,9 @@ def clean_and_transform_data(df, column_mapping):
 
     # Apply specific transformations
     if "height" in df.columns:
-        df["height"] = df["height"].apply(convert_height)  # Custom transformation example
+        df["height"] = df["height"].apply(
+            convert_height
+        )  # Custom transformation example
 
     # Convert datetime fields
     if "birthDate" in df.columns:
@@ -183,7 +189,9 @@ def clean_and_transform_data(df, column_mapping):
     df.rename(columns={"shootsCatches": "shootCatches"}, inplace=True)
 
     # Further sophisticated handling
-    df = df.where(pd.notnull(df), None)  # Convert NaNs to None for database compatibility
+    df = df.where(
+        pd.notnull(df), None
+    )  # Convert NaNs to None for database compatibility
 
     return df
 
@@ -208,7 +216,9 @@ def insert_data(df, table, session):
         session.rollback()
         logging.error(f"Error inserting data into {table.name}: {e}", exc_info=True)
     except Exception as e:
-        logging.error(f"Unexpected error inserting into {table.name}: {e}", exc_info=True)
+        logging.error(
+            f"Unexpected error inserting into {table.name}: {e}", exc_info=True
+        )
     finally:
         session.close()
 
@@ -235,7 +245,9 @@ def download_zip_from_s3(bucket_name, s3_file_key, local_download_path):
     if directory:  # Only attempt to create the directory if it's not empty
         os.makedirs(directory, exist_ok=True)
     else:
-        logging.error("Derived directory path is empty. Cannot ensure directory existence.")
+        logging.error(
+            "Derived directory path is empty. Cannot ensure directory existence."
+        )
         return
 
     # Proceed with the download if the path checks out
@@ -284,64 +296,52 @@ def extract_zip(zip_path, extract_to):
         return []
 
 
-def process_and_insert_data(
-    bucket_name,
-    s3_file_key,
-    local_zip_path,
-    local_extract_path,
-    local_download_path,
-    expected_csv_filename,
-    table_definition_function,
-    table_name,
-    column_mapping,
-    engine,
-    handle_zip,
-):
+def process_and_insert_data(config):
     """
     Download, extract, clean, and insert data into a database table.
 
     Args:
     ----
-        bucket_name (str): The S3 bucket name.
-        s3_file_key (str): The file key in S3.
-        local_zip_path (str): The path to save the downloaded zip file.
-        local_extract_path (str): The directory to extract files into. ✅
-        local_download_path: The path to download file from S3 into the download folder.
-        expected_csv_filename (str): The expected CSV file name inside the extracted files.
-        table_definition_function (function): Function to define the table schema.
-        table_name (str): The target database table name.
-        column_mapping (dict): Column mapping for data cleaning.
-        engine (sqlalchemy.engine.Engine): The database engine instance.
-        handle_zip: flag to handle csv or zip file.
-
+        config (dict): Dictionary containing configuration for the operation. Expected keys include:
+            - bucket_name (str): The S3 bucket name.
+            - s3_file_key (str): The file key in S3.
+            - local_zip_path (str): The path to save the downloaded zip file.
+            - local_extract_path (str): The directory to extract files into.
+            - local_download_path (str): The path to download the file from S3.
+            - expected_csv_filename (str): The expected CSV file name inside the extracted files.
+            - table_definition_function (function): Function to define the table schema.
+            - table_name (str): The target database table name.
+            - column_mapping (dict): Column mapping for data cleaning.
+            - engine (sqlalchemy.engine.Engine): The database engine instance.
+            - handle_zip (bool): Flag indicating whether the file is a zip archive.
     """
-    session_factory = sessionmaker(bind=engine)
+    session_factory = sessionmaker(bind=config["engine"])
     session = session_factory()
 
     # Clear old data
-    clear_directory(local_extract_path)
+    clear_directory(config["local_extract_path"])
 
     # Define the correct download path based on whether handling a ZIP
     download_path = (
-        local_zip_path if handle_zip else os.path.join(local_download_path, expected_csv_filename)
+        config["local_zip_path"]
+        if config["handle_zip"]
+        else os.path.join(
+            config["local_download_path"], config["expected_csv_filename"]
+        )
     )
 
-    # Download the file from S3
-    download_zip_from_s3(bucket_name, s3_file_key, download_path)
+    download_zip_from_s3(config["bucket_name"], config["s3_file_key"], download_path)
 
-    # Handle file based on ZIP flag
-    if handle_zip:
-        # Extract files to the extraction path
-        extract_zip(download_path, local_extract_path)
-        # Set the path to the extracted CSV
-        csv_file_path = os.path.join(local_extract_path, expected_csv_filename)
+    if config["handle_zip"]:
+        extract_zip(download_path, config["local_extract_path"])
+        csv_file_path = os.path.join(
+            config["local_extract_path"], config["expected_csv_filename"]
+        )
         if not os.path.exists(csv_file_path):
             logging.error(f"Extracted file not found after extraction: {csv_file_path}")
             return
-        # Clear the download directory after extraction
-        clear_directory(local_download_path)
+        clear_directory(config["local_download_path"])
     else:
-        # Use the directly downloaded CSV/XLS file
         csv_file_path = download_path
         if not os.path.exists(csv_file_path):
             logging.error(f"Downloaded file not found at path: {csv_file_path}")
@@ -356,27 +356,21 @@ def process_and_insert_data(
         logging.error(f"Error reading file {csv_file_path}: {e}")
         return
 
-    # Clean and transform the data
-    df = clean_and_transform_data(df, column_mapping)
+    df = clean_and_transform_data(df, config["column_mapping"])
 
-    # Ensure the table exists
-    ensure_table_exists(engine, get_metadata(), table_name, table_definition_function)
+    ensure_table_exists(
+        config["engine"],
+        get_metadata(),
+        config["table_name"],
+        config["table_definition_function"],
+    )
 
-    # Insert data into the database
     try:
-        logging.info(f"Inserting data into table: {table_name}")
-        insert_data(df, get_metadata().tables[table_name], session)
-        logging.info(f"Data successfully inserted into {table_name}.")
+        logging.info(f"Inserting data into table: {config['table_name']}")
+        insert_data(df, get_metadata().tables[config["table_name"]], session)
+        logging.info(f"Data successfully inserted into {config['table_name']}.")
     except Exception as e:
         session.rollback()
-        logging.error(f"Error inserting data into {table_name}: {e}")
+        logging.error(f"Error inserting data into {config['table_name']}: {e}")
     finally:
         session.close()
-
-    # Clean up
-    clear_directory(local_download_path)
-
-    if handle_zip:
-        clear_directory(local_extract_path)
-
-    logging.info("Processing completed successfully. Directories cleared.")
