@@ -12,7 +12,7 @@ import os
 from sqlalchemy import Column, MetaData, String, Table
 from sqlalchemy.orm import sessionmaker
 
-from data_processing_utils import insert_data_from_csv
+from data_processing_utils import insert_data
 from db_utils import get_db_engine, get_metadata
 
 # Initialize database connection
@@ -59,7 +59,7 @@ csv_files_and_mappings = [
 with Session() as session:
     for file_path, table_name in csv_files_and_mappings:
         if os.path.exists(file_path):  # Ensure the file exists before inserting
-            insert_data_from_csv(engine, table_name, file_path)
+            insert_data(engine, table_name, file_path)
         else:
             print(f"File not found: {file_path}, skipping...")
 
