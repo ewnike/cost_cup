@@ -78,4 +78,3 @@ config = {
 }
 # ✅ Run the standardized `process_and_insert_data()` function
 process_and_insert_data(config)
-"""Download, extract, clean, and insert data into a database table."""

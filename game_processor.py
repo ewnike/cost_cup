@@ -63,17 +63,18 @@ csv_file_path = os.path.join(local_extract_path, "game.csv")
 HANDLE_ZIP = bool(LOCAL_ZIP_PATH)  # True if local_zip_path is not empty
 print(bool(LOCAL_ZIP_PATH))
 
+config = {
+    "bucket_name": bucket_name,
+    "s3_file_key": S3_FILE_KEY,
+    "local_zip_path": LOCAL_ZIP_PATH,
+    "local_extract_path": local_extract_path,
+    "expected_csv_filename": "game.csv",
+    "table_definition_function": define_game_table_test,
+    "table_name": "game_table_test",
+    "column_mapping": game_column_mapping,
+    "engine": engine,
+    "handle_zip": HANDLE_ZIP,
+    "local_download_path": local_download_path,
+}
 # ✅ Run the standardized `process_and_insert_data()` function
-process_and_insert_data(
-    bucket_name=bucket_name,
-    s3_file_key=S3_FILE_KEY,
-    local_zip_path=LOCAL_ZIP_PATH,  # ✅ ZIP goes into `data/download/`
-    local_extract_path=local_extract_path,  # ✅ Extracted CSV goes into `data/extracted/`
-    expected_csv_filename="game.csv",
-    table_definition_function=define_game_table_test,
-    table_name="game_table_test",
-    column_mapping=game_column_mapping,
-    engine=engine,
-    handle_zip=HANDLE_ZIP,
-    local_download_path=local_download_path,
-)
+process_and_insert_data(config)

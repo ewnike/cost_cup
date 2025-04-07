@@ -46,26 +46,26 @@ S3_FILE_KEY = "game_plays_players.csv.zip"
 # ✅ Local Paths
 local_download_path = os.getenv("LOCAL_DOWNLOAD_PATH", "data/download")
 local_extract_path = os.getenv("LOCAL_EXTRACT_PATH", "data/extracted")
-local_zip_path = os.path.join(local_download_path, "game_plays_players.zip")
+LOCAL_ZIP_PATH = os.path.join(local_download_path, "game_plays_players.zip")
 csv_file_path = os.path.join(local_extract_path, "game_plays_players.csv")
 
 
 # Decide whether to process a ZIP file or a direct CSV/XLS file
-HANDLE_ZIP = bool(local_zip_path)  # True if local_zip_path is not empty
-print(bool(local_zip_path))
+HANDLE_ZIP = bool(LOCAL_ZIP_PATH)  # True if local_zip_path is not empty
+print(bool(LOCAL_ZIP_PATH))
 
-
+config = {
+    "bucket_name": bucket_name,
+    "s3_file_key": S3_FILE_KEY,
+    "local_zip_path": LOCAL_ZIP_PATH,
+    "local_extract_path": local_extract_path,
+    "expected_csv_filename": "game_plays_players.csv",
+    "table_definition_function": define_game_plays_players_test,
+    "table_name": "game_plays_players_test",
+    "column_mapping": game_plays_players_column_mapping,
+    "engine": engine,
+    "handle_zip": HANDLE_ZIP,
+    "local_download_path": local_download_path,
+}
 # ✅ Run the standardized `process_and_insert_data()` function
-process_and_insert_data(
-    bucket_name=bucket_name,
-    s3_file_key=S3_FILE_KEY,
-    local_zip_path=local_zip_path,
-    local_extract_path=local_extract_path,
-    local_download_path=local_download_path,
-    expected_csv_filename="game_plays_players.csv",
-    table_definition_function=define_game_plays_players_test,
-    table_name="game_plays_players_test",
-    column_mapping=game_plays_players_column_mapping,
-    engine=engine,
-    handle_zip=HANDLE_ZIP,
-)
+process_and_insert_data(config)
