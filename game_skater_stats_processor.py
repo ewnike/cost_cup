@@ -70,16 +70,18 @@ csv_file_path = os.path.join(local_extract_path, "game_skater_stats.csv")
 HANDLE_ZIP = bool(LOCAL_ZIP_PATH)  # True if local_zip_path is not empty
 print(bool(LOCAL_ZIP_PATH))
 
-process_and_insert_data(
-    bucket_name=bucket_name,
-    s3_file_key="game_skater_stats.csv.zip",
-    local_zip_path=LOCAL_ZIP_PATH,  # ✅ ZIP goes into `data/download/`
-    local_extract_path=local_extract_path,  # ✅ Extracted CSV goes into `data/extracted/`
-    expected_csv_filename="game_skater_stats.csv",
-    table_definition_function=define_game_skater_stats_test,
-    table_name="game_skater_stats_test",
-    column_mapping=game_skater_stats_column_mapping,
-    engine=engine,
-    handle_zip=HANDLE_ZIP,
-    local_download_path=local_download_path,
-)
+config = {
+    "bucket_name": bucket_name,
+    "s3_file_key": S3_FILE_KEY,
+    "local_zip_path": LOCAL_ZIP_PATH,
+    "local_extract_path": local_extract_path,
+    "expected_csv_filename": "game_skater_stats.csv",
+    "table_definition_function": define_game_skater_stats_test,
+    "table_name": "game_skater_stats_test",
+    "column_mapping": game_skater_stats_column_mapping,
+    "engine": engine,
+    "handle_zip": HANDLE_ZIP,
+    "local_download_path": local_download_path,
+}
+# ✅ Run the standardized `process_and_insert_data()` function
+process_and_insert_data(config)
