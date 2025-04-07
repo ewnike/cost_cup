@@ -14,7 +14,7 @@ import pandas as pd
 from sqlalchemy import BigInteger, Column, Float, Integer, MetaData, Table
 from sqlalchemy.orm import sessionmaker
 
-from data_processing_utils import insert_data_from_csv
+from data_processing_utils import insert_data
 from db_utils import get_db_engine, get_metadata
 
 # Initialize database connection
@@ -65,7 +65,7 @@ with Session() as session:
     for file_path, table_name in csv_files_and_mappings:
         if os.path.exists(file_path):  # Ensure file exists
             df = pd.read_csv(file_path)  # Read CSV into DataFrame
-            insert_data_from_csv(engine, table_name, file_path)
+            insert_data(engine, table_name, file_path)
 
         else:
             print(f"File not found: {file_path}, skipping...")
