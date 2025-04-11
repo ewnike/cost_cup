@@ -68,9 +68,7 @@ def clean_data(df, column_mapping, drop_duplicates=True):
     for db_column, csv_column in column_mapping.items():
         if csv_column in df.columns:
             if db_column in ["x", "y"]:
-                df[csv_column] = pd.to_numeric(df[csv_column], errors="coerce").fillna(
-                    0
-                )
+                df[csv_column] = pd.to_numeric(df[csv_column], errors="coerce").fillna(0)
             elif db_column == "dateTime":
                 df[csv_column] = pd.to_datetime(df[csv_column], errors="coerce")
             elif db_column in [
@@ -153,9 +151,7 @@ def add_suffix_to_duplicate_play_ids(df):
             play_id_counts[play_id] += 1
             suffix = string.ascii_lowercase[play_id_counts[play_id] - 1]
             df.at[idx, "play_id"] = f"{play_id}{suffix}"
-            logging.debug(
-                f"Updated play_id: {df.at[idx, 'play_id']}"
-            )  # Log updated play_id
+            logging.debug(f"Updated play_id: {df.at[idx, 'play_id']}")  # Log updated play_id
         else:
             # Initialize the count for this play_id
             play_id_counts[play_id] = 1
@@ -177,9 +173,7 @@ def clean_and_transform_data(df, column_mapping):
 
     # Apply specific transformations
     if "height" in df.columns:
-        df["height"] = df["height"].apply(
-            convert_height
-        )  # Custom transformation example
+        df["height"] = df["height"].apply(convert_height)  # Custom transformation example
 
     # Convert datetime fields
     if "birthDate" in df.columns:
@@ -189,9 +183,7 @@ def clean_and_transform_data(df, column_mapping):
     df.rename(columns={"shootsCatches": "shootCatches"}, inplace=True)
 
     # Further sophisticated handling
-    df = df.where(
-        pd.notnull(df), None
-    )  # Convert NaNs to None for database compatibility
+    df = df.where(pd.notnull(df), None)  # Convert NaNs to None for database compatibility
 
     return df
 
@@ -216,9 +208,7 @@ def insert_data(df, table, session):
         session.rollback()
         logging.error(f"Error inserting data into {table.name}: {e}", exc_info=True)
     except Exception as e:
-        logging.error(
-            f"Unexpected error inserting into {table.name}: {e}", exc_info=True
-        )
+        logging.error(f"Unexpected error inserting into {table.name}: {e}", exc_info=True)
     finally:
         session.close()
 
@@ -245,9 +235,7 @@ def download_zip_from_s3(bucket_name, s3_file_key, local_download_path):
     if directory:  # Only attempt to create the directory if it's not empty
         os.makedirs(directory, exist_ok=True)
     else:
-        logging.error(
-            "Derived directory path is empty. Cannot ensure directory existence."
-        )
+        logging.error("Derived directory path is empty. Cannot ensure directory existence.")
         return
 
     # Proceed with the download if the path checks out
@@ -325,18 +313,14 @@ def process_and_insert_data(config):
     download_path = (
         config["local_zip_path"]
         if config["handle_zip"]
-        else os.path.join(
-            config["local_download_path"], config["expected_csv_filename"]
-        )
+        else os.path.join(config["local_download_path"], config["expected_csv_filename"])
     )
 
     download_zip_from_s3(config["bucket_name"], config["s3_file_key"], download_path)
 
     if config["handle_zip"]:
         extract_zip(download_path, config["local_extract_path"])
-        csv_file_path = os.path.join(
-            config["local_extract_path"], config["expected_csv_filename"]
-        )
+        csv_file_path = os.path.join(config["local_extract_path"], config["expected_csv_filename"])
         if not os.path.exists(csv_file_path):
             logging.error(f"Extracted file not found after extraction: {csv_file_path}")
             return

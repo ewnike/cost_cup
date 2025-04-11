@@ -37,6 +37,21 @@ s3_client = boto3.client("s3")
 bucket_name = os.getenv("S3_BUCKET_NAME")  # Get the bucket name from environment variables
 
 
+def get_s3_env_vars():
+    """
+    Return required S3 config pulled from environment variables.
+
+    Returns:
+        dict: Contains 'bucket', 'key', and 'local_path' values.
+
+    """
+    return {
+        "bucket": os.getenv("S3_BUCKET_NAME"),
+        "key": os.getenv("S3_FILE_KEY"),
+        "local_path": os.getenv("LOCAL_FILE_PATH"),
+    }
+
+
 def download_from_s3(bucket: str, key: str, download_path: str, overwrite: bool = False) -> None:
     """
     Download a file from an S3 bucket and save it to a local path.
