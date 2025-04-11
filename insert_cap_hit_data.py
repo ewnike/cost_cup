@@ -9,7 +9,7 @@ Eric Winiecke.
 
 import os
 
-from sqlalchemy import Column, MetaData, String, Table
+from sqlalchemy import Column, String, Table
 from sqlalchemy.orm import sessionmaker
 
 from data_processing_utils import insert_data
@@ -19,8 +19,6 @@ from db_utils import get_db_engine, get_metadata
 engine = get_db_engine()
 metadata = get_metadata()
 
-# Define metadata and tables
-metadata = MetaData()
 
 # Define seasons
 seasons = ["20152016", "20162017", "20172018"]

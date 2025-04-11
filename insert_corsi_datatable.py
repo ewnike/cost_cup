@@ -11,7 +11,7 @@ Eric Winiecke.
 import os
 
 import pandas as pd
-from sqlalchemy import BigInteger, Column, Float, Integer, MetaData, Table
+from sqlalchemy import BigInteger, Column, Float, Integer, Table
 from sqlalchemy.orm import sessionmaker
 
 from data_processing_utils import insert_data
@@ -21,8 +21,6 @@ from db_utils import get_db_engine, get_metadata
 engine = get_db_engine()
 metadata = get_metadata()
 
-# Define metadata and tables
-metadata = MetaData()
 
 # Define seasons
 seasons = ["20152016", "20162017", "20172018"]
