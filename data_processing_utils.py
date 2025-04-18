@@ -302,6 +302,7 @@ def process_and_insert_data(config):
             - column_mapping (dict): Column mapping for data cleaning.
             - engine (sqlalchemy.engine.Engine): The database engine instance.
             - handle_zip (bool): Flag indicating whether the file is a zip archive.
+
     """
     session_factory = sessionmaker(bind=config["engine"])
     session = session_factory()
