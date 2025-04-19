@@ -63,6 +63,7 @@ def get_db_engine():
     load_environment_variables()  # Ensure variables are loaded
 
     # Check if DATABASE_URL is set
+    # pylint: disable=invalid-name
     DATABASE_URL = os.getenv("DATABASE_URL")
 
     if DATABASE_URL:
@@ -70,7 +71,7 @@ def get_db_engine():
         return create_engine(DATABASE_URL)
 
     # Otherwise, construct from individual variables
-    # pylint: disable=invalid-name
+
     DATABASE_TYPE = os.getenv("DATABASE_TYPE")
     DBAPI = os.getenv("DBAPI")
     ENDPOINT = os.getenv("ENDPOINT")
