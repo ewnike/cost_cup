@@ -18,13 +18,9 @@ import os
 
 from data_processing_utils import clean_data, process_and_insert_data
 from db_utils import define_game_plays_processor_test, get_db_engine, get_metadata
+from log_utils import setup_logging
 
-# Configure logging
-logging.basicConfig(
-    filename="data_processing.log",
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-)
+setup_logging()
 
 # ✅ Initialize database connection
 engine = get_db_engine()
