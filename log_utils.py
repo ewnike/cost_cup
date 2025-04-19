@@ -1,6 +1,4 @@
 """
-log_utils.py.
-
 Helper functions for log files.
 
 Author: Eric Winiecke
@@ -11,7 +9,7 @@ import logging
 
 
 def setup_logging(filename="data_processing.log"):
-    """Remove redundancy by storing logging function here."""
+    """Set up logging configuration with a specified log file."""
     logging.basicConfig(
         filename=filename,
         level=logging.INFO,
