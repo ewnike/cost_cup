@@ -70,6 +70,7 @@ def get_db_engine():
         return create_engine(DATABASE_URL)
 
     # Otherwise, construct from individual variables
+    # pylint: disable=invalid-name
     DATABASE_TYPE = os.getenv("DATABASE_TYPE")
     DBAPI = os.getenv("DBAPI")
     ENDPOINT = os.getenv("ENDPOINT")
@@ -78,6 +79,7 @@ def get_db_engine():
     PORT = os.getenv("PORT", "5432")  # Default PostgreSQL port
     DATABASE = os.getenv("DATABASE")
 
+    # pylint: enable=invalid-name
     # Ensure all required variables are available
     missing_vars = [
         var
