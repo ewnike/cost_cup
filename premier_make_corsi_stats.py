@@ -215,10 +215,10 @@ def calculate_and_save_corsi_stats(season_game_ids, season):
 
 def organize_by_season(seasons, df):
     """
-    Filters and processes hockey data by season.
+    Filter and process hockey data by season.
 
-    This function extracts and organizes data for specific seasons, merging necessary
-    statistics before performing Corsi calculations.
+    Extract and organize data for specific seasons, merge necessary statistics,
+    and perform Corsi calculations.
 
     Args:
     ----
@@ -229,7 +229,7 @@ def organize_by_season(seasons, df):
     -------
         list: A list containing processed DataFrames for each season.
 
-    """  # noqa: D401
+    """
     df_orig, nhl_dfs = df, []
     game_id = 2015020002
 
@@ -420,6 +420,23 @@ def organize_by_season(seasons, df):
 
 
 def prepare_game_plays(df, relevant_events):
+    """
+    Prepare the game_plays DataFrame for Corsi event processing.
+
+    Create a 'time' column based on period and periodTime, filter for relevant
+    event types, and drop rows with missing team information.
+
+    Args:
+    ----
+        df (dict): Dictionary of DataFrames, including 'game_plays'.
+        relevant_events (list): List of event types to retain (e.g., ["Shot", "Goal"]).
+
+    Returns:
+    -------
+        pd.DataFrame or None: Cleaned and filtered game_plays DataFrame, or None if
+        required data is missing.
+
+    """
     if "game_plays" not in df:
         logging.error("'game_plays' DataFrame missing in df.")
         return None
@@ -443,6 +460,24 @@ def prepare_game_plays(df, relevant_events):
 
 
 def calculate_corsi_for_game(df_corsi, game_id, df, game_plays):
+    """
+    Calculate Corsi statistics for a single game.
+
+    Filter shifts and plays for the given game ID, exclude plays during penalty situations,
+    and update player-level Corsi statistics based on events that occur during even-strength play.
+
+    Args:
+    ----
+        df_corsi (pd.DataFrame): DataFrame tracking player-level Corsi stats.
+        game_id (int): Unique identifier for the game being processed.
+        df (dict): Dictionary of DataFrames containing game data (shifts, skater stats, etc.).
+        game_plays (pd.DataFrame): Pre-filtered game_plays DataFrame with relevant events and time column.
+
+    Returns:
+    -------
+        pd.DataFrame: Updated Corsi DataFrame with stats for the given game.
+
+    """  # noqa: E501
     game_shifts = df["game_shifts"].query(f"game_id == {game_id}")
     plays_game = game_plays.query(f"game_id == {game_id}")
 
@@ -474,6 +509,23 @@ def calculate_corsi_for_game(df_corsi, game_id, df, game_plays):
 
 
 def update_corsi(df_corsi, event, game_shifts):
+    """
+    Update player-level Corsi statistics based on a single game event.
+
+    Identify players on the ice at the time of the event and apply the appropriate
+    Corsi For and Corsi Against adjustments depending on the event type.
+
+    Args:
+    ----
+        df_corsi (pd.DataFrame): DataFrame tracking player-level Corsi stats.
+        event (pd.Series): A row from the game_plays DataFrame representing a single event.
+        game_shifts (pd.DataFrame): DataFrame of player shifts for the current game.
+
+    Returns:
+    -------
+        pd.DataFrame: Updated Corsi DataFrame with stats modified based on the event.
+
+    """
     time = event["time"]
     team_for = event["team_id_for"]
     team_against = event["team_id_against"]
@@ -495,6 +547,26 @@ def update_corsi(df_corsi, event, game_shifts):
 
 
 def create_corsi_stats(df_corsi, df):
+    """
+    Generate Corsi statistics for all players across multiple games.
+
+    Prepare event data, filter for relevant Corsi events, and update player-level
+    Corsi For and Against counts based on play-by-play and shift data. Computes
+    overall Corsi and Corsi For Percentage (CF%) for each player.
+
+    Args:
+    ----
+        df_corsi (pd.DataFrame): DataFrame with player and game IDs to be updated with
+            Corsi statistics.
+        df (dict): Dictionary of DataFrames containing game data, including 'game_plays',
+            'game_shifts', and 'game_skater_stats'.
+
+    Returns:
+    -------
+        pd.DataFrame: Updated Corsi DataFrame with 'corsi_for', 'corsi_against', 'corsi',
+            and 'CF_Percent' columns.
+
+    """
     logging.info("Entered create_corsi_stats")
 
     df_corsi[["corsi_for", "corsi_against", "corsi"]] = 0
