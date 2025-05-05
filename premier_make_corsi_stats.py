@@ -288,7 +288,7 @@ def create_corsi_stats(df_corsi, df):  # noqa: D417
             logging.info("Calculated 'time' column in game_plays.")
         else:
             logging.error("'periodTime' or 'period' column missing in game_plays.")
-            return
+            return df_corsi
 
         # Filter game_plays to include only relevant events
         game_plays = df["game_plays"][df["game_plays"]["event"].isin(relevant_events)]
@@ -302,7 +302,7 @@ def create_corsi_stats(df_corsi, df):  # noqa: D417
         logging.info("Verified 'time' column exists in game_plays after filtering.")
     else:
         logging.error("'game_plays' DataFrame missing in df.")
-        return
+        return df_corsi
 
     game_id_prev = None
 
@@ -319,7 +319,7 @@ def create_corsi_stats(df_corsi, df):  # noqa: D417
             # Log the 'time' column in plays_game to verify its presence
             if "time" not in plays_game.columns:
                 logging.error("'time' column missing in plays_game after filtering by game_id.")
-                return
+                return df_corsi
 
             logging.info(f"'time' column verified in plays_game for game_id {game_id}.")
 
