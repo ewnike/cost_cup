@@ -255,166 +255,270 @@ def organize_by_season(seasons, df):
     return nhl_dfs
 
 
-def create_corsi_stats(df_corsi, df):  # noqa: D417
-    """
-    Filters and processes hockey data by season.
+# def create_corsi_stats(df_corsi, df):  # noqa: D417
+#     """
+#     Filters and processes hockey data by season.
 
-    This function extracts and organizes data for specific seasons, merging necessary
-    statistics before performing Corsi calculations.
+#     This function extracts and organizes data for specific seasons, merging necessary
+#     statistics before performing Corsi calculations.
 
-    Args:
-    ----
-        seasons (list): List of season years (e.g., [20152016, 20162017]).
-        df (dict): Dictionary of DataFrames containing game data.
+#     Args:
+#     ----
+#         seasons (list): List of season years (e.g., [20152016, 20162017]).
+#         df (dict): Dictionary of DataFrames containing game data.
 
-    Returns:
-    -------
-        list: A list containing processed DataFrames for each season.
+#     Returns:
+#     -------
+#         list: A list containing processed DataFrames for each season.
 
-    """  # noqa: D401
+#     """  # noqa: D401
+#     logging.info("Entered create_corsi_stats")
+
+#     # Initialize Corsi statistics columns with zeros for all players
+#     df_corsi[["corsi_for", "corsi_against", "corsi"]] = 0
+#     relevant_events = ["Shot", "Blocked Shot", "Missed Shot", "Goal"]
+
+#     # Ensure the 'time' column is created and available in game_plays
+#     if "game_plays" in df:
+#         if "periodTime" in df["game_plays"].columns and "period" in df["game_plays"].columns:
+#             # Calculate 'time' based on period and periodTime
+#             df["game_plays"]["time"] = (
+#                 df["game_plays"]["periodTime"] + (df["game_plays"]["period"] - 1) * 1200
+#             )
+#             logging.info("Calculated 'time' column in game_plays.")
+#         else:
+#             logging.error("'periodTime' or 'period' column missing in game_plays.")
+#             return df_corsi
+
+#         # Filter game_plays to include only relevant events
+#         game_plays = df["game_plays"][df["game_plays"]["event"].isin(relevant_events)]
+#         game_plays = game_plays.dropna(subset=["team_id_for", "team_id_against"])
+
+#         # Verify 'time' column presence after filtering
+#         if "time" not in game_plays.columns:
+#             logging.error("The 'time' column is missing from game_plays after filtering.")
+#             return
+
+#         logging.info("Verified 'time' column exists in game_plays after filtering.")
+#     else:
+#         logging.error("'game_plays' DataFrame missing in df.")
+#         return df_corsi
+
+#     game_id_prev = None
+
+#     for row in df_corsi.itertuples(index=False):
+#         game_id = row.game_id  # Access attributes directly
+
+#         if game_id != game_id_prev:
+#             game_id_prev = game_id
+
+#             # Filter game_shifts and game_plays for this game_id
+#             game_shifts = df["game_shifts"].query(f"game_id == {game_id}")
+#             plays_game = df["game_plays"].query(f"game_id == {game_id}")
+
+#             # Log the 'time' column in plays_game to verify its presence
+#             if "time" not in plays_game.columns:
+#                 logging.error("'time' column missing in plays_game after filtering by game_id.")
+#                 return df_corsi
+
+#             logging.info(f"'time' column verified in plays_game for game_id {game_id}.")
+
+#             # Continue with the rest of the function as needed, adding further logs as appropriate
+
+#             # Merge team_id into game_shifts and ensure team_id is an integer after merging
+#             game_shifts = pd.merge(
+#                 game_shifts,
+#                 df["game_skater_stats"][["game_id", "player_id", "team_id"]],
+#                 on=["game_id", "player_id"],
+#                 how="left",
+#             )
+
+#             game_shifts["shift_start"] = game_shifts["shift_start"].astype(int)
+#             game_shifts["shift_end"] = game_shifts["shift_end"].astype(int)
+
+#             gss = df["game_skater_stats"].query(f"game_id == {game_id}")
+#             df_num_players = get_penalty_exclude_times(game_shifts, gss).reset_index(drop=True)
+
+#             idx = df_num_players["time"].searchsorted(plays_game["time"]) - 1
+#             idx[idx < 0] = 0
+#             mask = df_num_players["exclude"][idx].reset_index(drop=True).to_numpy()
+#             plays_game = plays_game.loc[~mask]
+
+#     for _, event in plays_game.iterrows():
+#         event_time = event["time"]
+#         team_for = event["team_id_for"]
+#         team_against = event["team_id_against"]
+
+#         # Find all players on ice for both teams at this event time
+#         players_on_ice = game_shifts[
+#             (game_shifts["shift_start"] <= event_time) & (game_shifts["shift_end"] >= event_time)
+#         ]
+
+#         # Separate players by team
+#         players_for_team = players_on_ice[players_on_ice["team_id"] == team_for]
+#         players_against_team = players_on_ice[players_on_ice["team_id"] == team_against]
+
+#         # Log the number of players on each team at this event
+#         logging.info(
+#             f"Event: {event['event']} at time {event_time} - "
+#             f"Players for team {team_for} on ice: {len(players_for_team)}, "
+#             f"Players against team {team_against} on ice: {len(players_against_team)}"
+#         )
+
+#         # Log player IDs for detailed tracking
+#         logging.info(
+#             f"Player IDs for team {team_for} on ice: {players_for_team['player_id'].tolist()}"
+#         )
+#         logging.info(
+#             f"Player IDs for team {team_against} on ice: "
+#             f"{players_against_team['player_id'].tolist()}"
+#         )
+
+#         # Corsi calculations and log updates
+#         if event["event"] in ["Shot", "Goal", "Missed Shot"]:
+#             df_corsi.loc[
+#                 df_corsi["player_id"].isin(players_for_team["player_id"]), "corsi_for"
+#             ] += 1
+#             df_corsi.loc[
+#                 df_corsi["player_id"].isin(players_against_team["player_id"]),
+#                 "corsi_against",
+#             ] += 1
+
+#             logging.info(
+#                 f"{event['event']} - CF updated for players on team {team_for} "
+#                 f"and CA updated for players on team {team_against}"
+#             )
+
+#         elif event["event"] == "Blocked Shot":
+#             df_corsi.loc[
+#                 df_corsi["player_id"].isin(players_for_team["player_id"]),
+#                 "corsi_against",
+#             ] += 1
+#             df_corsi.loc[
+#                 df_corsi["player_id"].isin(players_against_team["player_id"]),
+#                 "corsi_for",
+#             ] += 1
+
+#             logging.info(
+#                 f"Blocked Shot - CA updated for players on team {team_for} "
+#                 f"and CF updated for players on team {team_against}"
+#             )
+
+#         # After the loop processing `plays_game` and updating `df_corsi`
+#     df_corsi["corsi"] = df_corsi["corsi_for"] - df_corsi["corsi_against"]
+
+#     df_corsi["CF_Percent"] = (
+#         ((df_corsi["corsi_for"] / (df_corsi["corsi_for"] + df_corsi["corsi_against"])) * 100)
+#         .fillna(0)
+#         .round(4)
+#     )
+
+#     # Final log summary
+#     logging.info("Corsi calculations complete. Summary of first few rows:")
+#     logging.info(df_corsi.head(5))
+#     return df_corsi
+
+
+def prepare_game_plays(df, relevant_events):
+    if "game_plays" not in df:
+        logging.error("'game_plays' DataFrame missing in df.")
+        return None
+
+    gp = df["game_plays"]
+
+    if "periodTime" not in gp.columns or "period" not in gp.columns:
+        logging.error("'periodTime' or 'period' column missing in game_plays.")
+        return None
+
+    gp["time"] = gp["periodTime"] + (gp["period"] - 1) * 1200
+    logging.info("Calculated 'time' column in game_plays.")
+
+    gp = gp[gp["event"].isin(relevant_events)].dropna(subset=["team_id_for", "team_id_against"])
+
+    if "time" not in gp.columns:
+        logging.error("The 'time' column is missing after filtering.")
+        return None
+
+    return gp
+
+
+def calculate_corsi_for_game(df_corsi, game_id, df, game_plays):
+    game_shifts = df["game_shifts"].query(f"game_id == {game_id}")
+    plays_game = game_plays.query(f"game_id == {game_id}")
+
+    if "time" not in plays_game.columns:
+        logging.error("'time' column missing in plays_game after filtering by game_id.")
+        return df_corsi
+
+    game_shifts = pd.merge(
+        game_shifts,
+        df["game_skater_stats"][["game_id", "player_id", "team_id"]],
+        on=["game_id", "player_id"],
+        how="left",
+    )
+    game_shifts["shift_start"] = game_shifts["shift_start"].astype(int)
+    game_shifts["shift_end"] = game_shifts["shift_end"].astype(int)
+
+    gss = df["game_skater_stats"].query(f"game_id == {game_id}")
+    df_num_players = get_penalty_exclude_times(game_shifts, gss).reset_index(drop=True)
+
+    idx = df_num_players["time"].searchsorted(plays_game["time"]) - 1
+    idx[idx < 0] = 0
+    mask = df_num_players["exclude"][idx].reset_index(drop=True).to_numpy()
+    plays_game = plays_game.loc[~mask]
+
+    for _, event in plays_game.iterrows():
+        df_corsi = update_corsi(df_corsi, event, game_shifts)
+
+    return df_corsi
+
+
+def update_corsi(df_corsi, event, game_shifts):
+    time = event["time"]
+    team_for = event["team_id_for"]
+    team_against = event["team_id_against"]
+
+    players_on_ice = game_shifts[
+        (game_shifts["shift_start"] <= time) & (game_shifts["shift_end"] >= time)
+    ]
+    players_for = players_on_ice[players_on_ice["team_id"] == team_for]
+    players_against = players_on_ice[players_on_ice["team_id"] == team_against]
+
+    if event["event"] in ["Shot", "Goal", "Missed Shot"]:
+        df_corsi.loc[df_corsi["player_id"].isin(players_for["player_id"]), "corsi_for"] += 1
+        df_corsi.loc[df_corsi["player_id"].isin(players_against["player_id"]), "corsi_against"] += 1
+    elif event["event"] == "Blocked Shot":
+        df_corsi.loc[df_corsi["player_id"].isin(players_for["player_id"]), "corsi_against"] += 1
+        df_corsi.loc[df_corsi["player_id"].isin(players_against["player_id"]), "corsi_for"] += 1
+
+    return df_corsi
+
+
+def create_corsi_stats(df_corsi, df):
     logging.info("Entered create_corsi_stats")
 
-    # Initialize Corsi statistics columns with zeros for all players
     df_corsi[["corsi_for", "corsi_against", "corsi"]] = 0
     relevant_events = ["Shot", "Blocked Shot", "Missed Shot", "Goal"]
+    game_plays = prepare_game_plays(df, relevant_events)
 
-    # Ensure the 'time' column is created and available in game_plays
-    if "game_plays" in df:
-        if "periodTime" in df["game_plays"].columns and "period" in df["game_plays"].columns:
-            # Calculate 'time' based on period and periodTime
-            df["game_plays"]["time"] = (
-                df["game_plays"]["periodTime"] + (df["game_plays"]["period"] - 1) * 1200
-            )
-            logging.info("Calculated 'time' column in game_plays.")
-        else:
-            logging.error("'periodTime' or 'period' column missing in game_plays.")
-            return df_corsi
-
-        # Filter game_plays to include only relevant events
-        game_plays = df["game_plays"][df["game_plays"]["event"].isin(relevant_events)]
-        game_plays = game_plays.dropna(subset=["team_id_for", "team_id_against"])
-
-        # Verify 'time' column presence after filtering
-        if "time" not in game_plays.columns:
-            logging.error("The 'time' column is missing from game_plays after filtering.")
-            return
-
-        logging.info("Verified 'time' column exists in game_plays after filtering.")
-    else:
-        logging.error("'game_plays' DataFrame missing in df.")
+    if game_plays is None:
         return df_corsi
 
     game_id_prev = None
-
     for row in df_corsi.itertuples(index=False):
-        game_id = row.game_id  # Access attributes directly
-
+        game_id = row.game_id
         if game_id != game_id_prev:
             game_id_prev = game_id
+            df_corsi = calculate_corsi_for_game(df_corsi, game_id, df, game_plays)
 
-            # Filter game_shifts and game_plays for this game_id
-            game_shifts = df["game_shifts"].query(f"game_id == {game_id}")
-            plays_game = df["game_plays"].query(f"game_id == {game_id}")
-
-            # Log the 'time' column in plays_game to verify its presence
-            if "time" not in plays_game.columns:
-                logging.error("'time' column missing in plays_game after filtering by game_id.")
-                return df_corsi
-
-            logging.info(f"'time' column verified in plays_game for game_id {game_id}.")
-
-            # Continue with the rest of the function as needed, adding further logs as appropriate
-
-            # Merge team_id into game_shifts and ensure team_id is an integer after merging
-            game_shifts = pd.merge(
-                game_shifts,
-                df["game_skater_stats"][["game_id", "player_id", "team_id"]],
-                on=["game_id", "player_id"],
-                how="left",
-            )
-
-            game_shifts["shift_start"] = game_shifts["shift_start"].astype(int)
-            game_shifts["shift_end"] = game_shifts["shift_end"].astype(int)
-
-            gss = df["game_skater_stats"].query(f"game_id == {game_id}")
-            df_num_players = get_penalty_exclude_times(game_shifts, gss).reset_index(drop=True)
-
-            idx = df_num_players["time"].searchsorted(plays_game["time"]) - 1
-            idx[idx < 0] = 0
-            mask = df_num_players["exclude"][idx].reset_index(drop=True).to_numpy()
-            plays_game = plays_game.loc[~mask]
-
-    for _, event in plays_game.iterrows():
-        event_time = event["time"]
-        team_for = event["team_id_for"]
-        team_against = event["team_id_against"]
-
-        # Find all players on ice for both teams at this event time
-        players_on_ice = game_shifts[
-            (game_shifts["shift_start"] <= event_time) & (game_shifts["shift_end"] >= event_time)
-        ]
-
-        # Separate players by team
-        players_for_team = players_on_ice[players_on_ice["team_id"] == team_for]
-        players_against_team = players_on_ice[players_on_ice["team_id"] == team_against]
-
-        # Log the number of players on each team at this event
-        logging.info(
-            f"Event: {event['event']} at time {event_time} - "
-            f"Players for team {team_for} on ice: {len(players_for_team)}, "
-            f"Players against team {team_against} on ice: {len(players_against_team)}"
-        )
-
-        # Log player IDs for detailed tracking
-        logging.info(
-            f"Player IDs for team {team_for} on ice: {players_for_team['player_id'].tolist()}"
-        )
-        logging.info(
-            f"Player IDs for team {team_against} on ice: "
-            f"{players_against_team['player_id'].tolist()}"
-        )
-
-        # Corsi calculations and log updates
-        if event["event"] in ["Shot", "Goal", "Missed Shot"]:
-            df_corsi.loc[
-                df_corsi["player_id"].isin(players_for_team["player_id"]), "corsi_for"
-            ] += 1
-            df_corsi.loc[
-                df_corsi["player_id"].isin(players_against_team["player_id"]),
-                "corsi_against",
-            ] += 1
-
-            logging.info(
-                f"{event['event']} - CF updated for players on team {team_for} "
-                f"and CA updated for players on team {team_against}"
-            )
-
-        elif event["event"] == "Blocked Shot":
-            df_corsi.loc[
-                df_corsi["player_id"].isin(players_for_team["player_id"]),
-                "corsi_against",
-            ] += 1
-            df_corsi.loc[
-                df_corsi["player_id"].isin(players_against_team["player_id"]),
-                "corsi_for",
-            ] += 1
-
-            logging.info(
-                f"Blocked Shot - CA updated for players on team {team_for} "
-                f"and CF updated for players on team {team_against}"
-            )
-
-        # After the loop processing `plays_game` and updating `df_corsi`
     df_corsi["corsi"] = df_corsi["corsi_for"] - df_corsi["corsi_against"]
-
     df_corsi["CF_Percent"] = (
         ((df_corsi["corsi_for"] / (df_corsi["corsi_for"] + df_corsi["corsi_against"])) * 100)
         .fillna(0)
         .round(4)
     )
 
-    # Final log summary
-    logging.info("Corsi calculations complete. Summary of first few rows:")
+    logging.info("Corsi calculations complete. Summary:")
     logging.info(df_corsi.head(5))
     return df_corsi
 
