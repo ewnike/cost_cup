@@ -7,6 +7,7 @@ Date: May 5, 2025
 """
 
 
+# pylint: disable=too-many-arguments
 def build_processing_config(
     *,
     bucket_name,
