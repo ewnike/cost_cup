@@ -471,7 +471,8 @@ def calculate_corsi_for_game(df_corsi, game_id, df, game_plays):
         df_corsi (pd.DataFrame): DataFrame tracking player-level Corsi stats.
         game_id (int): Unique identifier for the game being processed.
         df (dict): Dictionary of DataFrames containing game data (shifts, skater stats, etc.).
-        game_plays (pd.DataFrame): Pre-filtered game_plays DataFrame with relevant events and time column.
+        game_plays (pd.DataFrame): Pre-filtered game_plays DataFrame with relevant events
+        and time column.
 
     Returns:
     -------
