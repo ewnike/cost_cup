@@ -8,7 +8,7 @@
 # import logging
 
 
-# def setup_logging(filename="data_processing.log"):
+# def setup_logger(filename="data_processing.log"):
 #     """Set up logging configuration with a specified log file."""
 #     logging.basicConfig(
 #         filename=filename,
