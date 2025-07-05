@@ -13,6 +13,7 @@ import sys
 import pandas as pd
 from sqlalchemy import text
 
+from constants import SEASONS
 from db_utils import get_db_engine, get_metadata
 
 # Dynamically add the parent directory (cost_cup/) to sys.path
@@ -24,14 +25,15 @@ engine = get_db_engine()
 metadata = get_metadata()
 
 # Define seasons and corresponding years
-seasons = ["20152016", "20162017", "20172018"]
+# SEASONS = ["20152016", "20162017", "20172018"]
+
 years = ["2016", "2017", "2018"]
 
 # Initialize a list to store DataFrames
 df_list = []
 
 # Loop through each season and year to fetch data
-for season, year in zip(seasons, years):
+for season, year in zip(SEASONS, years):
     SQL_QUERY = f"""
     SELECT
         mt."Abbreviation",

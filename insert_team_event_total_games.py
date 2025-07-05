@@ -21,6 +21,7 @@ from sqlalchemy import (
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 
+from constants import SEASONS
 from db_utils import get_db_engine, get_metadata
 
 # Configure logging
@@ -70,10 +71,10 @@ def create_team_event_total_games_table(table_name):
 
 
 # Define seasons and create tables dynamically
-seasons = ["20152016", "20162017", "20172018"]
+# seasons = ["20152016", "20162017", "20172018"]
 tables = {
     season: create_team_event_total_games_table(f"team_event_totals_games_{season}")
-    for season in seasons
+    for season in SEASONS
 }  # noqa: E501
 
 # Create tables in the database
@@ -118,7 +119,7 @@ def insert_data_from_csv(engine, table_name, file_path):
 # Generate file paths dynamically
 csv_files_and_mappings = [
     (DATA_DIR / f"team_event_totals_games_{season}.csv", f"team_event_totals_games_{season}")
-    for season in seasons
+    for season in SEASONS
 ]
 
 # Insert data for each season
