@@ -7,42 +7,46 @@ per team per season.
 Eric Winiecke.
 """
 
-import logging
-import os
-from logging.handlers import RotatingFileHandler
+# import logging
+# import os
 
 import pandas as pd
 
 from load_data import get_env_vars, load_data
 
+# from logging.handlers import RotatingFileHandler
+from log_utils import setup_logger
+
 # Set up logging with explicit confirmation of path
 # Define the log file path
 LOG_FILE_PATH = "/Users/ericwiniecke/Documents/github/cost_cup/data_processing_II.log"
-log_directory = os.path.dirname(LOG_FILE_PATH)
+logger = setup_logger(LOG_FILE_PATH)
+logger.info("Logger configured successfully.")
+# log_directory = os.path.dirname(LOG_FILE_PATH)
 
-# Ensure the log directory exists
-if not os.path.exists(log_directory):
-    os.makedirs(log_directory)
-    print(f"Created log directory: {log_directory}")
-else:
-    print(f"Log directory exists: {log_directory}")
+# # Ensure the log directory exists
+# if not os.path.exists(log_directory):
+#     os.makedirs(log_directory)
+#     print(f"Created log directory: {log_directory}")
+# else:
+#     print(f"Log directory exists: {log_directory}")
 
-# Set up RotatingFileHandler (Max size 5 MB, keep up to 3 backup files)
-rotating_handler = RotatingFileHandler(LOG_FILE_PATH, maxBytes=5 * 1024 * 1024, backupCount=3)
-rotating_handler.setLevel(logging.INFO)
+# # Set up RotatingFileHandler (Max size 5 MB, keep up to 3 backup files)
+# rotating_handler = RotatingFileHandler(LOG_FILE_PATH, maxBytes=5 * 1024 * 1024, backupCount=3)
+# rotating_handler.setLevel(logging.INFO)
 
-# Define log format
-formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-rotating_handler.setFormatter(formatter)
+# # Define log format
+# formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+# rotating_handler.setFormatter(formatter)
 
-# Set up root logger with the rotating handler
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-logger.addHandler(rotating_handler)
-logger.addHandler(logging.StreamHandler())  # Also print logs to console
+# # Set up root logger with the rotating handler
+# logger = logging.getLogger()
+# logger.setLevel(logging.INFO)
+# logger.addHandler(rotating_handler)
+# logger.addHandler(logging.StreamHandler())  # Also print logs to console
 
 # Test logging configuration
-logger.info("Logger configured successfully with RotatingFileHandler.")
+# logger.info("Logger configured successfully with RotatingFileHandler.")
 print(f"Logging to file: {LOG_FILE_PATH}")
 
 
