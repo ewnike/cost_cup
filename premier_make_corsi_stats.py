@@ -15,31 +15,31 @@ Author: Eric Winiecke
 Date: October 30, 2024
 """
 
-import logging
-import os
-
 import pandas as pd
 
 from load_data import get_env_vars, load_data
+from log_utils import setup_logger
 
-# Set up logging with explicit confirmation of path
 LOG_FILE_PATH = "/Users/ericwiniecke/Documents/github/cost_cup/data_processing.log"
-log_directory = os.path.dirname(LOG_FILE_PATH)
-if not os.path.exists(log_directory):
-    os.makedirs(log_directory)
-    print(f"Created log directory: {log_directory}")
-else:
-    print(f"Log directory exists: {log_directory}")
+logger = setup_logger(LOG_FILE_PATH)
+logger.info("Logger configured successfully. Test message to ensure logging works.")
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[logging.FileHandler(LOG_FILE_PATH, mode="w"), logging.StreamHandler()],
-)
+# log_directory = os.path.dirname(LOG_FILE_PATH)
+# if not os.path.exists(log_directory):
+#     os.makedirs(log_directory)
+#     print(f"Created log directory: {log_directory}")
+# else:
+#     print(f"Log directory exists: {log_directory}")
 
-# Test to confirm logger output
-logging.info("Logger configured successfully. Test message to ensure logging works.")
-print(f"Logging to file: {LOG_FILE_PATH}")
+# logging.basicConfig(
+#     level=logging.INFO,
+#     format="%(asctime)s - %(levelname)s - %(message)s",
+#     handlers=[logging.FileHandler(LOG_FILE_PATH, mode="w"), logging.StreamHandler()],
+# )
+
+# # Test to confirm logger output
+# logging.info("Logger configured successfully. Test message to ensure logging works.")
+# print(f"Logging to file: {LOG_FILE_PATH}")
 
 # Function Definitions
 
