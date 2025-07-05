@@ -14,6 +14,7 @@ import pandas as pd
 from sqlalchemy import BigInteger, Column, Float, Integer, Table
 from sqlalchemy.orm import sessionmaker
 
+from constants import SEASONS
 from data_processing_utils import insert_data
 from db_utils import get_db_engine, get_metadata
 
@@ -23,7 +24,7 @@ metadata = get_metadata()
 
 
 # Define seasons
-seasons = ["20152016", "20162017", "20172018"]
+# seasons = ["20152016", "20162017", "20172018"]
 
 
 def create_corsi_table(table_name):
@@ -42,7 +43,7 @@ def create_corsi_table(table_name):
 
 
 # Create test tables dynamically (with "_test" suffix)
-tables = {season: create_corsi_table(f"raw_corsi_{season}") for season in seasons}
+tables = {season: create_corsi_table(f"raw_corsi_{season}") for season in SEASONS}
 metadata.create_all(engine)  # Ensure test tables are created
 
 # Initialize database session
@@ -55,7 +56,7 @@ csv_dir = os.path.join(base_dir, "corsi_stats")  # Path to CSV directory
 # Define CSV file paths and test table names dynamically
 csv_files_and_mappings = [
     (os.path.join(csv_dir, f"corsi_stats_{season}.csv"), f"raw_corsi_{season}")
-    for season in seasons
+    for season in SEASONS
 ]
 
 # Insert data into test tables

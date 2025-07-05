@@ -15,8 +15,11 @@ Author: Eric Winiecke
 Date: October 30, 2024
 """
 
+import os
+
 import pandas as pd
 
+from constants import SEASONS
 from load_data import get_env_vars, load_data
 from log_utils import setup_logger
 
@@ -31,14 +34,14 @@ logger.info("Logger configured successfully. Test message to ensure logging work
 # else:
 #     print(f"Log directory exists: {log_directory}")
 
-# logging.basicConfig(
-#     level=logging.INFO,
+# logger.basicConfig(
+#     level=logger.INFO,
 #     format="%(asctime)s - %(levelname)s - %(message)s",
-#     handlers=[logging.FileHandler(LOG_FILE_PATH, mode="w"), logging.StreamHandler()],
+#     handlers=[logger.FileHandler(LOG_FILE_PATH, mode="w"), logger.StreamHandler()],
 # )
 
 # # Test to confirm logger output
-# logging.info("Logger configured successfully. Test message to ensure logging works.")
+# logger.info("Logger configured successfully. Test message to ensure logging works.")
 # print(f"Logging to file: {LOG_FILE_PATH}")
 
 # Function Definitions
@@ -96,7 +99,7 @@ def get_penalty_exclude_times(game_shifts, game_skater_stats):
 
     """  # noqa: D401, E501
     if game_shifts.empty:
-        logging.warning("Warning: game_shifts is empty in get_penalty_exclude_times")
+        logger.warning("Warning: game_shifts is empty in get_penalty_exclude_times")
         return pd.DataFrame()  # Return an empty DataFrame if no shifts are available
 
     # Merge the `team_id` column from `game_skater_stats` into `game_shifts`
@@ -137,9 +140,9 @@ def get_penalty_exclude_times(game_shifts, game_skater_stats):
     df_exclude = df_exclude.reset_index(drop=True)
 
     # Log the penalty exclude times for verification
-    logging.info("Penalty Exclude Times:")
+    logger.info("Penalty Exclude Times:")
     for _, row in df_exclude.iterrows():
-        logging.info(
+        logger.info(
             f"Time: {row['time']}, Team 1 Players: {row['team_1']}, "
             f"Team 2 Players: {row['team_2']}, Exclude: {row['exclude']}"
         )
@@ -172,7 +175,7 @@ def calculate_and_save_corsi_stats(season_game_ids, season):
         or "game_shifts" not in df_master
         or "game_skater_stats" not in df_master
     ):
-        logging.error("One or more required dataframes are missing from the loaded data.")
+        logger.error("One or more required dataframes are missing from the loaded data.")
         return
 
     season_corsi_stats = []
@@ -187,7 +190,7 @@ def calculate_and_save_corsi_stats(season_game_ids, season):
             or df_game["game_plays"].empty
             or df_game["game_skater_stats"].empty
         ):
-            logging.warning(f"Skipping game {game_id}: One or more required DataFrames are empty.")
+            logger.warning(f"Skipping game {game_id}: One or more required DataFrames are empty.")
             continue
 
         # Calculate Corsi stats for the current game
@@ -196,7 +199,7 @@ def calculate_and_save_corsi_stats(season_game_ids, season):
 
         if corsi_stats is not None and not corsi_stats.empty:
             season_corsi_stats.append(corsi_stats)
-            logging.info(f"Completed Corsi calculation for game {game_id}.")
+            logger.info(f"Completed Corsi calculation for game {game_id}.")
 
     # Combine all game data into a single DataFrame
     if season_corsi_stats:
@@ -208,12 +211,12 @@ def calculate_and_save_corsi_stats(season_game_ids, season):
 
         output_file = os.path.join(output_dir, f"corsi_stats_{season}.csv")  # Set output path
         final_season_df.to_csv(output_file, index=False)
-        logging.info(f"Saved Corsi data for the {season} season to {output_file}.")
+        logger.info(f"Saved Corsi data for the {season} season to {output_file}.")
     else:
-        logging.warning(f"No valid Corsi data was generated for the {season} season.")
+        logger.warning(f"No valid Corsi data was generated for the {season} season.")
 
 
-def organize_by_season(seasons, df):
+def organize_by_season(df):
     """
     Filter and process hockey data by season.
 
@@ -222,7 +225,7 @@ def organize_by_season(seasons, df):
 
     Args:
     ----
-        seasons (list): List of season years (e.g., [20152016, 20162017]).
+        SEASONS global constant(list): List of season years (e.g., [20152016, 20162017]).
         df (dict): Dictionary of DataFrames containing game data.
 
     Returns:
@@ -233,11 +236,11 @@ def organize_by_season(seasons, df):
     df_orig, nhl_dfs = df, []
     game_id = 2015020002
 
-    for season in seasons:
+    for season in SEASONS:
         df = df_orig.copy()
         df["game"] = df["game"].query(f"season == {season} and game_id == {game_id}")
         if df["game"].empty:
-            logging.warning(f"Game ID {game_id} not found in season {season}.")
+            logger.warning(f"Game ID {game_id} not found in season {season}.")
             continue
 
         for name in ["game_skater_stats", "game_plays", "game_shifts"]:
@@ -272,7 +275,7 @@ def organize_by_season(seasons, df):
 #         list: A list containing processed DataFrames for each season.
 
 #     """  # noqa: D401
-#     logging.info("Entered create_corsi_stats")
+#     logger.info("Entered create_corsi_stats")
 
 #     # Initialize Corsi statistics columns with zeros for all players
 #     df_corsi[["corsi_for", "corsi_against", "corsi"]] = 0
@@ -285,9 +288,9 @@ def organize_by_season(seasons, df):
 #             df["game_plays"]["time"] = (
 #                 df["game_plays"]["periodTime"] + (df["game_plays"]["period"] - 1) * 1200
 #             )
-#             logging.info("Calculated 'time' column in game_plays.")
+#             logger.info("Calculated 'time' column in game_plays.")
 #         else:
-#             logging.error("'periodTime' or 'period' column missing in game_plays.")
+#             logger.error("'periodTime' or 'period' column missing in game_plays.")
 #             return df_corsi
 
 #         # Filter game_plays to include only relevant events
@@ -296,12 +299,12 @@ def organize_by_season(seasons, df):
 
 #         # Verify 'time' column presence after filtering
 #         if "time" not in game_plays.columns:
-#             logging.error("The 'time' column is missing from game_plays after filtering.")
+#             logger.error("The 'time' column is missing from game_plays after filtering.")
 #             return
 
-#         logging.info("Verified 'time' column exists in game_plays after filtering.")
+#         logger.info("Verified 'time' column exists in game_plays after filtering.")
 #     else:
-#         logging.error("'game_plays' DataFrame missing in df.")
+#         logger.error("'game_plays' DataFrame missing in df.")
 #         return df_corsi
 
 #     game_id_prev = None
@@ -318,10 +321,10 @@ def organize_by_season(seasons, df):
 
 #             # Log the 'time' column in plays_game to verify its presence
 #             if "time" not in plays_game.columns:
-#                 logging.error("'time' column missing in plays_game after filtering by game_id.")
+#                 logger.error("'time' column missing in plays_game after filtering by game_id.")
 #                 return df_corsi
 
-#             logging.info(f"'time' column verified in plays_game for game_id {game_id}.")
+#             logger.info(f"'time' column verified in plays_game for game_id {game_id}.")
 
 #             # Continue with the rest of the function as needed, adding further logs as appropriate
 
@@ -359,17 +362,17 @@ def organize_by_season(seasons, df):
 #         players_against_team = players_on_ice[players_on_ice["team_id"] == team_against]
 
 #         # Log the number of players on each team at this event
-#         logging.info(
+#         logger.info(
 #             f"Event: {event['event']} at time {event_time} - "
 #             f"Players for team {team_for} on ice: {len(players_for_team)}, "
 #             f"Players against team {team_against} on ice: {len(players_against_team)}"
 #         )
 
 #         # Log player IDs for detailed tracking
-#         logging.info(
+#         logger.info(
 #             f"Player IDs for team {team_for} on ice: {players_for_team['player_id'].tolist()}"
 #         )
-#         logging.info(
+#         logger.info(
 #             f"Player IDs for team {team_against} on ice: "
 #             f"{players_against_team['player_id'].tolist()}"
 #         )
@@ -384,7 +387,7 @@ def organize_by_season(seasons, df):
 #                 "corsi_against",
 #             ] += 1
 
-#             logging.info(
+#             logger.info(
 #                 f"{event['event']} - CF updated for players on team {team_for} "
 #                 f"and CA updated for players on team {team_against}"
 #             )
@@ -399,7 +402,7 @@ def organize_by_season(seasons, df):
 #                 "corsi_for",
 #             ] += 1
 
-#             logging.info(
+#             logger.info(
 #                 f"Blocked Shot - CA updated for players on team {team_for} "
 #                 f"and CF updated for players on team {team_against}"
 #             )
@@ -414,8 +417,8 @@ def organize_by_season(seasons, df):
 #     )
 
 #     # Final log summary
-#     logging.info("Corsi calculations complete. Summary of first few rows:")
-#     logging.info(df_corsi.head(5))
+#     logger.info("Corsi calculations complete. Summary of first few rows:")
+#     logger.info(df_corsi.head(5))
 #     return df_corsi
 
 
@@ -438,22 +441,22 @@ def prepare_game_plays(df, relevant_events):
 
     """
     if "game_plays" not in df:
-        logging.error("'game_plays' DataFrame missing in df.")
+        logger.error("'game_plays' DataFrame missing in df.")
         return None
 
     gp = df["game_plays"]
 
     if "periodTime" not in gp.columns or "period" not in gp.columns:
-        logging.error("'periodTime' or 'period' column missing in game_plays.")
+        logger.error("'periodTime' or 'period' column missing in game_plays.")
         return None
 
     gp["time"] = gp["periodTime"] + (gp["period"] - 1) * 1200
-    logging.info("Calculated 'time' column in game_plays.")
+    logger.info("Calculated 'time' column in game_plays.")
 
     gp = gp[gp["event"].isin(relevant_events)].dropna(subset=["team_id_for", "team_id_against"])
 
     if "time" not in gp.columns:
-        logging.error("The 'time' column is missing after filtering.")
+        logger.error("The 'time' column is missing after filtering.")
         return None
 
     return gp
@@ -483,7 +486,7 @@ def calculate_corsi_for_game(df_corsi, game_id, df, game_plays):
     plays_game = game_plays.query(f"game_id == {game_id}")
 
     if "time" not in plays_game.columns:
-        logging.error("'time' column missing in plays_game after filtering by game_id.")
+        logger.error("'time' column missing in plays_game after filtering by game_id.")
         return df_corsi
 
     game_shifts = pd.merge(
@@ -568,7 +571,7 @@ def create_corsi_stats(df_corsi, df):
             and 'CF_Percent' columns.
 
     """
-    logging.info("Entered create_corsi_stats")
+    logger.info("Entered create_corsi_stats")
 
     df_corsi[["corsi_for", "corsi_against", "corsi"]] = 0
     relevant_events = ["Shot", "Blocked Shot", "Missed Shot", "Goal"]
@@ -591,8 +594,8 @@ def create_corsi_stats(df_corsi, df):
         .round(4)
     )
 
-    logging.info("Corsi calculations complete. Summary:")
-    logging.info(df_corsi.head(5))
+    logger.info("Corsi calculations complete. Summary:")
+    logger.info(df_corsi.head(5))
     return df_corsi
 
 
@@ -613,19 +616,19 @@ if __name__ == "__main__":
 
     if "game" in df_master:
         # List of seasons to process
-        seasons = [20152016, 20162017, 20172018]
+        # seasons = [20152016, 20162017, 20172018]. Now a global constant SEASONS
 
-        for season in seasons:
+        for season in SEASONS:
             # Filter for the current season and get unique game IDs
             season_game_ids = (
                 df_master["game"].loc[df_master["game"]["season"] == season, "game_id"].unique()
             )
 
             if len(season_game_ids) > 0:
-                logging.info(f"Found {len(season_game_ids)} games for the {season} season.")
+                logger.info(f"Found {len(season_game_ids)} games for the {season} season.")
                 # Pass the game IDs and the season to the function to process and save Corsi stats
                 calculate_and_save_corsi_stats(season_game_ids, season)
             else:
-                logging.warning(f"No games found for the {season} season. Skipping.")
+                logger.warning(f"No games found for the {season} season. Skipping.")
     else:
-        logging.error("The 'game' DataFrame is missing from the loaded data. Cannot proceed.")
+        logger.error("The 'game' DataFrame is missing from the loaded data. Cannot proceed.")

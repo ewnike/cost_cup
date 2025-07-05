@@ -12,6 +12,7 @@ import os
 from sqlalchemy import Column, String, Table
 from sqlalchemy.orm import sessionmaker
 
+from constants import SEASONS
 from data_processing_utils import insert_data
 from db_utils import get_db_engine, get_metadata
 
@@ -21,7 +22,7 @@ metadata = get_metadata()
 
 
 # Define seasons
-seasons = ["20152016", "20162017", "20172018"]
+# seasons = ["20152016", "20162017", "20172018"]
 
 
 # Function to create player cap hit tables
@@ -37,7 +38,7 @@ def create_caphit_table(table_name):
 
 
 # Create tables for each season
-tables = {season: create_caphit_table(f"player_cap_hit_{season}") for season in seasons}
+tables = {season: create_caphit_table(f"player_cap_hit_{season}") for season in SEASONS}
 metadata.create_all(engine)
 
 # Initialize database session
@@ -50,7 +51,7 @@ csv_dir = os.path.join(base_dir, "player_cap_hits")  # Path to CSV directory
 # Define CSV file paths and table names dynamically
 csv_files_and_mappings = [
     (os.path.join(csv_dir, f"player_cap_hits_{year}.csv"), f"player_cap_hit_{season}")
-    for year, season in zip([2015, 2016, 2017], seasons)
+    for year, season in zip([2015, 2016, 2017], SEASONS)
 ]
 
 # Insert data from CSV files

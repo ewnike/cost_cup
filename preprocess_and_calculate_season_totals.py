@@ -8,13 +8,14 @@ Eric Winiecke.
 """
 
 # import logging
-# import os
+import os
 
 import pandas as pd
 
+from constants import SEASONS
 from load_data import get_env_vars, load_data
 
-# from logging.handlers import RotatingFileHandler
+# from logger.handlers import RotatingFileHandler
 from log_utils import setup_logger
 
 # Set up logging with explicit confirmation of path
@@ -33,17 +34,17 @@ logger.info("Logger configured successfully.")
 
 # # Set up RotatingFileHandler (Max size 5 MB, keep up to 3 backup files)
 # rotating_handler = RotatingFileHandler(LOG_FILE_PATH, maxBytes=5 * 1024 * 1024, backupCount=3)
-# rotating_handler.setLevel(logging.INFO)
+# rotating_handler.setLevel(logger.INFO)
 
 # # Define log format
-# formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+# formatter = logger.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 # rotating_handler.setFormatter(formatter)
 
 # # Set up root logger with the rotating handler
-# logger = logging.getLogger()
-# logger.setLevel(logging.INFO)
+# logger = logger.getLogger()
+# logger.setLevel(logger.INFO)
 # logger.addHandler(rotating_handler)
-# logger.addHandler(logging.StreamHandler())  # Also print logs to console
+# logger.addHandler(logger.StreamHandler())  # Also print logs to console
 
 # Test logging configuration
 # logger.info("Logger configured successfully with RotatingFileHandler.")
@@ -77,7 +78,7 @@ def organize_data_by_season(df_master, season_game_ids):
                 + (organized_data["game_plays"]["period"] - 1) * 1200
             )
         else:
-            logging.warning(
+            logger.warning(
                 "Column 'periodTime' is missing from game_plays. Skipping time calculation."
             )
 
@@ -89,7 +90,7 @@ def organize_data_by_season(df_master, season_game_ids):
                 + (organized_data["game_shifts"]["period"] - 1) * 1200
             )
         else:
-            logging.info("'periodTime' not present in game_shifts. Skipping time calculation.")
+            logger.info("'periodTime' not present in game_shifts. Skipping time calculation.")
 
     return organized_data
 
@@ -122,7 +123,7 @@ def preprocess_exclude_times(organized_data, season_game_ids):
 
             # Skip games with missing data
             if shifts.empty or skater_stats.empty or plays.empty:
-                logging.warning(f"Skipping game_id {game_id} due to missing data.")
+                logger.warning(f"Skipping game_id {game_id} due to missing data.")
                 continue
 
             # Compute penalty exclude times for the game
@@ -138,7 +139,7 @@ def preprocess_exclude_times(organized_data, season_game_ids):
         return exclude_times
 
     except Exception as e:
-        logging.error(f"Error in preprocessing exclude times: {e}")
+        logger.error(f"Error in preprocessing exclude times: {e}")
         raise
 
 
@@ -169,13 +170,13 @@ def verify_penalty(game_id, time, game_plays):
     ]
     for col in required_columns:
         if col not in game_plays.columns:
-            logging.error(f"Missing column '{col}' in game_plays.")
+            logger.error(f"Missing column '{col}' in game_plays.")
             return "None"
 
     # Calculate event_time if it doesn't already exist
     if "event_time" not in game_plays.columns:
         game_plays["event_time"] = (game_plays["period"] - 1) * 1200 + game_plays["periodTime"]
-        logging.info("Calculated 'event_time' column in game_plays.")
+        logger.info("Calculated 'event_time' column in game_plays.")
 
     # Filter game plays by game_id
     plays = game_plays[game_plays["game_id"] == game_id]
@@ -225,7 +226,7 @@ def get_penalty_exclude_times(game_shifts, game_skater_stats, game_plays):
     penalty-based exclusions based on game events.
     """
     if game_shifts.empty:
-        logging.warning("game_shifts is empty.")
+        logger.warning("game_shifts is empty.")
         return pd.DataFrame()
 
     game_shifts = pd.merge(
@@ -265,7 +266,7 @@ def get_penalty_exclude_times(game_shifts, game_skater_stats, game_plays):
     for _, row in df_exclude.iterrows():
         # Safeguard against missing `game_id`
         if "game_id" not in row or pd.isna(row["game_id"]):
-            logging.error("Missing game_id in df_exclude row.")
+            logger.error("Missing game_id in df_exclude row.")
             exclude_list.append(False)
             continue
 
@@ -331,7 +332,7 @@ def assemble_arrays_for_processing(organized_data, exclude_times):
 
         # Check if either DataFrame is empty
         if exclude_time.empty or plays.empty:
-            logging.warning(
+            logger.warning(
                 f"Skipping game_id {game_id} due to empty exclude_time or plays DataFrame."
             )
             continue
@@ -457,14 +458,15 @@ if __name__ == "__main__":
     df_game = df_master["game"]
 
     # Step 2: Define the seasons to process (as integers)
-    seasons = [20152016, 20162017, 20172018]  # Ensure these are integers
+    # seasons = [20152016, 20162017, 20172018]  # Ensure these are integers
+    # SEASONS is a global constant
 
     # Directory to save results
     OUTPUT_DIR = "team_event_totals"
     os.makedirs(OUTPUT_DIR, exist_ok=True)  # Create the directory if it doesn't exist
 
     try:
-        for season in seasons:
+        for season in SEASONS:
             print(f"Processing season {season}")
 
             # Step 3: Get game IDs for the season

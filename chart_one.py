@@ -15,6 +15,8 @@ from dotenv import load_dotenv
 from matplotlib import pyplot as plt
 from sqlalchemy import create_engine
 
+from constants import SEASONS
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -37,7 +39,7 @@ seasons = ["20152016", "20162017", "20172018"]
 df = pd.DataFrame()
 
 # Loop through each season and query the corresponding table
-for season in seasons:
+for season in SEASONS:
     QUERY = f"""
     SELECT "capHit"
     FROM public.aggregated_corsi_{season}
@@ -60,7 +62,7 @@ bins = np.arange(575000, df["capHit"].max() + BIN_WIDTH, BIN_WIDTH)
 fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(18, 6), sharey=True)
 
 # Loop through each season and create a histogram in its own subplot
-for ax, season in zip(axes, seasons):
+for ax, season in zip(axes, SEASONS):
     # Filter data for the specific season
     df_season = df[df["season"] == season]
 

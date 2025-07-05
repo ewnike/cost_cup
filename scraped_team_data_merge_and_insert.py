@@ -26,14 +26,14 @@ metadata = get_metadata()
 metadata = MetaData()
 
 # Create tables for each season
-seasons = ["2016", "2017", "2018"]
+season_year = ["2016", "2017", "2018"]
 
 # Create tables in the database
 metadata.create_all(engine)
 
 Session = sessionmaker(bind=engine)
 
-for season in seasons:
+for season in season_year:
     try:
         # Define the paths to the CSV files for each season
         STATS_PATH = f"team_records/NHL_{int(season)}_team_stats.csv"
