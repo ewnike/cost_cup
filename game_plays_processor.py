@@ -20,9 +20,9 @@ import pandas as pd
 
 from data_processing_utils import clean_data, process_and_insert_data
 from db_utils import define_game_plays_processor_test, get_db_engine, get_metadata
-from log_utils import setup_logging
+from log_utils import setup_logger
 
-setup_logging()
+setup_logger()
 
 # ✅ Initialize database connection
 engine = get_db_engine()
