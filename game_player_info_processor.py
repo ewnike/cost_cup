@@ -87,7 +87,7 @@ Author: Eric Winiecke
 Date: July 2025
 """
 
-from config_helpers import game_player_info_config
+from config_helpers import player_info_config
 from data_processing_utils import process_and_insert_data
 from log_utils import setup_logger
 
@@ -95,5 +95,5 @@ from log_utils import setup_logger
 setup_logger()
 
 # ✅ Get predefined config and run the ETL pipeline
-config = game_player_info_config()
+config = player_info_config()
 process_and_insert_data(config)
