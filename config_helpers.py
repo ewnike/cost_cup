@@ -119,6 +119,16 @@ COLUMN_MAPPINGS: dict[str, dict[str, str]] = {
         "weight": "float64",
         "shootCatches": "string",
     },
+    # ---------------- raw_corsi_{season} -------------------------
+    "raw_corsi": {
+        "game_id": "int64",
+        "player_id": "int64",
+        "team_id": "int64",
+        "corsi_for": "float64",
+        "corsi_against": "float64",
+        "corsi": "float64",
+        "CF_Percent": "float64",
+    },
 }
 
 

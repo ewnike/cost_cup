@@ -242,6 +242,36 @@ def define_player_info_table_test(metadata):
     )
 
 
+def create_corsi_table(table_name: str, metadata: MetaData) -> Table:
+    """
+    Dynamically define and return a Corsi table with the given name.
+
+    Parameters
+    ----------
+    table_name : str
+        The name to assign to the Corsi table.
+    metadata : sqlalchemy.MetaData
+        The shared metadata object.
+
+    Returns
+    -------
+    sqlalchemy.Table
+        SQLAlchemy table object.
+
+    """
+    return Table(
+        table_name,
+        metadata,
+        Column("team_id", Integer),
+        Column("season", Integer),
+        Column("games_played", Integer),
+        Column("cf", Integer),
+        Column("ca", Integer),
+        Column("cf_percent", Float),
+        Column("capHit", Float),
+    )
+
+
 def create_table(engine, metadata, table):
     """
     Create a specific table in the database.
