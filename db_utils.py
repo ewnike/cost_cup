@@ -24,13 +24,18 @@ from sqlalchemy import (
     create_engine,
 )
 
+from log_utils import setup_logger
+
+setup_logger()
+logger = logging.getLogger(__name__)  # ✅ define logger
+
 
 # 🔹 **Step 1: Load Environment Variables**
 def load_environment_variables():
     """Load environment variables from `.env` file if not already set."""
     if not os.getenv("DATABASE_URL"):
         load_dotenv()
-        logging.info("Environment variables loaded.")
+        logger.info("Environment variables loaded.")
 
 
 # 🔹 **Step 2: Get Database Engine**
@@ -67,7 +72,7 @@ def get_db_engine():
     DATABASE_URL = os.getenv("DATABASE_URL")
 
     if DATABASE_URL:
-        logging.info("Using DATABASE_URL from environment.")
+        logger.info("Using DATABASE_URL from environment.")
         return create_engine(DATABASE_URL)
 
     # Otherwise, construct from individual variables
@@ -88,7 +93,7 @@ def get_db_engine():
         if not os.getenv(var)
     ]
     if missing_vars:
-        logging.error(f"Missing required environment variables: {', '.join(missing_vars)}")
+        logger.error(f"Missing required environment variables: {', '.join(missing_vars)}")
         raise ValueError("ERROR: One or more required environment variables are missing.")
 
     # URL encode the password in case it contains special characters
@@ -98,7 +103,7 @@ def get_db_engine():
     connection_string = (
         f"{DATABASE_TYPE}+{DBAPI}://{USER}:{encoded_password}@{ENDPOINT}:{PORT}/{DATABASE}"
     )
-    logging.info("Database connection string created.")
+    logger.info("Database connection string created.")
 
     return create_engine(connection_string)
 
@@ -252,4 +257,4 @@ def create_table(engine, metadata, table):
 
     """
     metadata.create_all(engine, tables=[table])  # ✅ Create only the passed table
-    logging.info(f"Table '{table.name}' created or verified.")
+    logger.info(f"Table '{table.name}' created or verified.")
