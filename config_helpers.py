@@ -129,6 +129,25 @@ COLUMN_MAPPINGS: dict[str, dict[str, str]] = {
         "corsi": "float64",
         "CF_Percent": "float64",
     },
+    # ----------------- cap_hit -----------------------------------
+    "cap_hit": {
+        "firstName": "string",
+        "lastName": "string",
+        "capHit": "float64",
+    },
+    # --------------------- team_evenet_totals -----------------------
+    "team_event_totals_games": {
+        "team_id": "int64",
+        "total_goals": "int64",
+        "total_shots": "int64",
+        "total_missed_shots": "int64",
+        "total_blocked_shots_for": "int64",
+        "total_goals_against": "int64",
+        "total_shots_against": "int64",
+        "total_missed_shots_against": "int64",
+        "total_blocked_shots_against": "int64",
+        "game_id": "int64",
+    },
 }
 
 

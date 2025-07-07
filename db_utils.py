@@ -272,6 +272,35 @@ def create_corsi_table(table_name: str, metadata: MetaData) -> Table:
     )
 
 
+def create_caphit_table(table_name: str, metadata: MetaData) -> Table:
+    """Define caphit table schema."""
+    return Table(
+        table_name,
+        metadata,
+        Column("firstName", String(50)),
+        Column("lastName", String(50)),
+        Column("capHit", Float),
+    )
+
+
+def create_team_event_total_games_table(table_name: str, metadata: MetaData) -> Table:
+    """Define team event totals schema."""
+    return Table(
+        table_name,
+        metadata,
+        Column("team_id", Integer),
+        Column("total_goals", Integer),
+        Column("total_shots", Integer),
+        Column("total_missed_shots", Integer),
+        Column("total_blocked_shots_for", Integer),
+        Column("total_goals_against", Integer),
+        Column("total_shots_against", Integer),
+        Column("total_missed_shots_against", Integer),
+        Column("total_blocked_shots_against", Integer),
+        Column("game_id", BigInteger),
+    )
+
+
 def create_table(engine, metadata, table):
     """
     Create a specific table in the database.
