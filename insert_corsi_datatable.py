@@ -75,6 +75,54 @@
 
 # print("Data inserted successfully into all test tables.")
 
+# """
+# August 11, 2024.
+
+# Insert newly created raw Corsi data into test tables in the hockey_stats database.
+
+# Author: Eric Winiecke
+# """
+
+# import os
+
+# from sqlalchemy.orm import sessionmaker
+
+# from config_helpers import COLUMN_MAPPINGS
+# from constants import SEASONS
+# from data_processing_utils import insert_data
+# from db_utils import create_corsi_table, get_db_engine, get_metadata
+
+# # ✅ Initialize database connection
+# engine = get_db_engine()
+# metadata = get_metadata()
+
+# # ✅ Create test tables dynamically: raw_corsi_20152016, etc.
+# tables = {season: create_corsi_table(f"raw_corsi_{season}", metadata) for season in SEASONS}
+# metadata.create_all(engine)
+
+# # ✅ Construct CSV directory
+# csv_dir = os.path.join(os.getcwd(), "corsi_stats")
+
+# # ✅ Define CSV paths and table names
+# csv_files_and_mappings = [
+#     (os.path.join(csv_dir, f"corsi_stats_{season}.csv"), f"raw_corsi_{season}")
+#     for season in SEASONS
+# ]
+
+# # ✅ Insert data into tables
+# Session = sessionmaker(bind=engine)
+
+# with Session() as session:
+#     for file_path, table_name in csv_files_and_mappings:
+#         if os.path.exists(file_path):
+#             print(f"Inserting data into {table_name} from {file_path}...")
+#             insert_data(df, table, session, column_mapping=COLUMN_MAPPINGS["raw_corsi"])
+
+#         else:
+#             print(f"File not found: {file_path}, skipping...")
+
+# print("✅ Data inserted successfully into all raw Corsi test tables.")
+
 """
 August 11, 2024.
 
@@ -85,6 +133,7 @@ Author: Eric Winiecke
 
 import os
 
+import pandas as pd
 from sqlalchemy.orm import sessionmaker
 
 from config_helpers import COLUMN_MAPPINGS
@@ -92,32 +141,30 @@ from constants import SEASONS
 from data_processing_utils import insert_data
 from db_utils import create_corsi_table, get_db_engine, get_metadata
 
-# ✅ Initialize database connection
+# ✅ Init
 engine = get_db_engine()
 metadata = get_metadata()
+Session = sessionmaker(bind=engine)
 
-# ✅ Create test tables dynamically: raw_corsi_20152016, etc.
+# ✅ Create tables if needed
 tables = {season: create_corsi_table(f"raw_corsi_{season}", metadata) for season in SEASONS}
 metadata.create_all(engine)
 
-# ✅ Construct CSV directory
-csv_dir = os.path.join(os.getcwd(), "corsi_stats")
+# ✅ Build paths
+base_dir = os.getcwd()
+csv_dir = os.path.join(base_dir, "corsi_stats")
 
-# ✅ Define CSV paths and table names
 csv_files_and_mappings = [
     (os.path.join(csv_dir, f"corsi_stats_{season}.csv"), f"raw_corsi_{season}")
     for season in SEASONS
 ]
 
-# ✅ Insert data into tables
-Session = sessionmaker(bind=engine)
-
+# ✅ Insert data
 with Session() as session:
     for file_path, table_name in csv_files_and_mappings:
         if os.path.exists(file_path):
-            print(f"Inserting data into {table_name} from {file_path}...")
-            insert_data(engine, table_name, file_path, column_mapping=COLUMN_MAPPINGS["raw_corsi"])
+            df = pd.read_csv(file_path)
+            table = create_corsi_table(table_name, metadata)  # This ensures `table` is defined
+            insert_data(df, table, session, column_mapping=COLUMN_MAPPINGS["raw_corsi"])
         else:
             print(f"File not found: {file_path}, skipping...")
-
-print("✅ Data inserted successfully into all raw Corsi test tables.")
