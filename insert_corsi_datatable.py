@@ -85,7 +85,6 @@ Author: Eric Winiecke
 
 import os
 
-import pandas as pd
 from sqlalchemy.orm import sessionmaker
 
 from config_helpers import COLUMN_MAPPINGS
