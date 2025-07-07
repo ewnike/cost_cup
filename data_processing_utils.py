@@ -191,11 +191,45 @@ def clean_and_transform_data(df, column_mapping):
     return df
 
 
-def insert_data(df, table, session):
-    """Insert DataFrame into a database table."""
+# def insert_data(df, table, session):
+#     """Insert DataFrame into a database table."""
+#     if df.shape[0] == 0:
+#         logger.error(f"DataFrame is empty! No data inserted into {table.name}.")
+#         return
+
+#     logger.info(f"Inserting {df.shape[0]} rows into {table.name}.")
+#     data = df.to_dict(orient="records")
+
+#     try:
+#         with tqdm(total=len(data), desc=f"Inserting data into {table.name}") as pbar:
+#             for record in data:
+#                 session.execute(table.insert().values(**record))
+#                 pbar.update(1)
+#         session.commit()
+#         logger.info(f"Data successfully inserted into {table.name}.")
+#     except SQLAlchemyError as e:
+#         session.rollback()
+#         logger.error(f"Error inserting data into {table.name}: {e}", exc_info=True)
+#     except Exception as e:
+#         logger.error(f"Unexpected error inserting into {table.name}: {e}", exc_info=True)
+#     finally:
+#         session.close()
+
+
+def insert_data(df, table, session, column_mapping=None):
+    """Insert DataFrame into a database table, optionally using column mapping."""
     if df.shape[0] == 0:
         logger.error(f"DataFrame is empty! No data inserted into {table.name}.")
         return
+
+    # ✅ Optional: apply dtype mapping
+    if column_mapping:
+        try:
+            df = df.astype(column_mapping)
+            logger.info("Applied column mapping for dtype conversion.")
+        except Exception as e:
+            logger.error(f"Error applying column mapping: {e}", exc_info=True)
+            return
 
     logger.info(f"Inserting {df.shape[0]} rows into {table.name}.")
     data = df.to_dict(orient="records")
