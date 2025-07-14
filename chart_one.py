@@ -16,24 +16,6 @@ from db_utils import get_db_engine
 
 engine = get_db_engine()
 
-# # Load environment variables from .env file
-# load_dotenv()
-
-# # Database connection parameters
-# DATABASE_TYPE = os.getenv("DATABASE_TYPE")
-# DBAPI = os.getenv("DBAPI")
-# ENDPOINT = os.getenv("ENDPOINT")
-# USER = os.getenv("USER")
-# PASSWORD = os.getenv("PASSWORD")
-# PORT = int(os.getenv("PORT", 5432))
-# DATABASE = os.getenv("DATABASE", "hockey_stats")
-
-# # Create the connection string
-# connection_string = f"{DATABASE_TYPE}+{DBAPI}://{USER}:{PASSWORD}@{ENDPOINT}:{PORT}/{DATABASE}"
-# engine = create_engine(connection_string)
-# Define the seasons to query
-# seasons = ["20152016", "20162017", "20172018"]
-
 # Initialize an empty DataFrame to collect all the data
 df = pd.DataFrame()
 

@@ -1,8 +1,7 @@
 """
-August 28, 2024
-Script to scrape team win/loss record from hockey-reference.com
-Used selenium.xpath and set webdriver to safari.
-Eric Winiecke.
+Scrape team win/loss records from Hockey-Reference using Selenium and XPath.
+
+Created on August 28, 2024 by Eric Winiecke. Uses Safari WebDriver.
 """
 
 import os
