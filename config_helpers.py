@@ -8,12 +8,12 @@ Date: May 5, 2025
 
 from constants import S3_BUCKET_NAME, local_download_path, local_extract_path
 from db_utils import (
-    define_game_plays_players_test,
-    define_game_plays_processor_test,
-    define_game_shifts_test_table,
-    define_game_skater_stats_test,
-    define_game_table_test,
-    define_player_info_table_test,
+    define_game_plays_players,
+    define_game_plays_processor,
+    define_game_shifts_table,
+    define_game_skater_stats,
+    define_game_table,
+    define_player_info_table,
     get_db_engine,
 )
 
@@ -25,7 +25,7 @@ engine = get_db_engine()
 # PANDAS dtype mappings keyed by table name
 # ------------------------------------------------------------------
 COLUMN_MAPPINGS: dict[str, dict[str, str]] = {
-    # ----------------- game_skater_stats_test --------------------
+    # ----------------- game_skater_stats --------------------
     "game_skater_stats": {
         "game_id": "int64",
         "player_id": "int64",
@@ -50,7 +50,7 @@ COLUMN_MAPPINGS: dict[str, dict[str, str]] = {
         "shortHandedTimeOnIce": "int64",
         "powerPlayTimeOnIce": "int64",
     },
-    # ---------------------- game_table_test ----------------------
+    # ---------------------- game_table ----------------------
     "game_table": {
         "game_id": "int64",
         "season": "int64",
@@ -68,7 +68,7 @@ COLUMN_MAPPINGS: dict[str, dict[str, str]] = {
         "venue_time_zone_offset": "int64",
         "venue_time_zone_tz": "string",
     },
-    # ------------------- game_shifts_test ------------------------
+    # ------------------- game_shifts ------------------------
     "game_shifts": {
         "game_id": "int64",
         "player_id": "int64",
@@ -76,7 +76,7 @@ COLUMN_MAPPINGS: dict[str, dict[str, str]] = {
         "shift_start": "int64",
         "shift_end": "int64",
     },
-    # --------------- game_plays_processor_test -------------------
+    # --------------- game_plays_processor -------------------
     "game_plays": {
         "play_id": "string",
         "game_id": "int64",
@@ -97,14 +97,14 @@ COLUMN_MAPPINGS: dict[str, dict[str, str]] = {
         "st_x": "int64",
         "st_y": "int64",
     },
-    # ---------------- game_plays_players_test --------------------
+    # ---------------- game_plays_players --------------------
     "game_plays_players": {
         "play_id": "string",
         "game_id": "int64",
         "player_id": "int64",
         "playerType": "string",
     },
-    # ---------------- player_info_table_test ---------------------
+    # ---------------- player_info_table ---------------------
     "player_info": {
         "player_id": "int64",
         "firstName": "string",
@@ -135,7 +135,7 @@ COLUMN_MAPPINGS: dict[str, dict[str, str]] = {
         "lastName": "string",
         "capHit": "float64",
     },
-    # --------------------- team_evenet_totals -----------------------
+    # --------------------- team_event_totals -----------------------
     "team_event_totals_games": {
         "team_id": "int64",
         "total_goals": "int64",
@@ -209,8 +209,8 @@ def game_skater_stats_config():
         local_zip_path=f"{local_download_path}/game_skater_stats.zip",
         local_extract_path=local_extract_path,
         expected_csv_filename="game_skater_stats.csv",
-        table_definition_function=define_game_skater_stats_test,
-        table_name="game_skater_stats_test",
+        table_definition_function=define_game_skater_stats,
+        table_name="game_skater_stats",
         column_mapping=COLUMN_MAPPINGS["game_skater_stats"],
         engine=engine,
         local_download_path=local_download_path,
@@ -225,8 +225,8 @@ def game_table_config():
         local_zip_path=f"{local_download_path}/game.zip",
         local_extract_path=local_extract_path,
         expected_csv_filename="game.csv",
-        table_definition_function=define_game_table_test,
-        table_name="game_table_test",
+        table_definition_function=define_game_table,
+        table_name="game_table",
         column_mapping=COLUMN_MAPPINGS["game_table"],
         engine=engine,
         local_download_path=local_download_path,
@@ -241,8 +241,8 @@ def game_shifts_config():
         local_zip_path=f"{local_download_path}/game_shifts.zip",
         local_extract_path=local_extract_path,
         expected_csv_filename="game_shifts.csv",
-        table_definition_function=define_game_shifts_test_table,
-        table_name="game_shifts_test",
+        table_definition_function=define_game_shifts_table,
+        table_name="game_shifts",
         column_mapping=COLUMN_MAPPINGS["game_shifts"],
         engine=engine,
         local_download_path=local_download_path,
@@ -257,8 +257,8 @@ def game_plays_config():
         local_zip_path=f"{local_download_path}/game_plays.zip",
         local_extract_path=local_extract_path,
         expected_csv_filename="game_plays.csv",
-        table_definition_function=define_game_plays_processor_test,
-        table_name="game_plays_processor_test",
+        table_definition_function=define_game_plays_processor,
+        table_name="game_plays_processor",
         column_mapping=COLUMN_MAPPINGS["game_plays"],
         engine=engine,
         local_download_path=local_download_path,
@@ -273,8 +273,8 @@ def game_plays_players_config():
         local_zip_path=f"{local_download_path}/game_plays_players.zip",
         local_extract_path=local_extract_path,
         expected_csv_filename="game_plays_players.csv",
-        table_definition_function=define_game_plays_players_test,
-        table_name="game_plays_players_test",
+        table_definition_function=define_game_plays_players,
+        table_name="game_plays_players",
         column_mapping=COLUMN_MAPPINGS["game_plays_players"],
         engine=engine,
         local_download_path=local_download_path,
@@ -289,8 +289,8 @@ def player_info_config():
         local_zip_path=f"{local_download_path}/player_info.zip",
         local_extract_path=local_extract_path,
         expected_csv_filename="player_info.csv",
-        table_definition_function=define_player_info_table_test,
-        table_name="player_info_table_test",
+        table_definition_function=define_player_info_table,
+        table_name="player_info",
         column_mapping=COLUMN_MAPPINGS["player_info"],
         engine=engine,
         local_download_path=local_download_path,
