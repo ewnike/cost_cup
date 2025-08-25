@@ -118,10 +118,10 @@ def get_metadata():
 
 
 # 🔹 **Step 4: Table Definitions**
-def define_game_skater_stats_test(metadata):
-    """Define and return the schema for game_skater_stats_test."""
+def define_game_skater_stats(metadata):
+    """Define and return the schema for game_skater_stats."""
     return Table(
-        "game_skater_stats_test",
+        "game_skater_stats",
         metadata,
         Column("game_id", BigInteger),
         Column("player_id", BigInteger),
@@ -148,10 +148,10 @@ def define_game_skater_stats_test(metadata):
     )
 
 
-def define_game_table_test(metadata):
+def define_game_table(metadata):
     """Define the game table schema."""
     return Table(
-        "game_table_test",
+        "game",
         metadata,
         Column("game_id", Integer),
         Column("season", Integer),
@@ -171,10 +171,10 @@ def define_game_table_test(metadata):
     )
 
 
-def define_game_shifts_test_table(metadata):
+def define_game_shifts_table(metadata):
     """Define the table schema for game_shifts_test."""
     return Table(
-        "game_shifts_test",
+        "game_shifts",
         metadata,
         Column("game_id", BigInteger),
         Column("player_id", BigInteger),
@@ -184,10 +184,10 @@ def define_game_shifts_test_table(metadata):
     )
 
 
-def define_game_plays_processor_test(metadata):
-    """Define the schema for game_plays_processor_test and return the table."""
+def define_game_plays_processor(metadata):
+    """Define the schema for game_plays and return the table."""
     return Table(
-        "game_plays_processor_test",
+        "game_plays",
         metadata,
         Column("play_id", String(20), primary_key=True),
         Column("game_id", BigInteger),
@@ -210,10 +210,10 @@ def define_game_plays_processor_test(metadata):
     )
 
 
-def define_game_plays_players_test(metadata):
-    """Define and return the schema for game_plays_players_test."""
+def define_game_plays_players(metadata):
+    """Define and return the schema for game_plays_players."""
     return Table(
-        "game_plays_players_test",
+        "game_plays_players",
         metadata,
         Column("play_id", String(20)),
         Column("game_id", BigInteger, nullable=False),
@@ -222,10 +222,10 @@ def define_game_plays_players_test(metadata):
     )
 
 
-def define_player_info_table_test(metadata):
-    """Define the player_info_test table schema."""
+def define_player_info_table(metadata):
+    """Define the player_info table schema."""
     return Table(
-        "player_info_table_test",
+        "player_info",
         metadata,
         Column("player_id", BigInteger, primary_key=True),  # Unique player identifier
         Column("firstName", String(50)),
