@@ -6,28 +6,26 @@ Date: April 2025
 """
 
 import logging
-import os
 from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
 
-def setup_logger(log_file_path="data_processing.log"):
+def setup_logger(log_file_path="logs/data_processing.log"):
     """Set up a logger with rotating file handler and console output."""
-    log_dir = os.path.dirname(log_file_path)
-    os.makedirs(log_dir, exist_ok=True)
+    log_path = Path(log_file_path)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
 
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
 
-    # Avoid duplicate handlers
     if not logger.handlers:
-        # File handler
-        file_handler = RotatingFileHandler(log_file_path, maxBytes=5 * 1024 * 1024, backupCount=3)
-        file_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+        file_handler = RotatingFileHandler(str(log_path), maxBytes=5 * 1024 * 1024, backupCount=3)
+        fmt = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+        file_handler.setFormatter(fmt)
         logger.addHandler(file_handler)
 
-        # Console handler
         console_handler = logging.StreamHandler()
-        console_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+        console_handler.setFormatter(fmt)
         logger.addHandler(console_handler)
 
     return logger

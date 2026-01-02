@@ -14,6 +14,7 @@ import logging
 import os
 import shutil
 import string
+from pathlib import Path
 
 import boto3
 import botocore
@@ -325,13 +326,58 @@ def process_and_insert_data(config):
 
     download_zip_from_s3(config["bucket_name"], config["s3_file_key"], download_path)
 
+    # if config["handle_zip"]:
+    #     extract_zip(download_path, config["local_extract_path"])
+    #     csv_file_path = os.path.join(config["local_extract_path"], config["expected_csv_filename"])
+    #     if not os.path.exists(csv_file_path):
+    #         logger.error(f"Extracted file not found after extraction: {csv_file_path}")
+    #         return
+    #     clear_directory(config["local_download_path"])
+    # else:
+    #     csv_file_path = download_path
+    #     if not os.path.exists(csv_file_path):
+    #         logger.error(f"Downloaded file not found at path: {csv_file_path}")
+    #         return
+
+    # try:
+    #     if csv_file_path.endswith(".csv") or csv_file_path.endswith(".csv.xls"):
+    #         df = pd.read_csv(csv_file_path)
+    #     else:
+    #         df = pd.read_excel(csv_file_path, engine="openpyxl")
+    # except Exception as e:
+    #     logger.error(f"Error reading file {csv_file_path}: {e}")
+    #     return
+
     if config["handle_zip"]:
         extract_zip(download_path, config["local_extract_path"])
-        csv_file_path = os.path.join(config["local_extract_path"], config["expected_csv_filename"])
-        if not os.path.exists(csv_file_path):
-            logger.error(f"Extracted file not found after extraction: {csv_file_path}")
+
+        extract_dir = Path(config["local_extract_path"])
+        target = config["expected_csv_filename"]
+
+        # Look for the expected file anywhere under extract_dir, ignoring Mac junk
+        matches = [
+            p
+            for p in extract_dir.rglob(target)
+            if "__MACOSX" not in p.parts and not p.name.startswith("._")
+        ]
+
+        if not matches:
+            # Optional: helpful debug of what actually extracted (first 50 files)
+            extracted_files = [
+                str(p.relative_to(extract_dir))
+                for p in extract_dir.rglob("*")
+                if p.is_file() and "__MACOSX" not in p.parts and not p.name.startswith("._")
+            ]
+            logger.error(
+                f"Extracted file not found after extraction: {target}. "
+                f"Example extracted files: {extracted_files[:50]}"
+            )
             return
+
+        csv_file_path = str(matches[0])
+
         clear_directory(config["local_download_path"])
+
     else:
         csv_file_path = download_path
         if not os.path.exists(csv_file_path):

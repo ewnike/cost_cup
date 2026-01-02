@@ -9,18 +9,23 @@ Date: February 2025
 
 import logging
 import os
+from pathlib import Path
 from urllib.parse import quote_plus
 
 from dotenv import load_dotenv
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     Column,
+    Date,
     DateTime,
     Float,
     Integer,
     MetaData,
+    SmallInteger,
     String,
     Table,
+    Text,
     create_engine,
 )
 
@@ -32,10 +37,10 @@ logger = logging.getLogger(__name__)  # ✅ define logger
 
 # 🔹 **Step 1: Load Environment Variables**
 def load_environment_variables():
-    """Load environment variables from `.env` file if not already set."""
-    if not os.getenv("DATABASE_URL"):
-        load_dotenv()
-        logger.info("Environment variables loaded.")
+    """Load environment variables from the .env next to this file."""
+    env_path = Path(__file__).resolve().parent / ".env"
+    load_dotenv(dotenv_path=env_path, override=False)
+    logger.info("Environment variables loaded.")
 
 
 # 🔹 **Step 2: Get Database Engine**
@@ -80,8 +85,8 @@ def get_db_engine():
     DATABASE_TYPE = os.getenv("DATABASE_TYPE")
     DBAPI = os.getenv("DBAPI")
     ENDPOINT = os.getenv("ENDPOINT")
-    USER = os.getenv("USER")
-    PASSWORD = os.getenv("PASSWORD")
+    USER = os.getenv("DB_USER")
+    PASSWORD = os.getenv("DB_PASSWORD")
     PORT = os.getenv("PORT", "5432")  # Default PostgreSQL port
     DATABASE = os.getenv("DATABASE")
 
@@ -89,7 +94,7 @@ def get_db_engine():
     # Ensure all required variables are available
     missing_vars = [
         var
-        for var in ["DATABASE_TYPE", "DBAPI", "ENDPOINT", "USER", "PASSWORD", "DATABASE"]
+        for var in ["DATABASE_TYPE", "DBAPI", "ENDPOINT", "DB_USER", "DB_PASSWORD", "DATABASE"]
         if not os.getenv(var)
     ]
     if missing_vars:
@@ -239,6 +244,98 @@ def define_player_info_table(metadata):
         Column("height_cm", Float),  # Height in centimeters
         Column("weight", Float),  # Weight in pounds
         Column("shootCatches", String(10)),  # Shooting/Catching hand
+    )
+
+
+def define_raw_shifts_table(metadata, table_name: str = "raw_shifts"):
+    """Define the player raw shifts table schema."""
+    return Table(
+        table_name,
+        metadata,
+        Column("row_num", Integer, nullable=True),
+        Column("player", Text, nullable=False),
+        Column("team_num", String(10), nullable=False),
+        Column("position", String(1), nullable=False),
+        Column("game_id", BigInteger, nullable=False),
+        Column("game_date", Date, nullable=False),
+        Column("season", Integer, nullable=False),
+        Column("session", String(1), nullable=False),
+        Column("team", String(3), nullable=False),
+        Column("opponent", String(3), nullable=False),
+        Column("is_home", Boolean, nullable=False),
+        Column("game_period", SmallInteger, nullable=False),
+        Column("shift_num", Integer, nullable=False),  # it shows as a float but should be int
+        Column("seconds_start", Integer, nullable=False),  # seconds start at 0 go up 3600+ in OT
+        Column("seconds_end", Integer, nullable=False),
+        Column("seconds_duration", Integer, nullable=False),
+        Column("shift_start", String(5), nullable=True),
+        Column("shift_end", String(5), nullable=True),
+        Column("duration", String(5), nullable=True),
+        Column("shift_mod", Integer, nullable=False),
+    )
+
+
+def define_raw_pbp_table(metadata, table_name: str = "raw_pbp"):
+    """Define the game raw pbp table schema."""
+    return Table(
+        table_name,
+        metadata,
+        Column("season", Integer, nullable=False),
+        Column("game_id", BigInteger, nullable=False),
+        Column("game_date", Date, nullable=False),
+        Column("session", String(1), nullable=False),
+        Column("event_index", Integer),
+        Column("game_period", SmallInteger),
+        Column("game_seconds", Integer),
+        Column("clock_time", String(5)),  # "mm:ss"
+        Column("event_type", String(50)),
+        Column("event_description", Text),
+        Column("event_detail", Text),
+        Column("event_zone", String(20)),
+        Column("event_team", String(3)),  # e.g. MTL/TOR
+        Column("event_player_1", Text),
+        Column("event_player_2", Text),
+        Column("event_player_3", Text),
+        Column("event_length", Integer),
+        Column("coords_x", Float),
+        Column("coords_y", Float),
+        Column("num_on", Float),  # keep float if you can have NaN
+        Column("num_off", Float),
+        Column("players_on", Text),
+        Column("players_off", Text),
+        Column("home_on_1", Text),
+        Column("home_on_2", Text),
+        Column("home_on_3", Text),
+        Column("home_on_4", Text),
+        Column("home_on_5", Text),
+        Column("home_on_6", Text),
+        Column("home_on_7", Text),
+        Column("away_on_1", Text),
+        Column("away_on_2", Text),
+        Column("away_on_3", Text),
+        Column("away_on_4", Text),
+        Column("away_on_5", Text),
+        Column("away_on_6", Text),
+        Column("away_on_7", Text),
+        Column("home_goalie", Text),
+        Column("away_goalie", Text),
+        Column("home_team", String(3)),
+        Column("away_team", String(3)),
+        Column("home_skaters", SmallInteger),
+        Column("away_skaters", SmallInteger),
+        Column("home_score", SmallInteger),
+        Column("away_score", SmallInteger),
+        Column("game_score_state", String(20)),
+        Column("game_strength_state", String(20)),
+        Column("home_zone", String(20)),
+        Column("pbp_distance", Float),
+        Column("event_distance", Float),
+        Column("event_angle", Float),
+        Column("home_zonestart", Float),
+        Column("face_index", Integer),
+        Column("pen_index", Integer),
+        Column("shift_index", Integer),
+        Column("pred_goal", Float),
     )
 
 
