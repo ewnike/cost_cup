@@ -6,7 +6,15 @@ Date: May 5, 2025
 
 """
 
-from constants import S3_BUCKET_NAME, local_download_path, local_extract_path
+from constants import (
+    S3_BUCKET_NAME,
+    local_download_path,
+    local_download_path_II,
+    local_download_path_III,
+    local_extract_path,
+    local_extract_path_II,
+    local_extract_path_III,
+)
 from db_utils import (
     define_game_plays_players,
     define_game_plays_processor,
@@ -14,6 +22,8 @@ from db_utils import (
     define_game_skater_stats,
     define_game_table,
     define_player_info_table,
+    define_raw_pbp_table,
+    define_raw_shifts_table,
     get_db_engine,
 )
 
@@ -148,6 +158,88 @@ COLUMN_MAPPINGS: dict[str, dict[str, str]] = {
         "total_blocked_shots_against": "int64",
         "game_id": "int64",
     },
+    # ----------------------- raw_shifts_{season} -------------------------------
+    "raw_shifts": {
+        "row_num": "int64",
+        "player": "string",
+        "team_num": "string",
+        "position": "string",
+        "game_id": "int64",
+        "game_date": "datetime64[ns]",
+        "season": "int64",
+        "session": "string",
+        "team": "string",
+        "opponent": "string",
+        "is_home": "int64",
+        "game_period": "int64",
+        "shift_num": "float64",
+        "seconds_start": "int64",
+        "seconds_end": "int64",
+        "seconds_duration": "int64",
+        "shift_start": "string",
+        "shift_end": "string",
+        "duration": "string",
+        "shift_mod": "int64",
+    },
+    # --------------- pbp_raw_{season} ------------------
+    "pbp_raw_data": {
+        "season": "int64",
+        "game_id": "int64",
+        "game_date": "datetime64[ns]",
+        "session": "string",
+        "event_index": "int64",
+        "game_period": "int64",
+        "game_seconds": "int64",
+        "clock_time": "string",
+        "event_type": "string",
+        "event_description": "string",
+        "event_detail": "string",
+        "event_zone": "string",
+        "event_team": "string",
+        "event_player_1": "string",
+        "event_player_2": "string",
+        "event_player_3": "string",
+        "event_length": "int64",
+        "coords_x": "float64",
+        "coords_y": "float64",
+        "num_on": "float64",
+        "num_off": "float64",
+        "players_on": "string",
+        "players_off": "string",
+        "home_on_1": "string",
+        "home_on_2": "string",
+        "home_on_3": "string",
+        "home_on_4": "string",
+        "home_on_5": "string",
+        "home_on_6": "string",
+        "home_on_7": "string",
+        "away_on_1": "string",
+        "away_on_2": "string",
+        "away_on_3": "string",
+        "away_on_4": "string",
+        "away_on_5": "string",
+        "away_on_6": "string",
+        "away_on_7": "string",
+        "home_goalie": "string",
+        "away_goalie": "string",
+        "home_team": "string",
+        "away_team": "string",
+        "home_skaters": "int64",
+        "away_skaters": "int64",
+        "home_score": "int64",
+        "away_score": "int64",
+        "game_score_state": "string",
+        "game_strength_state": "string",
+        "home_zone": "string",
+        "pbp_distance": "float64",
+        "event_distance": "float64",
+        "event_angle": "float64",
+        "home_zonestart": "float64",
+        "face_index": "int64",
+        "pen_index": "int64",
+        "shift_index": "int64",
+        "pred_goal": "float64",
+    },
 }
 
 
@@ -156,6 +248,7 @@ def build_processing_config(
     *,
     bucket_name,
     s3_file_key,
+    season: int | str,
     local_zip_path,
     local_extract_path,
     expected_csv_filename,
@@ -165,6 +258,7 @@ def build_processing_config(
     engine,
     local_download_path,
 ):
+    s3_file_key = s3_file_key.format(season=season)
     """
     Build a standardized config dictionary for S3 extraction and data processing.
 
@@ -294,4 +388,41 @@ def player_info_config():
         column_mapping=COLUMN_MAPPINGS["player_info"],
         engine=engine,
         local_download_path=local_download_path,
+    )
+
+
+def raw_shifts_config(season: int):
+    """Predefined config for raw shifts data."""
+    return build_processing_config(
+        bucket_name=S3_BUCKET_NAME,
+        s3_file_key="shifts_{season}.csv.zip",
+        season=season,
+        local_zip_path=f"{local_download_path_III}/raw_shifts_{season}.zip",
+        local_extract_path=local_extract_path_III,
+        expected_csv_filename=f"shifts_{season}.csv",
+        table_name=f"raw_shifts_{season}",
+        column_mapping=COLUMN_MAPPINGS["raw_shifts"],
+        engine=engine,
+        local_download_path=local_download_path_III,
+        table_definition_function=lambda md: define_raw_shifts_table(md, f"raw_shifts_{season}"),
+    )
+
+
+def pbp_raw_data_config(season: int):
+    """Predefined config for raw pbp game data."""
+    table_name = f"raw_pbp_{season}"
+
+    return build_processing_config(
+        bucket_name=S3_BUCKET_NAME,
+        s3_file_key=f"pbp_{season}.csv.zip",
+        season=season,
+        local_zip_path=f"{local_download_path_II}/pbp_{season}.zip",
+        local_extract_path=local_extract_path_II,
+        expected_csv_filename=f"pbp_{season}.csv",
+        table_name=table_name,
+        column_mapping=COLUMN_MAPPINGS["pbp_raw_data"],
+        engine=engine,
+        local_download_path=local_download_path_II,
+        table_definition_function=lambda md: define_raw_pbp_table(md, table_name),
+        # handle_zip=True,
     )
