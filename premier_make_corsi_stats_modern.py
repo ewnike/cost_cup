@@ -21,7 +21,6 @@ import pandas as pd
 
 from constants import SEASONS_MODERN
 from db_utils import get_db_engine
-from load_data import get_env_vars, load_data
 from log_utils import setup_logger
 from schema_utils import fq
 

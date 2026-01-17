@@ -55,6 +55,23 @@ def clear_player_cap_hits_dir(csv_dir: str, pattern: str = "player_cap_hits_*.cs
             logger.error("Failed deleting %s: %s", p, e)
 
 
+def clear_dir_patterns(directory: str, patterns: list[str]) -> None:
+    """
+    Delete files in `directory` matching any pattern in `patterns`.
+
+    patterns can be exact filenames or globs, e.g.
+      ["NHL_2019_team_stats.csv"] or ["NHL_*_team_stats.csv"]
+    """
+    for pat in patterns:
+        path_pat = os.path.join(directory, pat)
+        for p in glob.glob(path_pat):
+            try:
+                os.remove(p)
+                logger.info("Deleted %s", p)
+            except OSError as e:
+                logger.error("Failed deleting %s: %s", p, e)
+
+
 def clean_data(df: pd.DataFrame, column_mapping: dict[str, str], drop_duplicates: bool = True):
     """
     Clean and format a DataFrame using a dtype mapping.

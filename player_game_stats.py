@@ -8,7 +8,6 @@ Author: Eric Winiecke
 Date: December 6, 2025.
 """
 
-import numpy as np
 import pandas as pd
 
 df_corsi = pd.read_csv("player_game_corsi_2015_2018.csv")

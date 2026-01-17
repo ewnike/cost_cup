@@ -1,9 +1,5 @@
-(
-    """
-Docstring for scraped_team_data_later_seasons_merge_and_insert
 """
-    """
-January 14, 2026.
+Docstring for scraped_team_data_later_seasons_merge_and_insert.
 
 Script to merge team_record and team salaries
 by season and insert data into the database.
@@ -11,13 +7,14 @@ Then delete files in team_records and
 team salaries.
 
 Eric Winiecke
+January 14, 2026.
 """
-)
 
 import os
 
 import pandas as pd
 
+from data_processing_utils import clear_dir_patterns
 from db_utils import get_db_engine
 
 RECORDS_DIR = "team_records"
@@ -72,10 +69,8 @@ for end_year in end_years:
         left_on="Abbreviation",
         right_on="Team",
         how="inner",
+        suffixes=("", "_salary"),
     )
-
-    merged.drop(columns=["Team"], inplace=True, errors="ignore")
-    merged["season"] = season_id
 
     # --- Sanity checks BEFORE writing ---
     stats_codes = set(stats["Abbreviation"].astype(str).str.strip().str.upper())
@@ -88,9 +83,37 @@ for end_year in end_years:
     print(f"{season_id}: unmatched in salary (Team not in stats.Abbreviation): {unmatched_salary}")
 
     # --- Write Table -------------------------
-    table_name = f"merged_team_stats_{season_id}"
-    merged.to_sql(table_name, engine, if_exists="replace", index=False)
+    merged["season"] = season_id
 
+    merged = merged.rename(
+        columns={
+            "Team": "team_name",
+            "Abbreviation": "abbr",
+            "Team_ID": "team_id",
+            "GP": "gp",
+            "W": "w",
+            "L": "l",
+            "OTL": "otl",
+            "PTS": "pts",
+            "Total_Cap": "total_cap_raw",
+            "Total_Cap_num": "total_cap",
+        }
+    )
+    # Drop salary join key now (we used it)
+    merged = merged.drop(columns=["Team_salary", "Avg_Age"], errors="ignore")
+
+    merged = merged[
+        ["team_name", "abbr", "team_id", "gp", "w", "l", "otl", "pts", "total_cap_raw", "total_cap"]
+    ].copy()
+
+    table_name = f"team_summary_{season_id}"
+
+    merged.to_sql(table_name, engine, schema="mart", if_exists="replace", index=False)
     print(f"{season_id}: merged rows={len(merged)} -> {table_name}")
+
+    # ✅ only clear files AFTER successful insert for this season
+    clear_dir_patterns(RECORDS_DIR, [f"NHL_{end_year}_team_stats.csv"])
+    clear_dir_patterns(SALARY_DIR, [f"team_salary_{end_year - 1}.csv"])
+
 
 engine.dispose()
