@@ -11,42 +11,39 @@ import re
 
 import pandas as pd
 
-# If you have SCHEMA in constants.py
 from constants import SCHEMA
 from data_processing_utils import clear_dir_patterns
 from db_utils import get_db_engine
+
+RECORDS_DIR = "team_records"
+SALARY_DIR = "team_salaries"
 
 
 def parse_cap_to_int(val) -> int | None:
     """Convert '$70,403,880' -> 70403880; return None if missing."""
     if val is None or (isinstance(val, float) and pd.isna(val)):
         return None
-    s = str(val)
-    digits = re.sub(r"[^0-9]", "", s)
+    digits = re.sub(r"[^0-9]", "", str(val))
     return int(digits) if digits else None
 
 
-def year_to_season_id(year_str: str) -> int:
-    """
-    2016 -> 20152016
-    2017 -> 20162017
-    2018 -> 20172018.
-    """  # noqa: D205
-    y = int(year_str)
-    return int(f"{y - 1}{y}")
+def year_to_season_id(end_year: int) -> int:
+    """2016 -> 20152016, 2017 -> 20162017, 2018 -> 20172018."""
+    return int(f"{end_year - 1}{end_year}")
 
 
 def main():
+    """Bring it all together now."""
     engine = get_db_engine()
 
-    # Your original seasons (NHL_2016_team_stats.csv etc.)
-    season_years = ["2016", "2017", "2018"]
+    # Legacy end-years for NHL_{end_year}_team_stats.csv
+    season_years = [2016, 2017, 2018]
 
-    for year in season_years:
-        season_id = year_to_season_id(year)
+    for end_year in season_years:
+        season_id = year_to_season_id(end_year)
 
-        stats_path = f"team_records/NHL_{int(year)}_team_stats.csv"
-        salary_path = f"team_salaries/team_salary_{int(year) - 1}.csv"
+        stats_path = os.path.join(RECORDS_DIR, f"NHL_{end_year}_team_stats.csv")
+        salary_path = os.path.join(SALARY_DIR, f"team_salary_{end_year - 1}.csv")
 
         if not os.path.exists(stats_path):
             print(f"Missing stats file: {stats_path} — skipping {season_id}")
@@ -59,63 +56,61 @@ def main():
             stats = pd.read_csv(stats_path)
             salary = pd.read_csv(salary_path)
 
-            # Normalize headers (strip whitespace)
+            # Normalize headers
             stats.columns = [c.strip() for c in stats.columns]
             salary.columns = [c.strip() for c in salary.columns]
 
-            # Expected inputs:
-            # stats: Team, GP, W, L, OTL, PTS, Abbreviation, Team_ID
-            # salary: Team, Avg_Age, Total_Cap
+            # Normalize join keys
+            stats["Abbreviation"] = stats["Abbreviation"].astype(str).str.strip().str.upper()
+            salary["Team"] = salary["Team"].astype(str).str.strip().str.upper()
+
             merged = pd.merge(
                 stats,
                 salary,
                 left_on="Abbreviation",
                 right_on="Team",
                 how="inner",
+                suffixes=("", "_salary"),
             )
 
-            # Keep salary abbreviation, drop redundant salary Team col
-            merged = merged.drop(columns=["Team_y"], errors="ignore")
-
-            # Standardize output columns
-            merged_out = pd.DataFrame(
+            # Build final standardized output
+            out = pd.DataFrame(
                 {
                     "season": season_id,
-                    "team_name": merged.get("Team_x", merged.get("Team")),
-                    "abbr": merged.get("Abbreviation", merged.get("Team")),
-                    "team_id": merged["Team_ID"],
-                    "gp": merged["GP"],
-                    "w": merged["W"],
-                    "l": merged["L"],
-                    "otl": merged["OTL"],
-                    "pts": merged["PTS"],
+                    # stats side team name is usually "Team"
+                    "team_name": merged["Team"],
+                    "abbr": merged["Abbreviation"],
+                    "team_id": merged["Team_ID"].astype("int64"),
+                    "gp": merged["GP"].astype("int64"),
+                    "w": merged["W"].astype("int64"),
+                    "l": merged["L"].astype("int64"),
+                    "otl": merged["OTL"].astype("int64"),
+                    "pts": merged["PTS"].astype("int64"),
                     "total_cap_raw": merged.get("Total_Cap"),
                 }
             )
 
-            merged_out["total_cap"] = merged_out["total_cap_raw"].apply(parse_cap_to_int)
+            out["total_cap"] = out["total_cap_raw"].apply(parse_cap_to_int).astype("Int64")
 
-            # Write to mart schema
-            out_table = f"team_summary_{season_id}"
-            out_schema = SCHEMA["mart"]  # "mart"
-
-            merged_out.to_sql(
-                out_table,
+            table_name = f"team_summary_{season_id}"
+            out.to_sql(
+                table_name,
                 engine,
-                schema=out_schema,
+                schema=SCHEMA["mart"],  # "mart"
                 if_exists="replace",
                 index=False,
             )
 
-            print(f"✅ Created {out_schema}.{out_table} rows={len(merged_out)}")
+            print(f"✅ {season_id}: rows={len(out)} -> {SCHEMA['mart']}.{table_name}")
 
-            # Delete inputs only after success
-            os.remove(stats_path)
-            os.remove(salary_path)
-            print(f"🧹 Deleted {stats_path} and {salary_path}")
+            # ✅ ONLY clear after successful insert for that season
+            clear_dir_patterns(RECORDS_DIR, [os.path.basename(stats_path)])
+            clear_dir_patterns(SALARY_DIR, [os.path.basename(salary_path)])
 
         except Exception as e:
-            print(f"❌ Failed season {season_id} ({year}): {e}")
+            print(f"❌ Failed season {season_id} (end_year={end_year}): {e}")
+            # ✅ do NOT delete files if anything failed
+            continue
 
     engine.dispose()
 
