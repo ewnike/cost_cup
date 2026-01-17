@@ -1,5 +1,15 @@
-import requests
+"""
+Docstring for fetch_hockey_seasons.
+
+This is the code used to download and read into df
+pbp and shift data for NHL games seasons 20182019-2024-2025.
+
+Eric Winiecke
+December, 2025.
+"""
+
 import pandas as pd
+import requests
 
 URL = "https://evolving-hockey.com/stats/pbp_query/session/853e43fa250088d4888c629c15aea8b9/dataobj/pbp_query_table_output?w=&nonce=88e8ca3ee2cb01a4"
 
@@ -28,6 +38,7 @@ BASE_PAYLOAD = (
 
 
 def make_payload(start: int, length: int) -> str:
+    """Load data from evolving hockey."""
     # Just mutate the start/length substring; do NOT parse/re-encode
     return BASE_PAYLOAD.replace("start=0&length=100", f"start={start}&length={length}")
 
