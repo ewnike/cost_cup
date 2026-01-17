@@ -1,86 +1,88 @@
-"""
-Scrape team payroll data from Spotrac using Selenium (Safari WebDriver).
-
-Created on 2024-08-28 by Eric Winiecke.
-"""
-
 import os
+import re
 import time
 
 import pandas as pd
-from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-# Set up the Safari WebDriver
-driver = webdriver.Safari()
-
-# Base URL to scrape
 BASE_URL = "https://www.spotrac.com/nhl/cap/_/year/{}/sort/cap_maximum_space2"
+YEARS = [2018, 2019, 2020, 2021, 2022, 2023, 2024]
 
-# Years to scrape
-years = [2015, 2016, 2017]
-
-# Directory to store CSV files
 OUTPUT_DIR = "team_salaries"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# Loop through each year and scrape the data
-for year in years:
-    url = BASE_URL.format(year)
-    driver.get(url)
+TABLE_XPATH = "/html/body/main/div[2]/section/div/div/div[1]/section/article/div[2]/div/div/div[2]/div/div/div[2]/table"
 
-    # Wait until the table is loaded
-    WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.CLASS_NAME, "tablesorter-headerRow"))
-    )
+TEAM_COL = 2  # td[2]
+AVG_AGE_COL = 7  # td[7]
+TOTAL_CAP_COL = 9  # td[9]
 
-    # Scroll to the bottom of the page to load all content (if applicable)
-    while True:
-        previous_height = driver.execute_script("return document.body.scrollHeight")
-        driver.find_element(By.TAG_NAME, "body").send_keys(Keys.END)
-        time.sleep(2)  # Wait for new data to load
-        new_height = driver.execute_script("return document.body.scrollHeight")
-        if new_height == previous_height:
-            break  # Exit the loop when no more new content is loaded
 
-    # Get page source and parse with BeautifulSoup
-    html = driver.page_source
-    soup = BeautifulSoup(html, "html.parser")
+def team_abbrev_from_cell(text: str) -> str | None:
+    # usually "SJS", "TBL", etc.
+    if not text:
+        return None
+    m = re.search(r"\b[A-Z]{2,3}\b", text.upper())
+    return m.group(0) if m else None
 
-    # Find all rows in the table body
-    rows = soup.find("tbody").find_all("tr")
 
-    # Find the elements containing the team name and total player payroll
-    team_names = []
-    team_payroll = []
+def main():
+    driver = webdriver.Safari()
 
-    # Iterate over each row to extract the name and payroll value
-    for row in rows:
-        # Get the team name, usually from the 'a' tag within the second 'td' element
-        team_name_tag = row.find_all("td")[1].find("a")
-        if team_name_tag:
-            team_name = team_name_tag.get_text(strip=True)
-        else:
-            team_name = row.find_all("td")[1].get_text(strip=True)
+    try:
+        for year in YEARS:
+            driver.get(BASE_URL.format(year))
+            print(year, driver.title)
 
-        # Get the correct payroll column (assumed to be in the 7th column)
-        payroll_column = row.find_all("td")[6].get_text(strip=True)
+            # Wait until the table exists
+            table = WebDriverWait(driver, 30).until(
+                EC.presence_of_element_located((By.XPATH, TABLE_XPATH))
+            )
 
-        team_names.append(team_name)
-        team_payroll.append(payroll_column)
+            # Wait until at least one Total Cap cell exists in the tbody (td[9])
+            WebDriverWait(driver, 30).until(
+                EC.presence_of_element_located(
+                    (By.XPATH, f"{TABLE_XPATH}/tbody/tr[1]/td[{TOTAL_CAP_COL}]")
+                )
+            )
 
-    # Create a DataFrame to store the results
-    df = pd.DataFrame({"Team": team_names, "Total_Payroll": team_payroll})
+            # Grab all data rows
+            rows = table.find_elements(By.XPATH, ".//tbody/tr")
+            team_vals, age_vals, cap_vals = [], [], []
 
-    # Save DataFrame to a CSV file
-    output_file = os.path.join(OUTPUT_DIR, f"team_salary_{year}.csv")
-    df.to_csv(output_file, index=False)
+            for r in rows:
+                tds = r.find_elements(By.XPATH, "./td")
+                # need at least 9 columns
+                if len(tds) < TOTAL_CAP_COL:
+                    continue
 
-# Close the driver
-driver.quit()
+                team_cell = tds[TEAM_COL - 1].text.strip()
+                age_cell = tds[AVG_AGE_COL - 1].text.strip()
+                cap_cell = tds[TOTAL_CAP_COL - 1].text.strip()
 
-print("Scraping completed. CSV files saved in the 'output' directory.")
+                abbr = team_abbrev_from_cell(team_cell)
+                if not abbr:
+                    continue
+
+                # Skip blank cap rows
+                if not cap_cell:
+                    continue
+
+                team_vals.append(abbr)
+                age_vals.append(age_cell)
+                cap_vals.append(cap_cell)
+
+            df = pd.DataFrame({"Team": team_vals, "Avg_Age": age_vals, "Total_Cap": cap_vals})
+            out = os.path.join(OUTPUT_DIR, f"team_salary_{year}.csv")
+            df.to_csv(out, index=False)
+            print(f"{year}: scraped {len(df)} teams -> {out}")
+
+    finally:
+        driver.quit()
+
+
+if __name__ == "__main__":
+    main()

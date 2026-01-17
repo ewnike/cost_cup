@@ -14,19 +14,39 @@ load_dotenv()
 
 
 # List of NHL seasons to be processed
-SEASONS = [
-    "20152016",
-    "20162017",
-    "20172018",
-    "20182019",
-    "20192020",
-    "20202021",
-    "20212022",
-    "20222023",
-    "20232024",
-    "20242025",
-    "20252026",
+SEASONS_LEGACY = [
+    20152016,
+    20162017,
+    20172018,
 ]
+
+SEASONS_MODERN = [
+    20182019,
+    20192020,
+    20202021,
+    20212022,
+    20222023,
+    20232024,
+    20242025,
+]
+
+# List of new NHL Seasons to be processed
+SEASONS_TO_RUN = [
+    20192020,
+    20202021,
+    20212022,
+    20222023,
+    20232024,
+    20242025,
+]
+
+SCHEMA = {
+    "raw": "raw",
+    "dim": "dim",
+    "derived": "derived",
+    "mart": "mart",
+}
+
 
 # ✅ Local Paths
 local_download_path = os.getenv("LOCAL_DOWNLOAD_PATH", "data/download")

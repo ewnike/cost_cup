@@ -258,7 +258,6 @@ def build_processing_config(
     engine,
     local_download_path,
 ):
-    s3_file_key = s3_file_key.format(season=season)
     """
     Build a standardized config dictionary for S3 extraction and data processing.
 
@@ -280,6 +279,8 @@ def build_processing_config(
         dict: Config dictionary with all values needed for process_and_insert_data().
 
     """
+    s3_file_key = s3_file_key.format(season=season)
+
     return {
         "bucket_name": bucket_name,
         "s3_file_key": s3_file_key,
@@ -290,7 +291,7 @@ def build_processing_config(
         "table_name": table_name,
         "column_mapping": column_mapping,
         "engine": engine,
-        "handle_zip": bool(local_zip_path),
+        "handle_zip": str(local_zip_path).lower().endswith(".zip"),
         "local_download_path": local_download_path,
     }
 
@@ -320,7 +321,7 @@ def game_table_config():
         local_extract_path=local_extract_path,
         expected_csv_filename="game.csv",
         table_definition_function=define_game_table,
-        table_name="game_table",
+        table_name="game",
         column_mapping=COLUMN_MAPPINGS["game_table"],
         engine=engine,
         local_download_path=local_download_path,
@@ -351,8 +352,9 @@ def game_plays_config():
         local_zip_path=f"{local_download_path}/game_plays.zip",
         local_extract_path=local_extract_path,
         expected_csv_filename="game_plays.csv",
+        table_name="game_plays",
         table_definition_function=define_game_plays_processor,
-        table_name="game_plays_processor",
+        # table_name="game_plays_processor",
         column_mapping=COLUMN_MAPPINGS["game_plays"],
         engine=engine,
         local_download_path=local_download_path,
@@ -393,6 +395,7 @@ def player_info_config():
 
 def raw_shifts_config(season: int):
     """Predefined config for raw shifts data."""
+    table_name = f"raw_shifts_{season}"
     return build_processing_config(
         bucket_name=S3_BUCKET_NAME,
         s3_file_key="shifts_{season}.csv.zip",
@@ -400,7 +403,7 @@ def raw_shifts_config(season: int):
         local_zip_path=f"{local_download_path_III}/raw_shifts_{season}.zip",
         local_extract_path=local_extract_path_III,
         expected_csv_filename=f"shifts_{season}.csv",
-        table_name=f"raw_shifts_{season}",
+        table_name=table_name,
         column_mapping=COLUMN_MAPPINGS["raw_shifts"],
         engine=engine,
         local_download_path=local_download_path_III,
@@ -411,10 +414,9 @@ def raw_shifts_config(season: int):
 def pbp_raw_data_config(season: int):
     """Predefined config for raw pbp game data."""
     table_name = f"raw_pbp_{season}"
-
     return build_processing_config(
         bucket_name=S3_BUCKET_NAME,
-        s3_file_key=f"pbp_{season}.csv.zip",
+        s3_file_key="pbp_{season}.csv.zip",
         season=season,
         local_zip_path=f"{local_download_path_II}/pbp_{season}.zip",
         local_extract_path=local_extract_path_II,

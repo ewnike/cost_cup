@@ -436,6 +436,37 @@ if __name__ == "__main__":
     # Step 2: Define the seasons to process (as integers)
     # seasons = [20152016, 20162017, 20172018]  # Ensure these are integers
     # SEASONS is a global constant
+    from db_utils import get_db_engine
+
+    engine = get_db_engine()
+
+    # Replace game_plays with the view built from raw_pbp_20182019
+    df_master["game_plays"] = pd.read_sql(
+        """
+        SELECT game_id,
+            period,
+            "periodTime",
+            event,
+            team_id_for,
+            team_id_against
+        FROM public.game_plays_20182019_from_raw_pbp
+        ORDER BY game_id, period, "periodTime"
+        """,
+        engine,
+    )
+
+    # Replace game_shifts with your final shifts table (season filtered)
+    df_master["game_shifts"] = pd.read_sql(
+        """
+        SELECT gs.game_id, gs.player_id, gs.period, gs.shift_start, gs.shift_end
+        FROM public.game_shifts_final gs
+        JOIN public.game g ON g.game_id = gs.game_id
+        WHERE g.season = 20182019
+        """,
+        engine,
+    )
+
+    engine.dispose()
 
     # Directory to save results
     OUTPUT_DIR = "team_event_totals"

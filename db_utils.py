@@ -20,14 +20,17 @@ from sqlalchemy import (
     Date,
     DateTime,
     Float,
+    Index,
     Integer,
     MetaData,
+    PrimaryKeyConstraint,
     SmallInteger,
     String,
     Table,
     Text,
     create_engine,
 )
+from sqlalchemy.schema import Identity
 
 from log_utils import setup_logger
 
@@ -36,11 +39,18 @@ logger = logging.getLogger(__name__)  # ✅ define logger
 
 
 # 🔹 **Step 1: Load Environment Variables**
+# def load_environment_variables():
+#     """Load environment variables from the .env next to this file."""
+#     env_path = Path(__file__).resolve().parent / ".env"
+#     load_dotenv(dotenv_path=env_path, override=False)
+#     logger.info("Environment variables loaded.")
+
+
 def load_environment_variables():
     """Load environment variables from the .env next to this file."""
     env_path = Path(__file__).resolve().parent / ".env"
+    print("Loading .env from:", env_path)  # TEMP
     load_dotenv(dotenv_path=env_path, override=False)
-    logger.info("Environment variables loaded.")
 
 
 # 🔹 **Step 2: Get Database Engine**
@@ -247,11 +257,28 @@ def define_player_info_table(metadata):
     )
 
 
+def define_raw_corsi_table(metadata, table_name: str = "raw_corsi"):
+    """Define the raw corsi table schema."""
+    return Table(
+        table_name,
+        metadata,
+        Column("game_id", Integer),
+        Column("player_id", Integer),
+        Column("team_id", Integer),
+        Column("corsi_for", Integer),
+        Column("corsi_against", Integer),
+        Column("corsi", Integer),
+        Column("cf_percent", Float),
+        extend_existing=True,
+    )
+
+
 def define_raw_shifts_table(metadata, table_name: str = "raw_shifts"):
     """Define the player raw shifts table schema."""
     return Table(
         table_name,
         metadata,
+        Column("id", BigInteger, Identity(always=False), primary_key=True),
         Column("row_num", Integer, nullable=True),
         Column("player", Text, nullable=False),
         Column("team_num", String(10), nullable=False),
@@ -272,6 +299,7 @@ def define_raw_shifts_table(metadata, table_name: str = "raw_shifts"):
         Column("shift_end", String(5), nullable=True),
         Column("duration", String(5), nullable=True),
         Column("shift_mod", Integer, nullable=False),
+        extend_existing=True,
     )
 
 
@@ -280,6 +308,7 @@ def define_raw_pbp_table(metadata, table_name: str = "raw_pbp"):
     return Table(
         table_name,
         metadata,
+        Column("id", BigInteger, Identity(always=False), primary_key=True),
         Column("season", Integer, nullable=False),
         Column("game_id", BigInteger, nullable=False),
         Column("game_date", Date, nullable=False),
@@ -336,6 +365,7 @@ def define_raw_pbp_table(metadata, table_name: str = "raw_pbp"):
         Column("pen_index", Integer),
         Column("shift_index", Integer),
         Column("pred_goal", Float),
+        extend_existing=True,
     )
 
 
@@ -359,25 +389,34 @@ def create_corsi_table(table_name: str, metadata: MetaData) -> Table:
     return Table(
         table_name,
         metadata,
+        Column("game_id", BigInteger),
+        Column("player_id", BigInteger),
         Column("team_id", Integer),
-        Column("season", Integer),
-        Column("games_played", Integer),
-        Column("cf", Integer),
-        Column("ca", Integer),
+        Column("corsi_for", Float),
+        Column("corsi_against", Float),
+        Column("corsi", Float),
         Column("cf_percent", Float),
-        Column("capHit", Float),
+        extend_existing=True,
     )
 
 
 def create_caphit_table(table_name: str, metadata: MetaData) -> Table:
     """Define caphit table schema."""
-    return Table(
+    t = Table(
         table_name,
         metadata,
+        Column("id", BigInteger, Identity(always=False), primary_key=True),
         Column("firstName", String(50)),
         Column("lastName", String(50)),
         Column("capHit", Float),
+        Column("spotrac_url", String(255)),
+        extend_existing=True,
     )
+
+    # add indexes after table exists
+    Index(f"ux_{table_name}_spotrac_url", t.c.spotrac_url, unique=True)
+
+    return t
 
 
 def create_team_event_total_games_table(table_name: str, metadata: MetaData) -> Table:
@@ -396,6 +435,36 @@ def create_team_event_total_games_table(table_name: str, metadata: MetaData) -> 
         Column("total_blocked_shots_against", Integer),
         Column("game_id", BigInteger),
     )
+
+
+def create_player_game_es_table(table_name: str, metadata: MetaData) -> Table:
+    """
+    Grain: one row per (game_id, player_id, team_id) for even-strength only.
+
+    Stored per season as player_game_es_{season}.
+    """
+    t = Table(
+        table_name,
+        metadata,
+        Column("game_id", BigInteger, nullable=False),
+        Column("player_id", BigInteger, nullable=False),
+        Column("team_id", Integer, nullable=False),
+        # raw totals for that game at even strength
+        Column("cf", Integer, nullable=False),
+        Column("ca", Integer, nullable=False),
+        Column("toi_sec", Integer, nullable=False),
+        # derived rates (optional but handy)
+        Column("cf60", Float),
+        Column("ca60", Float),
+        Column("cf_percent", Float),
+        PrimaryKeyConstraint("game_id", "player_id", "team_id", name=f"pk_{table_name}"),
+        extend_existing=True,
+    )
+
+    Index(f"ix_{table_name}_player", t.c.player_id)
+    Index(f"ix_{table_name}_game", t.c.game_id)
+    Index(f"ix_{table_name}_team", t.c.team_id)
+    return t
 
 
 def create_table(engine, metadata, table):

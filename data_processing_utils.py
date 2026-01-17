@@ -10,8 +10,10 @@ Eric Winiecke
 February 17, 2025
 """
 
+import glob
 import logging
 import os
+import re
 import shutil
 import string
 from pathlib import Path
@@ -42,66 +44,61 @@ def ensure_table_exists(engine, metadata, table_name, table_definition_function)
         metadata.reflect(bind=engine)  # Refresh metadata
 
 
-def clean_data(df, column_mapping, drop_duplicates=True):
+def clear_player_cap_hits_dir(csv_dir: str, pattern: str = "player_cap_hits_*.csv") -> None:
+    """Delete cap-hit CSVs after successful DB load."""
+    paths = glob.glob(os.path.join(csv_dir, pattern))
+    for p in paths:
+        try:
+            os.remove(p)
+            logger.info("Deleted %s", p)
+        except OSError as e:
+            logger.error("Failed deleting %s: %s", p, e)
+
+
+def clean_data(df: pd.DataFrame, column_mapping: dict[str, str], drop_duplicates: bool = True):
     """
-    Clean and format a DataFrame based on column mappings.
+    Clean and format a DataFrame using a dtype mapping.
 
-    Args:
-        df (pd.DataFrame): The DataFrame to clean.
-        column_mapping (dict): Dictionary mapping column names to expected types.
-        drop_duplicates (bool): Whether to drop duplicates (default is True).
-
-    Returns:
-        pd.DataFrame: Cleaned DataFrame.
-
+    column_mapping = { "col_name": "int64" | "float64" | "string" | "datetime64[ns]" ... }
     """
-    # Replace NaN values with 0 for integer and float columns
-    for col in df.columns:
-        if df[col].dtype.kind in "fi":  # Float or Integer
-            df[col] = df[col].fillna(0)  # Convert NaN to 0
+    if df is None or df.empty:
+        return df
+
+    # Normalize headers first (Spotrac / CSVs sometimes have whitespace)
+    df.columns = [c.strip() for c in df.columns]
+
+    # Only operate on columns we actually care about (present in df)
+    cols = [c for c in column_mapping.keys() if c in df.columns]
+
+    # Don’t blindly fill numeric NaNs with 0 for these
+    never_zero = {"season"}
+
+    # 1) Basic null cleanup
+    for c in cols:
+        if pd.api.types.is_numeric_dtype(df[c]) and c not in never_zero:
+            df[c] = df[c].fillna(0)
         else:
-            df[col] = df[col].where(pd.notnull(df[col]), None)  # Keep None for strings
+            df[c] = df[c].where(pd.notnull(df[c]), None)
 
-    # Convert columns to appropriate data types based on column_mapping
-    for db_column, csv_column in column_mapping.items():
-        if csv_column in df.columns:
-            if db_column in ["x", "y"]:
-                df[csv_column] = pd.to_numeric(df[csv_column], errors="coerce").fillna(0)
-            elif db_column == "dateTime":
-                df[csv_column] = pd.to_datetime(df[csv_column], errors="coerce")
-            elif db_column in [
-                "game_id",
-                "player_id",
-                "team_id_for",
-                "team_id_against",
-                "period",
-                "timeOnIce",
-                "assists",
-                "goals",
-                "shots",
-                "hits",
-                "powerPlayGoals",
-                "powerPlayAssists",
-                "penaltyMinutes",
-                "faceOffWins",
-                "faceoffTaken",
-                "takeaways",
-                "giveaways",
-                "shortHandedGoals",
-                "shortHandedAssists",
-                "blocked",
-                "plusMinus",
-                "evenTimeOnIce",
-                "shortHandedTimeOnIce",
-                "powerPlayTimeOnIce",
-            ]:
-                df[csv_column] = pd.to_numeric(
-                    df[csv_column], downcast="integer", errors="coerce"
-                ).fillna(0)
-            else:
-                df[csv_column] = df[csv_column].astype(str).str.strip()
+    # 2) Apply type conversions based on dtype mapping
+    for c in cols:
+        dtype = str(column_mapping[c]).lower()
 
-    # ✅ Drop duplicates only if drop_duplicates=True
+        if "datetime" in dtype:
+            df[c] = pd.to_datetime(df[c], errors="coerce")
+
+        elif dtype.startswith("int"):
+            # integers: coerce -> fillna(0) -> int
+            df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0).astype("int64")
+
+        elif dtype.startswith("float"):
+            df[c] = pd.to_numeric(df[c], errors="coerce")
+
+        else:
+            # treat as string
+            df[c] = df[c].astype(str).str.strip()
+
+    # 3) Optional de-dupe
     if drop_duplicates:
         df = df.drop_duplicates(ignore_index=True)
 
@@ -160,48 +157,95 @@ def add_suffix_to_duplicate_play_ids(df):
     return df
 
 
-def clean_and_transform_data(df, column_mapping):
-    """Apply specific transformations and further clean data."""
-    # Start with general cleaning
+COLUMN_RENAMES = {
+    # corsi
+    "CF_Percent": "cf_percent",
+    "Cap_Hit": "cap_hit",
+    "timeOnIce": "time_on_ice",
+    "evenTimeOnIce": "even_time_on_ice",
+    "shortHandedTimeOnIce": "short_handed_time_on_ice",
+    "powerPlayTimeOnIce": "power_play_time_on_ice",
+    "date_time_GMT": "date_time_gmt",
+    "dateTime": "date_time",
+    "periodTime": "period_time",
+    "periodTimeRemaining": "period_time_remaining",
+    # add more as needed
+}
+
+
+def to_snake(s: str) -> str:
+    """Make constants pythonic."""
+    s = s.strip()
+    s = re.sub(r"[\s\-]+", "_", s)
+    s = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s)  # camelCase -> snake
+    return s.lower()
+
+
+def normalize_columns(df):
+    """Apply to_snake where appropriate."""
+    df.columns = [to_snake(c) for c in df.columns]
+    # apply explicit overrides after generic snake-case
+    df = df.rename(columns={to_snake(k): v for k, v in COLUMN_RENAMES.items()})
+    return df
+
+
+#     return df
+def clean_and_transform_data(df, column_mapping, table_name: str | None = None):
+    """Apply transformations and clean data using dtype mapping (col -> dtype)."""
+    # Normalize headers
+    df.columns = [c.strip() for c in df.columns]
+
+    # Special-case player_info header normalization (shootCatches aliases)
+    if table_name == "player_info":
+        df = normalize_player_info_columns(df)
+
+    # Clean + dtype coercion (this should be the ONLY place types get coerced)
     df = clean_data(df, column_mapping, drop_duplicates=False)
 
-    # Check for the need to add suffixes to 'play_id' if the column exists
+    # If play_id exists, enforce uniqueness
     if "play_id" in df.columns:
         df = add_suffix_to_duplicate_play_ids(df)
 
-    # Apply specific transformations
+    # Height conversion (if present)
     if "height" in df.columns:
-        df["height"] = df["height"].apply(convert_height)  # Custom transformation example
+        df["height"] = df["height"].apply(convert_height)
 
-    # Convert datetime fields
-    if "birthDate" in df.columns:
-        df["birthDate"] = pd.to_datetime(df["birthDate"])
-
-    # Rename columns to match database schema
-    df.rename(columns={"shootsCatches": "shootCatches"}, inplace=True)
-
-    # Further sophisticated handling
-    df = df.where(pd.notnull(df), None)  # Convert NaNs to None for database compatibility
+    # Drop duplicates at the end (optional)
+    df = df.drop_duplicates(ignore_index=True)
 
     return df
 
 
-def insert_data(df, table, session, column_mapping=None):
-    """Insert DataFrame into a database table, optionally using column mapping."""
-    if df.shape[0] == 0:
+def insert_data(df, table, session):
+    """Insert DataFrame into a database table. Assumes df is already cleaned/coerced."""
+    if df.empty:
         logger.error(f"DataFrame is empty! No data inserted into {table.name}.")
         return
 
-    # ✅ Optional: apply dtype mapping
-    if column_mapping:
-        try:
-            df = df.astype(column_mapping)
-            logger.info("Applied column mapping for dtype conversion.")
-        except Exception as e:
-            logger.error(f"Error applying column mapping: {e}", exc_info=True)
-            return
+    # ✅ Filter df to table schema
+    valid_cols = set(table.columns.keys())
+    extra_cols = [c for c in df.columns if c not in valid_cols]
+    if extra_cols:
+        logger.warning(f"Dropping extra columns not in {table.name}: {extra_cols}")
+        df = df.drop(columns=extra_cols)
 
-    logger.info(f"Inserting {df.shape[0]} rows into {table.name}.")
+    # ✅ Ensure required NOT NULL cols exist in df
+    missing_required = [
+        col.name
+        for col in table.columns
+        if not col.nullable
+        and col.default is None
+        and col.server_default is None
+        and col.name not in df.columns
+    ]
+    if missing_required:
+        logger.error(f"Missing required NOT NULL columns for {table.name}: {missing_required}")
+        return
+
+    # Keep only schema columns, in any order
+    df = df[[c for c in df.columns if c in valid_cols]]
+
+    logger.info(f"Inserting {len(df)} rows into {table.name}.")
     data = df.to_dict(orient="records")
 
     try:
@@ -215,9 +259,8 @@ def insert_data(df, table, session, column_mapping=None):
         session.rollback()
         logger.error(f"Error inserting data into {table.name}: {e}", exc_info=True)
     except Exception as e:
+        session.rollback()
         logger.error(f"Unexpected error inserting into {table.name}: {e}", exc_info=True)
-    finally:
-        session.close()
 
 
 def clear_directory(directory):
@@ -291,6 +334,23 @@ def extract_zip(zip_path, extract_to):
         return []
 
 
+def normalize_player_info_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Normalize column spellings for shootCatches."""
+    # strip whitespace in headers
+    df.columns = [c.strip() for c in df.columns]
+
+    # handle known aliases
+    rename_map = {}
+    for c in df.columns:
+        key = c.replace("_", "").replace(" ", "").strip().lower()
+        if key in {"shootscatches", "shootcatches", "shootcatch"}:
+            rename_map[c] = "shootCatches"
+    if rename_map:
+        df = df.rename(columns=rename_map)
+
+    return df
+
+
 def process_and_insert_data(config):
     """
     Download, extract, clean, and insert data into a database table.
@@ -314,10 +374,8 @@ def process_and_insert_data(config):
     session_factory = sessionmaker(bind=config["engine"])
     session = session_factory()
 
-    # Clear old data
     clear_directory(config["local_extract_path"])
 
-    # Define the correct download path based on whether handling a ZIP
     download_path = (
         config["local_zip_path"]
         if config["handle_zip"]
@@ -326,35 +384,12 @@ def process_and_insert_data(config):
 
     download_zip_from_s3(config["bucket_name"], config["s3_file_key"], download_path)
 
-    # if config["handle_zip"]:
-    #     extract_zip(download_path, config["local_extract_path"])
-    #     csv_file_path = os.path.join(config["local_extract_path"], config["expected_csv_filename"])
-    #     if not os.path.exists(csv_file_path):
-    #         logger.error(f"Extracted file not found after extraction: {csv_file_path}")
-    #         return
-    #     clear_directory(config["local_download_path"])
-    # else:
-    #     csv_file_path = download_path
-    #     if not os.path.exists(csv_file_path):
-    #         logger.error(f"Downloaded file not found at path: {csv_file_path}")
-    #         return
-
-    # try:
-    #     if csv_file_path.endswith(".csv") or csv_file_path.endswith(".csv.xls"):
-    #         df = pd.read_csv(csv_file_path)
-    #     else:
-    #         df = pd.read_excel(csv_file_path, engine="openpyxl")
-    # except Exception as e:
-    #     logger.error(f"Error reading file {csv_file_path}: {e}")
-    #     return
-
     if config["handle_zip"]:
         extract_zip(download_path, config["local_extract_path"])
 
         extract_dir = Path(config["local_extract_path"])
         target = config["expected_csv_filename"]
 
-        # Look for the expected file anywhere under extract_dir, ignoring Mac junk
         matches = [
             p
             for p in extract_dir.rglob(target)
@@ -362,7 +397,6 @@ def process_and_insert_data(config):
         ]
 
         if not matches:
-            # Optional: helpful debug of what actually extracted (first 50 files)
             extracted_files = [
                 str(p.relative_to(extract_dir))
                 for p in extract_dir.rglob("*")
@@ -375,7 +409,6 @@ def process_and_insert_data(config):
             return
 
         csv_file_path = str(matches[0])
-
         clear_directory(config["local_download_path"])
 
     else:
@@ -393,8 +426,11 @@ def process_and_insert_data(config):
         logger.error(f"Error reading file {csv_file_path}: {e}")
         return
 
-    df = clean_and_transform_data(df, config["column_mapping"])
+    # ✅ table-specific fixes BEFORE cleaning
+    if config["table_name"].startswith("raw_shifts") and "shift_num" in df.columns:
+        df["shift_num"] = pd.to_numeric(df["shift_num"], errors="coerce").fillna(0).astype(int)
 
+    # ✅ Ensure the table exists BEFORE referencing metadata.tables[...]
     ensure_table_exists(
         config["engine"],
         get_metadata(),
@@ -402,12 +438,15 @@ def process_and_insert_data(config):
         config["table_definition_function"],
     )
 
+    # ✅ Clean after table fixes
+    df = clean_and_transform_data(df, config["column_mapping"], table_name=config["table_name"])
+
     try:
         logger.info(f"Inserting data into table: {config['table_name']}")
         insert_data(df, get_metadata().tables[config["table_name"]], session)
         logger.info(f"Data successfully inserted into {config['table_name']}.")
     except Exception as e:
         session.rollback()
-        logger.error(f"Error inserting data into {config['table_name']}: {e}")
+        logger.error(f"Error inserting data into {config['table_name']}: {e}", exc_info=True)
     finally:
         session.close()

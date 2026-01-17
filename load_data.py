@@ -14,20 +14,23 @@ import pandas as pd
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 
+from db_utils import load_environment_variables  # if you have this available
+
 
 def get_env_vars():
-    """Assemble credentials for login."""
-    load_dotenv()
-    env_vars = {
-        "DATABASE_TYPE": os.getenv("DATABASE_TYPE"),
-        "DBAPI": os.getenv("DBAPI"),
-        "ENDPOINT": os.getenv("ENDPOINT"),
-        "USER": os.getenv("USER"),
-        "PASSWORD": os.getenv("PASSWORD"),
-        "PORT": int(os.getenv("PORT", 5432)),
-        "DATABASE": os.getenv("DATABASE"),
+    """Load env vars used for DB connection."""
+    load_environment_variables()  # ensures .env is loaded (same as db_utils)
+
+    return {
+        "DATABASE_TYPE": os.getenv("DATABASE_TYPE", "postgresql"),
+        "DBAPI": os.getenv("DBAPI", "psycopg2"),
+        "ENDPOINT": os.getenv("ENDPOINT", "127.0.0.1"),
+        # ✅ prefer DB_USER / DB_PASSWORD
+        "USER": os.getenv("DB_USER") or os.getenv("USER"),
+        "PASSWORD": os.getenv("DB_PASSWORD"),
+        "PORT": int(os.getenv("PORT", "5432")),
+        "DATABASE": os.getenv("DATABASE", "hockey_stats"),
     }
-    return env_vars
 
 
 def get_db_engine(env_vars):

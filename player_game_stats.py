@@ -18,8 +18,8 @@ df_clusters = pd.read_csv("skater_merged_player_seasons_with_clusters.csv")
 df_clusters["season"] = df_clusters["season"].astype(str)
 
 
-# attach season to game-level Corsi via game_id -> season
 def game_id_to_season(gid: int) -> str:
+    """Attach season to game-level Corsi via game_id -> season."""
     year_start = gid // 1_000_000
     return f"{year_start}{year_start + 1}"
 
