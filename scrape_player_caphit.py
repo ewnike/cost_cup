@@ -29,7 +29,7 @@ BASE_URL = "https://www.spotrac.com/nhl/rankings/player/_/year/{}/sort/cap_total
 
 # Years to scrape
 # years = [2015, 2016, 2017]
-years = [2018, 2019, 2020, 2021, 2022, 2023, 2024]
+years = [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024]
 
 # Directory to store CSV files
 OUTPUT_DIR = "player_cap_hits"

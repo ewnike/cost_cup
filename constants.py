@@ -40,11 +40,22 @@ SEASONS_TO_RUN = [
     20242025,
 ]
 
+SEASONS_ALL = SEASONS_LEGACY + SEASONS_MODERN
+SEASONS_ACTIVE = SEASONS_ALL
+
 SCHEMA = {
     "raw": "raw",
     "dim": "dim",
     "derived": "derived",
     "mart": "mart",
+}
+
+
+TABLES = {
+    "GAME": ("raw", "game"),
+    "PLAYS": ("raw", "game_plays"),
+    "SHIFTS": ("raw", "game_shifts"),
+    "SKATER_STATS": ("raw", "game_skater_stats"),
 }
 
 

@@ -13,7 +13,6 @@ Outputs:
 - line_archetype_corsi_summary.csv
 """
 
-import numpy as np
 import pandas as pd
 
 

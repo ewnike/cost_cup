@@ -1,89 +1,195 @@
 """
-July 30, 2024.
+load_data.py.
 
-Code to load data from database into working env
-so that code can access data, calculate corsi,
-aggregate data, and insert data back into data table.
+Load NHL data from Postgres into a dict of DataFrames.
 
-Eric Winiecke.
+Updated:
+- Uses db_utils.get_db_engine() (single source of truth for DB connection)
+- Reads from raw.* tables (raw.game, raw.game_plays, raw.game_shifts, raw.game_skater_stats)
+- Optional season/game_id filtering to avoid loading everything
 """
 
-import os
+from __future__ import annotations
+
+from typing import Any
 
 import pandas as pd
-from dotenv import load_dotenv
-from sqlalchemy import create_engine
 
-from db_utils import load_environment_variables  # if you have this available
-
-
-def get_env_vars():
-    """Load env vars used for DB connection."""
-    load_environment_variables()  # ensures .env is loaded (same as db_utils)
-
-    return {
-        "DATABASE_TYPE": os.getenv("DATABASE_TYPE", "postgresql"),
-        "DBAPI": os.getenv("DBAPI", "psycopg2"),
-        "ENDPOINT": os.getenv("ENDPOINT", "127.0.0.1"),
-        # ✅ prefer DB_USER / DB_PASSWORD
-        "USER": os.getenv("DB_USER") or os.getenv("USER"),
-        "PASSWORD": os.getenv("DB_PASSWORD"),
-        "PORT": int(os.getenv("PORT", "5432")),
-        "DATABASE": os.getenv("DATABASE", "hockey_stats"),
-    }
+from db_utils import get_db_engine, load_environment_variables
+from schema_utils import fq
 
 
-def get_db_engine(env_vars):
-    """Create connection string to database."""
-    connection_string = (
-        f"{env_vars['DATABASE_TYPE']}+{env_vars['DBAPI']}://"
-        f"{env_vars['USER']}:{env_vars['PASSWORD']}@"
-        f"{env_vars['ENDPOINT']}:{env_vars['PORT']}/"
-        f"{env_vars['DATABASE']}"
-    )
-    return create_engine(connection_string)
-
-
-def fetch_game_ids_20152016(engine):
-    """Fetch all game IDs for the 2015-2016 season from the database."""
-    query = """
-    SELECT DISTINCT game_id
-    FROM public.game_plays
-    WHERE game_id >= 2015000000
-    AND game_id < 2016000000;
+def get_env_vars() -> dict[str, Any]:
     """
-    return pd.read_sql(query, engine)["game_id"].tolist()
+    Kept for backwards compatibility with existing scripts.
+    Your db_utils.get_db_engine() already loads env vars from .env.
+    """
+    load_environment_variables()
+    return {}  # legacy scripts can still call get_env_vars(), but it isn't needed anymore
 
 
-def load_data(env_vars):
-    """Connect to db."""
-    engine = get_db_engine(env_vars)
+def fetch_game_ids_20152016(engine) -> list[int]:
+    """
+    Fetch all game IDs for 20152016 season.
 
-    queries = {
-        "game_skater_stats": "SELECT * FROM game_skater_stats",
-        "game_plays": "SELECT * FROM game_plays",
-        "game_shifts": "SELECT * FROM game_shifts",
-        "game": "SELECT * FROM game",
-    }
+    NOTE: Updated to use raw.game (not public.game_plays).
+    """
+    game_tbl = fq("raw", "game")
+    q = f"""
+    SELECT DISTINCT game_id
+    FROM {game_tbl}
+    WHERE season = 20152016
+    ORDER BY game_id;
+    """
+    return pd.read_sql(q, engine)["game_id"].astype("int64").tolist()
 
-    df = {}
-    for name, query in queries.items():
-        df[name] = pd.read_sql(query, engine)
 
-        # Ensure 'game_id' is cast to int64 for consistency
-        if "game_id" in df[name].columns:
-            df[name]["game_id"] = df[name]["game_id"].astype("int64")
+def load_data(
+    env_vars: dict[str, Any] | None = None,
+    *,
+    season: int | None = None,
+    game_id: int | None = None,
+    limit_games: int | None = None,
+    debug_print_head: bool = False,
+) -> dict[str, pd.DataFrame]:
+    """
+    Load core raw tables.
 
-        print(f"{name}:")
-        print(df[name].head())  # Print first few rows of each DataFrame for debugging
+    If season is provided:
+      - loads raw.game filtered to that season (optionally limit_games)
+      - loads plays/shifts/skater_stats only for those game_ids
 
-    return df
+    If game_id is provided:
+      - loads that single game across tables
+
+    Returns dict with keys:
+      game, game_plays, game_shifts, game_skater_stats
+    """
+    engine = get_db_engine()
+
+    game_tbl = fq("raw", "game")
+    plays_tbl = fq("raw", "game_plays")
+    shifts_tbl = fq("raw", "game_shifts")
+    gss_tbl = fq("raw", "game_skater_stats")
+
+    try:
+        where = []
+        params: dict[str, Any] = {}
+
+        if season is not None:
+            where.append("season = %(season)s")
+            params["season"] = int(season)
+
+        if game_id is not None:
+            where.append("game_id = %(game_id)s")
+            params["game_id"] = int(game_id)
+
+        where_sql = ("WHERE " + " AND ".join(where)) if where else ""
+
+        # df_game = pd.read_sql(
+        #     f"""
+        #     SELECT game_id, season, type, date_time_GMT, away_team_id, home_team_id,
+        #            away_goals, home_goals, outcome
+        #     FROM {game_tbl}
+        #     {where_sql}
+        #     """,
+        #     engine,
+        #     params=params if params else None,
+        # )
+        df_game = pd.read_sql(
+            f"SELECT * FROM {game_tbl} {where_sql}",
+            engine,
+            params=params if params else None,
+        )
+
+        if limit_games is not None and not df_game.empty:
+            df_game = df_game.head(int(limit_games)).copy()
+
+        # Determine game_ids scope for the other tables
+        game_ids = df_game["game_id"].astype("int64").tolist() if not df_game.empty else None
+
+        # def _read_by_game_ids(sql_base: str) -> pd.DataFrame:
+        #     if game_ids is None:
+        #         return pd.read_sql(sql_base, engine)
+        #     return pd.read_sql(
+        #         sql_base + " WHERE game_id = ANY(%(game_ids)s)",
+        #         engine,
+        #         params={"game_ids": game_ids},
+        #     )
+        def _read_by_game_ids(sql_base: str) -> pd.DataFrame:
+            base = sql_base.strip().rstrip(";")
+            if game_ids is None:
+                return pd.read_sql(base, engine)
+            return pd.read_sql(
+                f"SELECT * FROM ({base}) q WHERE q.game_id = ANY(%(game_ids)s)",
+                engine,
+                params={"game_ids": game_ids},
+            )
+
+        # df_plays = _read_by_game_ids(
+        #     f"""
+        #     SELECT play_id, game_id, team_id_for, team_id_against, event, "secondaryType",
+        #            x, y, period, "periodType", "periodTime", "periodTimeRemaining",
+        #            "dateTime", goals_away, goals_home, description, st_x, st_y
+        #     FROM {plays_tbl}
+        #     """
+        # )
+        df_plays = _read_by_game_ids(f"SELECT * FROM {plays_tbl}")
+
+        df_shifts = _read_by_game_ids(
+            f"""
+            SELECT game_id, player_id, period, shift_start, shift_end
+            FROM {shifts_tbl}
+            """
+        )
+
+        # df_gss = _read_by_game_ids(
+        #     f"""
+        #     SELECT game_id, player_id, team_id,
+        #            "timeOnIce", assists, goals, shots, hits,
+        #            "powerPlayGoals", "powerPlayAssists", "penaltyMinutes",
+        #            "faceOffWins", "faceoffTaken", takeaways, giveaways,
+        #            "shortHandedGoals", "shortHandedAssists", blocked, "plusMinus",
+        #            "evenTimeOnIce", "shortHandedTimeOnIce", "powerPlayTimeOnIce"
+        #     FROM {gss_tbl}
+        #     """
+        # )
+        df_gss = _read_by_game_ids(f"SELECT * FROM {gss_tbl}")
+
+        # Normalize id dtypes for merges
+        for name, df in {
+            "game": df_game,
+            "game_plays": df_plays,
+            "game_shifts": df_shifts,
+            "game_skater_stats": df_gss,
+        }.items():
+            if not df.empty and "game_id" in df.columns:
+                df["game_id"] = df["game_id"].astype("int64")
+            if not df.empty and "player_id" in df.columns:
+                df["player_id"] = df["player_id"].astype("int64")
+
+            if debug_print_head:
+                print(f"{name}: {len(df)} rows")
+                print(df.head(3))
+
+        return {
+            "game": df_game,
+            "game_plays": df_plays,
+            "game_shifts": df_shifts,
+            "game_skater_stats": df_gss,
+        }
+
+    finally:
+        engine.dispose()
 
 
 if __name__ == "__main__":
-    env_vars = get_env_vars()
-    df = load_data(env_vars)
+    # Backwards compatible
+    _ = get_env_vars()
+
+    # Example debug: load one game
+    df = load_data(game_id=2015020001, debug_print_head=True)
 
     print("Data loaded successfully.")
-    for name, df in df.items():
-        print(f"{name}: {len(df)} rows")
+    for name, frame in df.items():
+        print(f"{name}: {len(frame)} rows")

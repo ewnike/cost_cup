@@ -25,10 +25,14 @@ from typing import Optional
 import pandas as pd
 from sqlalchemy import text
 
-from constants import SCHEMA
+from constants import SCHEMA, TABLES
 from data_processing_utils import clear_dir_patterns
 from db_utils import get_db_engine
-from schema_utils import fq_q
+from schema_utils import fq, fq_q
+
+GAME_TBL = fq(*TABLES["RAW_GAME"])
+PLAYS_TBL = fq(*TABLES["RAW_PLAYS"])
+
 
 CSV_GLOB = "player_cap_hits/player_cap_hits_*.csv"
 

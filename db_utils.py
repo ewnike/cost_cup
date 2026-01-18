@@ -401,21 +401,19 @@ def create_corsi_table(table_name: str, metadata: MetaData) -> Table:
 
 
 def create_caphit_table(table_name: str, metadata: MetaData) -> Table:
-    """Define caphit table schema."""
+    """Cap-hit by season with player_id for reliable joins."""
     t = Table(
         table_name,
         metadata,
-        Column("id", BigInteger, Identity(always=False), primary_key=True),
-        Column("firstName", String(50)),
-        Column("lastName", String(50)),
-        Column("capHit", Float),
-        Column("spotrac_url", String(255)),
+        Column("player_id", BigInteger, nullable=True),  # allow null while resolving
+        Column("firstName", String(50), nullable=True),
+        Column("lastName", String(50), nullable=True),
+        Column("capHit", Float, nullable=True),
+        Column("spotrac_url", String(255), nullable=True),
         extend_existing=True,
     )
-
-    # add indexes after table exists
-    Index(f"ux_{table_name}_spotrac_url", t.c.spotrac_url, unique=True)
-
+    Index(f"ix_{table_name}_player_id", t.c.player_id)
+    Index(f"ix_{table_name}_spotrac_url", t.c.spotrac_url)
     return t
 
 
