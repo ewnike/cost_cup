@@ -13,6 +13,7 @@ import pandas as pd
 
 
 def game_id_to_season(gid: int) -> str:
+    """Derive NHL season out of game_id."""
     year_start = gid // 1_000_000
     return f"{year_start}{year_start + 1}"
 
@@ -86,6 +87,7 @@ print("Rows with non-null cluster:", df_pg["cluster"].notna().sum())
 
 
 def assign_lines(group, line_size=3, max_lines=4):
+    """Assign players to lines."""
     g = group.sort_values("evenTimeOnIce", ascending=False).reset_index(drop=True)
     g = g.iloc[: line_size * max_lines]  # top N skaters
     if g.empty:

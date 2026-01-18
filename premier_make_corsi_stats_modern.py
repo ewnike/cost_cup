@@ -151,7 +151,7 @@ def calculate_and_save_corsi_stats(season_game_ids, season):
         df_master["game_plays"] = pd.read_sql(f"SELECT * FROM {plays_view}", engine)
 
         # ✅ Load shifts WITH team_id so we don't need game_skater_stats for 20202021+
-        raw_shifts_resolved = fq("derived", "raw_shifts_resolved")  # or fq("raw", ...)
+        raw_shifts_resolved = fq("raw", "raw_shifts_resolved")
         dim_team_code = fq("dim", "dim_team_code")
 
         df_master["game_shifts"] = pd.read_sql(
