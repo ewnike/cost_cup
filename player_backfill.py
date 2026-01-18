@@ -133,7 +133,7 @@ def upsert_player_info(conn, player_id: int, full_name: str):
 
     conn.execute(
         text("""
-        INSERT INTO public.player_info (player_id, "firstName", "lastName")
+        INSERT INTO dim.player_info (player_id, "firstName", "lastName")
         VALUES (:player_id, :firstName, :lastName)
         ON CONFLICT (player_id) DO UPDATE
         SET "firstName" = EXCLUDED."firstName",

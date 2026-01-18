@@ -39,14 +39,6 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 dfs_by_year = {}
 
 
-# def split_player_name(name):
-#     """Clean data and split player name."""
-#     name_parts = name.split()
-#     first_name = name_parts[0]
-#     last_name = " ".join(name_parts[1:]) if len(name_parts) > 1 else ""
-#     return first_name, last_name
-
-
 def split_player_name(name):
     """Clean data and split player name. Returns (None, None) if unusable."""
     if name is None:

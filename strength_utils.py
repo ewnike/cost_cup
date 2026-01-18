@@ -98,12 +98,26 @@ def filter_goalies_modern(game_shifts: pd.DataFrame) -> pd.DataFrame:
 
 def build_exclude_timeline_equal_strength(game_shifts_skaters: pd.DataFrame) -> pd.DataFrame:
     """
-    Build exclude timeline from SKATER shifts with team_id present.
+    Build an exclude timeline from SKATER shifts (team_id present, goalies removed).
 
-    Returns columns: time, team_1, team_2, exclude
+    Allowed time:
+      - Equal skater counts (5v5, 4v4, 3v3 OT, etc.)
+
+    Excluded time:
+      - Imbalanced skater counts up to 6 (6v5, 5v4, 4v3, etc.)
+        exclude = (team_1 != team_2) & (team_1 <= 6) & (team_2 <= 6)
+
+    Returns columns:
+      time (breakpoints), team_1, team_2, exclude
     """
     if game_shifts_skaters.empty:
         return pd.DataFrame(columns=["time", "team_1", "team_2", "exclude"])
+
+    # Ensure numeric timepoints
+    if "shift_start" in game_shifts_skaters.columns:
+        game_shifts_skaters = game_shifts_skaters.copy()
+        game_shifts_skaters["shift_start"] = game_shifts_skaters["shift_start"].astype(int)
+        game_shifts_skaters["shift_end"] = game_shifts_skaters["shift_end"].astype(int)
 
     team_ids = sorted(game_shifts_skaters["team_id"].dropna().unique())
     if len(team_ids) != 2:
