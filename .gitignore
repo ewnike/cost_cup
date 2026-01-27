@@ -192,3 +192,7 @@ cython_debug/
 # Database dumps
 *.backup
 *.dump
+
+# Database dumps
+*.backup
+*.dump
