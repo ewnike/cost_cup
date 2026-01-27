@@ -1,5 +1,11 @@
+"""
+Program to analyze_team_lines.
+
+Eric Winiecke
+January, 2026.
+"""
+
 import pandas as pd
-import numpy as np
 
 # ------------- config: set the team you want to study ---------
 TEAM_ID = 16  # <-- change to the team_id you want to analyze

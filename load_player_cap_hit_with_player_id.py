@@ -20,8 +20,8 @@ from sqlalchemy import text
 from sqlalchemy.orm import sessionmaker
 
 from constants import SCHEMA
-from data_processing_utils import clear_player_cap_hits_dir
-from db_utils import create_caphit_table, get_db_engine, get_metadata
+from data_processing_utils import clear_player_cap_hits_dir  # noqa: F401
+from db_utils import create_caphit_table, get_db_engine, get_metadata  # noqa: F401
 from schema_utils import fqs  # quoted fq: "schema"."table"
 
 CSV_GLOB = "player_cap_hits/player_cap_hits_*.csv"
@@ -55,13 +55,15 @@ def py_norm_name(s: str) -> str:
 
 
 def season_from_filename(path: str) -> int:
+    """Turn year into season."""
     year = int(os.path.basename(path).split("_")[-1].split(".")[0])
     return YEAR_TO_SEASON[year]
 
 
 def main() -> None:
+    """Assembly code."""
     engine = get_db_engine()
-    md = get_metadata()
+    md = get_metadata()  # noqa: F841
     Session = sessionmaker(bind=engine)
 
     files = sorted(glob.glob(CSV_GLOB))

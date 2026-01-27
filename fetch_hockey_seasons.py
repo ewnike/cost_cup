@@ -2,7 +2,7 @@
 Docstring for fetch_hockey_seasons.
 
 This is the code used to download and read into df
-pbp and shift data for NHL games seasons 20182019-2024-2025.
+pbp and shift data for NHL games seasons 20182019-20242025.
 
 Eric Winiecke
 December, 2025.
@@ -19,7 +19,7 @@ headers = {
     "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
     "Origin": "https://evolving-hockey.com",
     "Referer": "https://evolving-hockey.com/stats/pbp_query/?_inputs_&dir_pbp_query=%22PBP%20Past%20Games%22",
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",  # noqa: E501
     "X-Requested-With": "XMLHttpRequest",
     "Cookie": "__utmz=...; PHPSESSID=...; ...",  # from the *same* curl as this URL
 }

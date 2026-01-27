@@ -15,6 +15,7 @@ from schema_utils import fq
 
 
 def main() -> None:
+    """Build aggregated corsi."""
     engine = get_db_engine()
 
     for season in SEASONS_ALL:
