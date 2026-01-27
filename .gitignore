@@ -183,3 +183,12 @@ cython_debug/
 #.idea/
 .vscode/settings.json
 .vscode/settings.json
+
+# Database dumps
+*.backup
+*.dump
+*.sql
+
+# Database dumps
+*.backup
+*.dump
