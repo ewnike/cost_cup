@@ -1,11 +1,26 @@
-# caphit_playerid_backfill.py
+"""
+Backfill missing NHL `player_id` values in Spotrac cap-hit tables.
+
+For each season table `dim.player_cap_hit_{season}`, the script selects rows where `player_id`
+is NULL, attempts to resolve the NHL player ID via the NHL search API, and updates both:
+  - `dim.player_info` (upsert of player_id, firstName, lastName)
+  - the cap-hit season table (sets player_id), preferring updates by `spotrac_url` when present
+
+The name resolution uses normalized string matching, nicknames/prefix variants, and a conservative
+acceptance policy to reduce false matches.
+
+Notes:
+  - Requires network access to `SEARCH_URL`.
+  - Requires database connectivity via `db_utils.get_db_engine()`.
+
+"""
+
 from __future__ import annotations
 
 import difflib
 import re
 import time
 import unicodedata
-from functools import lru_cache
 from typing import Any
 
 import pandas as pd
@@ -24,7 +39,14 @@ NAME_ALIAS = {
 
 
 def py_norm_name(s: str) -> str:
-    """Normalize names for matching across sources (handles accents, punctuation, initials)."""
+    """
+    Normalize a name for cross-source matching.
+
+    Lowercases, removes accents, converts punctuation to spaces, strips non-letters,
+    collapses whitespace, joins Irish prefixes (O'/D'), and collapses spaced initials.
+
+    Returns a stable ASCII a–z + space representation.
+    """
     s = "" if s is None else str(s)
     s = s.strip().lower()
 
@@ -48,7 +70,17 @@ def py_norm_name(s: str) -> str:
 
 
 def apply_alias(first: str, last: str) -> tuple[str, str]:
-    # normalize + keep hyphen logic simple for alias keys
+    """
+    Apply known last-name aliases to handle spelling variations across sources.
+
+    Args:
+        first: First name (unchanged).
+        last: Last name, possibly with accents/punctuation.
+
+    Returns:
+        (first, last) where last may be replaced by a mapped alias.
+
+    """
     k = py_norm_name(last).replace(" ", "-")
     if k in NAME_ALIAS:
         return first, NAME_ALIAS[k]
@@ -57,8 +89,10 @@ def apply_alias(first: str, last: str) -> tuple[str, str]:
 
 def _extract_hits(payload: Any):
     """
-    Recursively search a JSON payload for a list of dicts that look like NHL player hits.
-    Returns [] if nothing plausible found.
+    Recursively search a JSON payload for a plausible list of NHL player result dicts.
+
+    A "hit" list is identified as a list of dicts containing an ID field (playerId/id)
+    and a name field (name/fullName). Returns [] if nothing plausible is found.
     """
     if isinstance(payload, list):
         if payload and isinstance(payload[0], dict):
@@ -86,6 +120,7 @@ def _extract_hits(payload: Any):
 
 
 def _hit_player_id(h: dict) -> int | None:
+    """Extract an integer player ID from a search hit dict."""
     pid = h.get("playerId") or h.get("player_id") or h.get("id")
     try:
         return int(pid) if pid is not None else None
@@ -94,6 +129,11 @@ def _hit_player_id(h: dict) -> int | None:
 
 
 def _hit_name(h: dict) -> str:
+    """
+    Extract a displayable full name from a search hit dict.
+
+    Supports 'name'/'fullName' fields, optional split first/last fields, and localized dict forms.
+    """
     nm = h.get("name") or h.get("fullName") or h.get("full_name") or ""
     # sometimes split fields exist
     if not nm:
@@ -108,12 +148,18 @@ def _hit_name(h: dict) -> str:
 
 def _score_name_match(target_full_norm: str, hit_full_norm: str) -> int:
     """
-    Conservative scoring:
-    - 100: exact normalized full name
-    - 92: exact after removing spaces (helps "jeanluc" vs "jean luc")
-    - 85: same last name + first name startswith (or matches initial)
-    - 0: no acceptable match
+    Score a name match using conservative, rule-based thresholds.
+
+    Returns:
+        100: exact normalized full name
+         92: exact after removing spaces (e.g., "jeanluc" vs "jean luc")
+         90: same last name and exact first name
+         88: same last name and first-name prefix match (either direction)
+         85: same last name and initial-style match for short first tokens
+          0: no acceptable match
+
     """
+    # pylint: disable=unused-function
     if not target_full_norm or not hit_full_norm:
         return 0
 
@@ -147,6 +193,11 @@ def _score_name_match(target_full_norm: str, hit_full_norm: str) -> int:
 
 
 def _split_first_last(full_name: str) -> tuple[str, str]:
+    """
+    Normalize and split a full name into (first, last) tokens.
+
+    Uses the first token as first name and the last token as last name.
+    """
     n = py_norm_name(full_name)
     parts = n.split()
     if not parts:
@@ -158,9 +209,10 @@ def _split_first_last(full_name: str) -> tuple[str, str]:
 
 def _initials_from_first_parts(full_name: str) -> str:
     """
-    Build initials from everything except last name:
+    Build initials from everything except last name.
+
       'pierre alexandre parenteau' -> 'pa'
-      'jean francois berube' -> 'jf'
+      'jean francois berube' -> 'jf'.
     """
     n = py_norm_name(full_name)
     parts = n.split()
@@ -172,6 +224,7 @@ def _initials_from_first_parts(full_name: str) -> str:
 
 
 def _bidirectional_nick_map() -> dict[str, set[str]]:
+    """Return a bidirectional mapping between formal first names and common nicknames."""
     pairs = {
         "michael": {"mike"},
         "nicholas": {"nick"},
@@ -198,7 +251,12 @@ def _bidirectional_nick_map() -> dict[str, set[str]]:
 
 
 def _first_name_variants(first_norm: str, full_name: str | None = None) -> set[str]:
-    """Nicknames + safe prefixes + initials for multi-part first names."""
+    """
+    Generate acceptable variants for matching first names.
+
+    Includes the normalized first name, short safe prefixes (3–4 chars), nickname equivalents,
+    and (optionally) multi-part initials (e.g., "pierre alexandre" -> "pa").
+    """
     variants = {first_norm}
 
     # safe prefixes
@@ -221,9 +279,10 @@ def _first_name_variants(first_norm: str, full_name: str | None = None) -> set[s
 
 def _first_similarity(a: str, b: str) -> float:
     """
-    Similarity with a strong rule:
+    Similarity with a strong rule.
+
     - if either is a prefix of the other (>=3 chars), treat as perfect (1.0)
-      ex: chris vs christopher, nick vs nicholas
+      ex: chris vs christopher, nick vs nicholas.
     """
     if not a or not b:
         return 0.0
@@ -238,6 +297,15 @@ def _first_similarity(a: str, b: str) -> float:
 
 
 def _request_json(params: dict) -> dict | list:
+    """
+    Call the NHL player search API with retries for transient errors.
+
+    Retries up to 3 times on common transient statuses (429, 5xx) with short backoff.
+
+    Raises:
+        requests.HTTPError / RequestException on permanent failures.
+
+    """
     headers = {
         "User-Agent": "caphit-backfill/1.0 (+requests)",
         "Accept": "application/json",
@@ -255,11 +323,17 @@ def _request_json(params: dict) -> dict | list:
 
 def nhl_search_player_id(full_name: str) -> int | None:
     """
-    Strategy:
-      1) full-name query
-      2) variant+last queries (Nick Paul, Jake Muzzin, PA Parenteau, etc.)
-      3) last-name query (broad) + best-first selection
-      4) last-name alternates (grossman -> grossmann)
+    Resolve an NHL player ID from a full name using the NHL search API.
+
+    Approach:
+      1) Query using the full name; accept exact/near-exact normalized matches.
+      2) Query using first-name variants + last name (nicknames, prefixes, multi-part initials).
+      3) Broad last-name query and select the best first-name similarity among same-last hits.
+      4) Try common last-name alternates (e.g., grossman -> grossmann) if no candidates found.
+
+    Returns:
+        player_id if a sufficiently strong match is found, otherwise None.
+
     """
     target_first, target_last = _split_first_last(full_name)
     if not target_last:
@@ -269,7 +343,7 @@ def nhl_search_player_id(full_name: str) -> int | None:
 
     def _best_from_hits(
         hits: list[dict], full_name_for_variants: str
-    ) -> tuple[float, int | None, str, list]:
+    ) -> tuple[float, int | None, str, list[tuple[float, int, str]]]:
         variants = _first_name_variants(target_first, full_name_for_variants)
         cands = []
         best = (-1.0, None, "")
@@ -305,7 +379,7 @@ def nhl_search_player_id(full_name: str) -> int | None:
     # 1) full-name query
     payload = _request_json({"culture": "en-us", "limit": 50, "q": full_name})
     hits = _extract_hits(payload)
-    best_sim, best_pid, best_name, cands = _best_from_hits(hits, full_name)
+    best_sim, best_pid, _, _ = _best_from_hits(hits, full_name)
 
     if best_sim > 1.0 and best_pid is not None:
         return best_pid
@@ -331,7 +405,8 @@ def nhl_search_player_id(full_name: str) -> int | None:
 
         if pid_v is not None and sim_v >= 0.92:
             print(
-                f"DEBUG variant query '{full_name}' via q='{q}' -> '{name_v}' sim={sim_v:.3f} pid={pid_v}",
+                f"DEBUG variant query '{full_name}' via q='{q}' -> '{name_v}' "
+                f"sim={sim_v:.3f} pid={pid_v}",
                 flush=True,
             )
             return pid_v
@@ -339,7 +414,7 @@ def nhl_search_player_id(full_name: str) -> int | None:
     # 3) broad last-name query (your existing fallback)
     payload2 = _request_json({"culture": "en-us", "limit": 200, "q": target_last})
     hits2 = _extract_hits(payload2)
-    sim2, pid2, name2, cands2 = _best_from_hits(hits2, full_name)
+    _, _, _, cands2 = _best_from_hits(hits2, full_name)
 
     if not cands2:
         # 4) last-name alternates (common issue: Grossman vs Grossmann)
@@ -356,7 +431,7 @@ def nhl_search_player_id(full_name: str) -> int | None:
             if cands_alt:
                 # reuse acceptance logic below
                 cands2 = cands_alt
-                sim2, pid2, name2 = sim_alt, pid_alt, name_alt
+                _, _, _ = sim_alt, pid_alt, name_alt
                 target_last = alt
                 break
 
@@ -370,9 +445,13 @@ def nhl_search_player_id(full_name: str) -> int | None:
 
     # accept if strong
     if top_sim >= 0.80:
+        top3 = [(c[2], round(c[0], 3), c[1]) for c in cands2[:3]]
         print(
-            f"DEBUG last-name fallback '{full_name}' -> '{top_name}' sim={top_sim:.3f} pid={top_pid} "
-            f"(cands_top3={[(c[2], round(c[0], 3), c[1]) for c in cands2[:3]]})",
+            (
+                f"DEBUG last-name fallback '{full_name}' -> '{top_name}' "
+                f"sim={top_sim:.3f} pid={top_pid} "
+                f"(cands_top3={top3})"
+            ),
             flush=True,
         )
         return top_pid
@@ -397,6 +476,7 @@ def nhl_search_player_id(full_name: str) -> int | None:
 
 
 def upsert_dim_player_info(conn, player_id: int, first: str, last: str) -> None:
+    """Upsert a row into dim.player_info for the given NHL player_id."""
     conn.execute(
         text(f"""
             INSERT INTO {SCHEMA["dim"]}.player_info (player_id, "firstName", "lastName")
@@ -409,7 +489,40 @@ def upsert_dim_player_info(conn, player_id: int, first: str, last: str) -> None:
     )
 
 
+def discover_cap_hit_seasons() -> list[int]:
+    """Return seasons that have a dim.player_cap_hit_{season} table."""
+    engine = get_db_engine()
+    with engine.begin() as conn:
+        rows = conn.execute(
+            text(f"""
+            SELECT table_name
+            FROM information_schema.tables
+            WHERE table_schema = '{SCHEMA["dim"]}'
+              AND table_name LIKE 'player_cap_hit_%'
+        """)
+        ).fetchall()
+    engine.dispose()
+
+    seasons = []
+    for (tname,) in rows:
+        m = re.match(r"player_cap_hit_(\d{8})$", tname)
+        if m:
+            seasons.append(int(m.group(1)))
+    return sorted(seasons)
+
+
 def backfill_season(season: int) -> None:
+    """
+    Backfill missing player_id values for a given cap-hit season table.
+
+    Reads rows from dim.player_cap_hit_{season} where player_id is NULL, resolves NHL player IDs
+    via `nhl_search_player_id`, upserts player info into dim.player_info, and updates the season
+    table (by spotrac_url when available, otherwise by name).
+
+    Args:
+        season: Season identifier like 20152016.
+
+    """
     engine = get_db_engine()
     table = f"{SCHEMA['dim']}.player_cap_hit_{season}"
 
@@ -484,5 +597,5 @@ def backfill_season(season: int) -> None:
 
 
 if __name__ == "__main__":
-    for s in (20152016, 20162017, 20172018):
+    for s in discover_cap_hit_seasons():
         backfill_season(s)
