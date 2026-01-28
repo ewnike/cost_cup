@@ -35,11 +35,11 @@ import pandas as pd
 from sqlalchemy import text
 from sqlalchemy.exc import ProgrammingError
 
-from constants import SCHEMA, SEASONS_MODERN
-from db_utils import get_db_engine
-from log_utils import setup_logger
-from schema_utils import fq
-from strength_utils import (
+from .constants import SCHEMA, SEASONS_MODERN
+from .db_utils import get_db_engine
+from .log_utils import setup_logger
+from .schema_utils import fq
+from .strength_utils import (
     apply_exclude_to_plays,
     build_exclude_timeline_equal_strength,
     filter_goalies_modern,
