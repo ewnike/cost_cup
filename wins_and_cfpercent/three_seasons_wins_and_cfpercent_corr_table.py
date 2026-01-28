@@ -13,7 +13,7 @@ import sys
 import pandas as pd
 from sqlalchemy import text
 
-from constants import SEASONS
+from constants import SEASONS_LEGACY as SEASONS
 from db_utils import get_db_engine, get_metadata
 
 # Dynamically add the parent directory (cost_cup/) to sys.path

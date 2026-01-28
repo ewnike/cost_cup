@@ -11,7 +11,7 @@ import pandas as pd
 from sqlalchemy.orm import sessionmaker
 
 from config_helpers import COLUMN_MAPPINGS
-from constants import SEASONS
+from constants import SEASONS_ACTIVE as SEASONS
 from data_processing_utils import insert_data
 from db_utils import create_team_event_total_games_table, get_db_engine, get_metadata
 from log_utils import setup_logger

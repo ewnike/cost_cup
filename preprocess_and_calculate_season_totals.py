@@ -12,7 +12,7 @@ import os
 
 import pandas as pd
 
-from constants import SEASONS
+from constants import SEASONS_ACTIVE as SEASONS
 from load_data import get_env_vars, load_data
 
 # from logger.handlers import RotatingFileHandler
