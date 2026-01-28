@@ -6,7 +6,7 @@ Date: May 5, 2025
 
 """
 
-from constants import (
+from .constants import (
     S3_BUCKET_NAME,
     local_download_path,
     local_download_path_II,
@@ -15,7 +15,7 @@ from constants import (
     local_extract_path_II,
     local_extract_path_III,
 )
-from db_utils import (
+from .db_utils import (
     define_game_plays_players,
     define_game_plays_processor,
     define_game_shifts_table,
@@ -276,7 +276,7 @@ def build_processing_config(
 
     Returns:
     -------
-        dict: Config dictionary with all values needed for process_and_insert_data().
+        dict: Config dictionary with all values needed for `process_and_insert_data()`.
 
     """
     s3_file_key = s3_file_key.format(season=season)

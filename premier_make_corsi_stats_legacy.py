@@ -20,11 +20,11 @@ import os
 
 import pandas as pd
 
-from constants import SEASONS_LEGACY, TABLES
-from load_data import get_env_vars, load_data
-from log_utils import setup_logger
-from schema_utils import fq
-from strength_utils import (
+from .constants import SEASONS_LEGACY, TABLES
+from .load_data import get_env_vars, load_data
+from .log_utils import setup_logger
+from .schema_utils import fq
+from .strength_utils import (
     apply_exclude_to_plays,
     build_exclude_timeline_equal_strength,
     ensure_team_id_on_shifts_legacy,
@@ -183,7 +183,8 @@ def get_penalty_exclude_times(
 
 def prepare_game_plays(df: dict, relevant_events: list[str]) -> pd.DataFrame | None:
     """
-    Prepare game_plays for Corsi events:
+    Prepare game_plays for Corsi events.
+
       - add cumulative time
       - filter to corsi-relevant events
       - require both team_id_for/team_id_against.
