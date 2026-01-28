@@ -8,6 +8,7 @@ Date: May 5, 2025
 
 from .constants import (
     S3_BUCKET_NAME,
+    SEASONS_ACTIVE,  # or SEASONS_TO_RUN
     local_download_path,
     local_download_path_II,
     local_download_path_III,
@@ -27,8 +28,16 @@ from .db_utils import (
     get_db_engine,
 )
 
-# 🔹 Get shared engine once
-engine = get_db_engine()
+# Lazily create the engine to avoid “freeze on import”
+_ENGINE = None
+
+
+def get_engine():
+    """Get_engine."""
+    global _ENGINE
+    if _ENGINE is None:
+        _ENGINE = get_db_engine()
+    return _ENGINE
 
 
 # ------------------------------------------------------------------
@@ -248,7 +257,7 @@ def build_processing_config(
     *,
     bucket_name,
     s3_file_key,
-    season: int | str,
+    season: int | str | None = None,  # <-- default
     local_zip_path,
     local_extract_path,
     expected_csv_filename,
@@ -307,7 +316,7 @@ def game_skater_stats_config():
         table_definition_function=define_game_skater_stats,
         table_name="game_skater_stats",
         column_mapping=COLUMN_MAPPINGS["game_skater_stats"],
-        engine=engine,
+        engine=get_engine(),
         local_download_path=local_download_path,
     )
 
@@ -323,7 +332,7 @@ def game_table_config():
         table_definition_function=define_game_table,
         table_name="game",
         column_mapping=COLUMN_MAPPINGS["game_table"],
-        engine=engine,
+        engine=get_engine(),
         local_download_path=local_download_path,
     )
 
@@ -339,7 +348,7 @@ def game_shifts_config():
         table_definition_function=define_game_shifts_table,
         table_name="game_shifts",
         column_mapping=COLUMN_MAPPINGS["game_shifts"],
-        engine=engine,
+        engine=get_engine(),
         local_download_path=local_download_path,
     )
 
@@ -356,7 +365,7 @@ def game_plays_config():
         table_definition_function=define_game_plays_processor,
         # table_name="game_plays_processor",
         column_mapping=COLUMN_MAPPINGS["game_plays"],
-        engine=engine,
+        engine=get_engine(),
         local_download_path=local_download_path,
     )
 
@@ -372,7 +381,7 @@ def game_plays_players_config():
         table_definition_function=define_game_plays_players,
         table_name="game_plays_players",
         column_mapping=COLUMN_MAPPINGS["game_plays_players"],
-        engine=engine,
+        engine=get_engine(),
         local_download_path=local_download_path,
     )
 
@@ -388,7 +397,7 @@ def player_info_config():
         table_definition_function=define_player_info_table,
         table_name="player_info",
         column_mapping=COLUMN_MAPPINGS["player_info"],
-        engine=engine,
+        engine=get_engine(),
         local_download_path=local_download_path,
     )
 
@@ -398,14 +407,14 @@ def raw_shifts_config(season: int):
     table_name = f"raw_shifts_{season}"
     return build_processing_config(
         bucket_name=S3_BUCKET_NAME,
-        s3_file_key="shifts_{season}.csv.zip",
+        s3_file_key=f"shifts_{season}.csv.zip",
         season=season,
         local_zip_path=f"{local_download_path_III}/raw_shifts_{season}.zip",
         local_extract_path=local_extract_path_III,
         expected_csv_filename=f"shifts_{season}.csv",
         table_name=table_name,
         column_mapping=COLUMN_MAPPINGS["raw_shifts"],
-        engine=engine,
+        engine=get_engine(),
         local_download_path=local_download_path_III,
         table_definition_function=lambda md: define_raw_shifts_table(md, f"raw_shifts_{season}"),
     )
@@ -423,8 +432,27 @@ def pbp_raw_data_config(season: int):
         expected_csv_filename=f"pbp_{season}.csv",
         table_name=table_name,
         column_mapping=COLUMN_MAPPINGS["pbp_raw_data"],
-        engine=engine,
+        engine=get_engine(),
         local_download_path=local_download_path_II,
         table_definition_function=lambda md: define_raw_pbp_table(md, table_name),
         # handle_zip=True,
     )
+
+
+def build_all_configs(seasons=SEASONS_ACTIVE):
+    """Return a list of base + season-specific processing configs."""
+    base = [
+        game_skater_stats_config(),
+        game_table_config(),
+        game_shifts_config(),
+        game_plays_config(),
+        game_plays_players_config(),
+        player_info_config(),
+    ]
+
+    seasonal = []
+    for season in seasons:
+        seasonal.append(raw_shifts_config(season))
+        seasonal.append(pbp_raw_data_config(season))
+
+    return base + seasonal
