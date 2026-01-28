@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import pandas as pd
 
-from constants import SCHEMA, SEASONS_ALL  # include 20152016..20242025
-from db_utils import get_db_engine
-from schema_utils import fq
+from .constants import SCHEMA, SEASONS_ALL  # include 20152016..20242025
+from .db_utils import get_db_engine
+from .schema_utils import fq
 
 
 def main() -> None:

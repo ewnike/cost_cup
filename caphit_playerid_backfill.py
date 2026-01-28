@@ -27,8 +27,8 @@ import pandas as pd
 import requests
 from sqlalchemy import text
 
-from constants import SCHEMA
-from db_utils import get_db_engine
+from .constants import SCHEMA
+from .db_utils import get_db_engine
 
 SEARCH_URL = "https://search.d3.nhle.com/api/v1/search/player"
 

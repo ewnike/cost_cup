@@ -1,9 +1,11 @@
-import os
-from pathlib import Path
+"""Scratch Code File."""
 
-import pandas as pd
+# import os
+# from pathlib import Path
 
-from load_data import load_data
+# import pandas as pd
+
+from .load_data import load_data
 
 # def stitch_together():
 #     """Stitch dfs from same season together."""
@@ -27,6 +29,7 @@ from load_data import load_data
 
 
 def tested():
+    """Docstring for tested."""
     df = load_data(game_id=2015020001, debug_print_head=True)
     print({k: len(v) for k, v in df.items()})
 

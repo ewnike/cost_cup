@@ -3,7 +3,7 @@
 import altair as alt
 import pandas as pd
 
-from db_utils import get_db_engine
+from .db_utils import get_db_engine
 
 # Initialize database connection
 engine = get_db_engine()

@@ -32,7 +32,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.schema import Identity
 
-from log_utils import setup_logger
+from .log_utils import setup_logger
 
 setup_logger()
 logger = logging.getLogger(__name__)  # ✅ define logger

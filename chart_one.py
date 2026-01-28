@@ -11,8 +11,8 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from constants import SEASONS
-from db_utils import get_db_engine
+from .constants import SEASONS
+from .db_utils import get_db_engine
 
 engine = get_db_engine()
 

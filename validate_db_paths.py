@@ -11,8 +11,8 @@ import sys
 
 import pandas as pd
 
-from db_utils import get_db_engine
-from schema_utils import fq
+from .db_utils import get_db_engine
+from .schema_utils import fq
 
 REQUIRED = {
     ("raw", "game"): ["game_id", "season"],
