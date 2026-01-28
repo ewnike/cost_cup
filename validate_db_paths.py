@@ -1,12 +1,18 @@
-# scripts/validate_db_paths.py
+"""
+Validate required raw.* tables and columns exist and perform a small smoke test.
+
+Checks that required tables/columns exist in the database and runs a smoke test query for
+TEST_GAME_ID to ensure the raw ingestion tables are populated and readable.
+"""
+
 from __future__ import annotations
 
 import sys
+
 import pandas as pd
 
 from db_utils import get_db_engine
 from schema_utils import fq
-
 
 REQUIRED = {
     ("raw", "game"): ["game_id", "season"],
@@ -25,7 +31,7 @@ REQUIRED = {
 TEST_GAME_ID = 2015020001
 
 
-def table_exists(engine, schema: str, table: str) -> bool:
+def table_exists(engine, schema: str, table: str) -> bool:  # noqa: D103
     q = """
     SELECT 1
     FROM information_schema.tables
@@ -35,7 +41,7 @@ def table_exists(engine, schema: str, table: str) -> bool:
     return not pd.read_sql(q, engine, params={"schema": schema, "table": table}).empty
 
 
-def columns(engine, schema: str, table: str) -> set[str]:
+def columns(engine, schema: str, table: str) -> set[str]:  # noqa: D103
     q = """
     SELECT column_name
     FROM information_schema.columns
@@ -46,6 +52,7 @@ def columns(engine, schema: str, table: str) -> set[str]:
 
 
 def main() -> int:
+    """Validate db paths."""
     engine = get_db_engine()
     try:
         print("=== Validating raw.* tables ===")
