@@ -24,7 +24,7 @@ import re
 import requests
 from sqlalchemy import text
 
-from db_utils import get_db_engine
+from .db_utils import get_db_engine
 
 ENGINE = get_db_engine()
 

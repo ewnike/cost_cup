@@ -10,7 +10,7 @@ Eric Winiecke.
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from db_utils import get_db_engine, get_metadata
+from .db_utils import get_db_engine, get_metadata
 
 engine = get_db_engine()
 metadata = get_metadata()

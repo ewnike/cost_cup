@@ -11,13 +11,12 @@ Pipeline:
 - Inspect cluster centers & example players
 """
 
-import os
-
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
-from sklearn.decomposition import PCA
+
+# from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import StandardScaler
 
@@ -39,6 +38,14 @@ print("Player-game rows:", len(df_games))
 
 
 def game_id_to_season(gid: int) -> str:
+    """
+    Transform game_id_to_season.
+
+    :param gid: Description
+    :type gid: int
+    :return: Description
+    :rtype: str
+    """
     year_start = gid // 1_000_000
     return f"{year_start}{year_start + 1}"
 

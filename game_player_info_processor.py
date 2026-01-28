@@ -13,9 +13,9 @@ Author: Eric Winiecke
 Date: July 2025
 """
 
-from config_helpers import player_info_config
-from data_processing_utils import process_and_insert_data
-from log_utils import setup_logger
+from .config_helpers import player_info_config
+from .data_processing_utils import process_and_insert_data
+from .log_utils import setup_logger
 
 # ✅ Set up logging
 setup_logger()

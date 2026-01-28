@@ -8,8 +8,8 @@ January 14, 2026.
 import pandas as pd
 from sqlalchemy.orm import sessionmaker
 
-from data_processing_utils import insert_data
-from db_utils import create_player_game_es_table, get_db_engine, get_metadata
+from .data_processing_utils import insert_data
+from .db_utils import create_player_game_es_table, get_db_engine, get_metadata
 
 engine = get_db_engine()
 metadata = get_metadata()
