@@ -15,6 +15,8 @@ Notes:
 
 import sys
 
+from scripts.validate_db_paths import main as validate_main
+
 
 def main() -> int:
     """
@@ -24,12 +26,6 @@ def main() -> int:
         Exit code: 0 on success; non-zero if validation fails.
 
     """
-    # Import here (or keep at top) depending on how you want pylint to treat it.
-    # Keeping it here avoids import errors if scripts/ isn't wired yet.
-    from validate_db_paths import (
-        main as validate_main,  # pylint: disable=import-outside-toplevel
-    )
-
     rc = validate_main()
     if rc != 0:
         return rc
