@@ -1,6 +1,19 @@
+"""
+Scrape NHL team payroll/cap data from Spotrac and save yearly CSVs.
+
+For each year in `YEARS`, this script loads the Spotrac NHL cap page using Selenium (Safari),
+waits for the payroll table to render, extracts team abbreviation, average age, and total cap,
+and writes the results to `team_salaries/team_salary_{year}.csv`.
+
+Notes:
+  - Requires Safari WebDriver support (safaridriver) enabled on macOS.
+  - Spotrac pages are dynamic; the script uses WebDriverWait on the table and key cells.
+  - Output values are scraped as strings (e.g., currency formatting) and can be cleaned later.
+
+"""
+
 import os
 import re
-import time
 
 import pandas as pd
 from selenium import webdriver
@@ -14,14 +27,24 @@ YEARS = [2018, 2019, 2020, 2021, 2022, 2023, 2024]
 OUTPUT_DIR = "team_salaries"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-TABLE_XPATH = "/html/body/main/div[2]/section/div/div/div[1]/section/article/div[2]/div/div/div[2]/div/div/div[2]/table"
-
+TABLE_XPATH = (
+    "/html/body/main/div[2]/section/div/div/div[1]/section/article/div[2]/div/div/"
+    "div[2]/div/div/div[2]/table"
+)
 TEAM_COL = 2  # td[2]
 AVG_AGE_COL = 7  # td[7]
 TOTAL_CAP_COL = 9  # td[9]
 
 
 def team_abbrev_from_cell(text: str) -> str | None:
+    """
+    Get team_abbrev_from_cell.
+
+    :param text: Description
+    :type text: str
+    :return: Description
+    :rtype: str | None
+    """
     # usually "SJS", "TBL", etc.
     if not text:
         return None
@@ -30,6 +53,7 @@ def team_abbrev_from_cell(text: str) -> str | None:
 
 
 def main():
+    """Docstring for main."""
     driver = webdriver.Safari()
 
     try:
