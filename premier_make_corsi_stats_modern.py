@@ -20,15 +20,16 @@ import os
 
 import pandas as pd
 
-from constants import SEASONS_MODERN
-from db_utils import get_db_engine
-from log_utils import setup_logger
-from schema_utils import fq
-from strength_utils import (
-    apply_exclude_to_plays,
-    build_exclude_timeline_equal_strength,
-    filter_goalies_modern,
-)
+from .constants import SEASONS_MODERN
+from .db_utils import get_db_engine
+from .log_utils import setup_logger
+from .schema_utils import fq
+
+# from .strength_utils import (
+#     apply_exclude_to_plays,
+#     build_exclude_timeline_equal_strength,
+#     filter_goalies_modern,
+# )
 
 LOG_FILE_PATH = "/Users/ericwiniecke/Documents/github/cost_cup/logs/data_processing.log"
 logger = setup_logger(LOG_FILE_PATH)
@@ -64,7 +65,8 @@ def _period_time_to_seconds(s: pd.Series) -> pd.Series:
 
 def add_cumulative_time_from_period(gp: pd.DataFrame) -> pd.DataFrame:
     """
-    Adds a cumulative 'time' column (seconds from game start).
+    Add a cumulative 'time' column (seconds from game start).
+
     Periods 1-3: (period-1)*1200 + periodTime
     OT (period >= 4): 3600 + periodTime.
     """
@@ -93,7 +95,8 @@ def add_cumulative_time_from_period(gp: pd.DataFrame) -> pd.DataFrame:
 # -------------------------
 def get_num_players(shift_df: pd.DataFrame) -> pd.DataFrame:
     """
-    Computes number of skaters on ice at each time breakpoint.
+    Compute number of skaters on ice at each time breakpoint.
+
     shift_df must have: game_id, player_id, shift_start, shift_end
     """
     if shift_df.empty:
@@ -214,6 +217,16 @@ def get_exclude_timeline(game_shifts: pd.DataFrame, *, log_rows: bool = False) -
 # Corsi calculation helpers
 # -------------------------
 def prepare_game_plays(df_game: dict, relevant_events: list[str]) -> pd.DataFrame | None:
+    """
+    Prepare_game_plays.
+
+    :param df_game: Description
+    :type df_game: dict
+    :param relevant_events: Description
+    :type relevant_events: list[str]
+    :return: Description
+    :rtype: DataFrame | None
+    """
     if "game_plays" not in df_game:
         logger.error("'game_plays' missing in df_game")
         return None
@@ -247,6 +260,18 @@ def prepare_game_plays(df_game: dict, relevant_events: list[str]) -> pd.DataFram
 def update_corsi(
     df_corsi: pd.DataFrame, event: pd.Series, game_shifts: pd.DataFrame
 ) -> pd.DataFrame:
+    """
+    Update_corsi.
+
+    :param df_corsi: Description
+    :type df_corsi: pd.DataFrame
+    :param event: Description
+    :type event: pd.Series
+    :param game_shifts: Description
+    :type game_shifts: pd.DataFrame
+    :return: Description
+    :rtype: DataFrame
+    """
     t = int(event["time"])
     team_for = int(event["team_id_for"])
     team_against = int(event["team_id_against"])
@@ -269,6 +294,16 @@ def update_corsi(
 
 
 def calculate_corsi_for_game(df_corsi: pd.DataFrame, df_game: dict) -> pd.DataFrame:
+    """
+    Calculate_corsi_for_game.
+
+    :param df_corsi: Description
+    :type df_corsi: pd.DataFrame
+    :param df_game: Description
+    :type df_game: dict
+    :return: Description
+    :rtype: DataFrame
+    """
     gs = df_game["game_shifts"].copy()
     gp = df_game["game_plays"].copy()
 
@@ -315,6 +350,16 @@ def calculate_corsi_for_game(df_corsi: pd.DataFrame, df_game: dict) -> pd.DataFr
 
 
 def create_corsi_stats(df_corsi: pd.DataFrame, df_game: dict) -> pd.DataFrame:
+    """
+    Create_corsi_stats.
+
+    :param df_corsi: Description
+    :type df_corsi: pd.DataFrame
+    :param df_game: Description
+    :type df_game: dict
+    :return: Description
+    :rtype: DataFrame
+    """
     df_corsi = df_corsi.copy()
     df_corsi[["corsi_for", "corsi_against", "corsi"]] = 0
 
@@ -331,6 +376,12 @@ def create_corsi_stats(df_corsi: pd.DataFrame, df_game: dict) -> pd.DataFrame:
 # Season driver
 # -------------------------
 def calculate_and_save_corsi_stats(season: int) -> None:
+    """
+    Calculate_and_save_corsi_stats.
+
+    :param season: Description
+    :type season: int
+    """
     df_master = {}
     engine = get_db_engine()
 
