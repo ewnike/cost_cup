@@ -14,8 +14,8 @@ import os
 
 import pandas as pd
 
-from .data_processing_utils import clear_dir_patterns
-from .db_utils import get_db_engine
+from data_processing_utils import clear_dir_patterns
+from db_utils import get_db_engine
 
 RECORDS_DIR = "team_records"
 SALARY_DIR = "team_salaries"

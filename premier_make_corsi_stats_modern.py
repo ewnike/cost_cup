@@ -20,10 +20,10 @@ import os
 
 import pandas as pd
 
-from .constants import SEASONS_MODERN
-from .db_utils import get_db_engine
-from .log_utils import setup_logger
-from .schema_utils import fq
+from constants import SEASONS_MODERN
+from db_utils import get_db_engine
+from log_utils import setup_logger
+from schema_utils import fq
 
 # from .strength_utils import (
 #     apply_exclude_to_plays,

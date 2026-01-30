@@ -20,11 +20,11 @@ import os
 
 import pandas as pd
 
-from .constants import SEASONS_LEGACY, TABLES
-from .load_data import get_env_vars, load_data
-from .log_utils import setup_logger
-from .schema_utils import fq
-from .strength_utils import (
+from constants import SEASONS_LEGACY, TABLES
+from load_data import get_env_vars, load_data
+from log_utils import setup_logger
+from schema_utils import fq
+from strength_utils import (
     apply_exclude_to_plays,
     build_exclude_timeline_equal_strength,
     ensure_team_id_on_shifts_legacy,
