@@ -18,6 +18,7 @@ import sys
 from scripts.validate_db_paths import main as validate_main
 
 
+# pylint: disable=import-outside-toplevel
 def main() -> int:
     """
     Validate the environment and run pipeline jobs.
