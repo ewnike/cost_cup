@@ -25,7 +25,7 @@ Notes:
 
 from __future__ import annotations
 
-from .constants import SCHEMA
+from constants import SCHEMA
 
 
 def qident(name: str) -> str:

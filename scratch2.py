@@ -5,7 +5,7 @@
 
 # import pandas as pd
 
-from .load_data import load_data
+from load_data import load_data
 
 # def stitch_together():
 #     """Stitch dfs from same season together."""

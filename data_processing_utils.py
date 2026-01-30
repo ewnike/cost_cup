@@ -25,8 +25,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 from tqdm import tqdm
 
-from .db_utils import get_metadata
-from .log_utils import setup_logger
+from db_utils import get_metadata
+from log_utils import setup_logger
 
 setup_logger()
 logger = logging.getLogger(__name__)

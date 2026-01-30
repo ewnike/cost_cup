@@ -15,8 +15,8 @@ from typing import Any
 
 import pandas as pd
 
-from .db_utils import get_db_engine, load_environment_variables
-from .schema_utils import fq
+from db_utils import get_db_engine, load_environment_variables
+from schema_utils import fq
 
 
 def get_env_vars() -> dict[str, Any]:
