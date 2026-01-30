@@ -6,7 +6,7 @@ Date: May 5, 2025
 
 """
 
-from .constants import (
+from constants import (
     S3_BUCKET_NAME,
     SEASONS_ACTIVE,  # or SEASONS_TO_RUN
     local_download_path,
@@ -16,7 +16,7 @@ from .constants import (
     local_extract_path_II,
     local_extract_path_III,
 )
-from .db_utils import (
+from db_utils import (
     define_game_plays_players,
     define_game_plays_processor,
     define_game_shifts_table,
