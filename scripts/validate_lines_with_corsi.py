@@ -8,7 +8,6 @@ Goal:
 - Summarize performance by archetype mix (c0, c1, c2)
 """
 
-import numpy as np
 import pandas as pd
 
 

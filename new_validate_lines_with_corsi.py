@@ -96,6 +96,18 @@ if "evenTimeOnIce" not in df_pg.columns:
 
 
 def assign_lines(group: pd.DataFrame, line_size: int = 3, max_lines: int = 4) -> pd.DataFrame:
+    """
+    Assign_lines.
+
+    :param group: Description
+    :type group: pd.DataFrame
+    :param line_size: Description
+    :type line_size: int
+    :param max_lines: Description
+    :type max_lines: int
+    :return: Description
+    :rtype: DataFrame
+    """
     g = group.sort_values("evenTimeOnIce", ascending=False).reset_index(drop=True)
     g = g.iloc[: line_size * max_lines]  # top 12 skaters by EV TOI
     if g.empty:

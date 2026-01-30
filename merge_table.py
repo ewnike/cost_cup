@@ -1,3 +1,5 @@
+"""Merge_table."""
+
 import pandas as pd
 
 df_corsi = pd.read_csv("player_season_corsi_2015_2018.csv")
