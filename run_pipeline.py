@@ -38,7 +38,9 @@ def main() -> int:
         from jobs.build_modern_player_game_es import (
             run_modern_es,  # pylint: disable=import-outside-toplevel
         )
-        from jobs.load_cap_hits import run_cap_hits  # pylint: disable=import-outside-toplevel
+        from jobs.load_cap_hits import (
+            run_cap_hits,  # pylint: disable=import-outside-toplevel
+        )
     except ModuleNotFoundError as exc:
         print("✅ Validation passed.")
         print("⚠️ Jobs not wired yet:", exc)
