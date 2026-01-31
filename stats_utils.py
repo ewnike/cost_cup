@@ -12,6 +12,19 @@ def add_corsi_rates_and_merge(
 
     Expects df_corsi to have: time_on_ice, corsi_for, corsi_against, cf_percent, cap_hit.
     """
+    required = {
+        "player_id",
+        "season",
+        "time_on_ice",
+        "corsi_for",
+        "corsi_against",
+        "cf_percent",
+        "cap_hit",
+    }
+    missing = required - set(df_corsi.columns)
+    if missing:
+        raise KeyError(f"df_corsi missing required columns: {sorted(missing)}")
+
     df_corsi = df_corsi.copy()
     df_corsi["toi_corsi_min"] = df_corsi["time_on_ice"] / 60.0
     df_corsi = df_corsi[df_corsi["toi_corsi_min"] > 0].copy()
