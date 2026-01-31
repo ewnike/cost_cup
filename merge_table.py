@@ -2,6 +2,8 @@
 
 import pandas as pd
 
+from stats_utils import add_corsi_rates_and_merge
+
 df_corsi = pd.read_csv("player_season_corsi_2015_2018.csv")
 df_season = pd.read_csv("skater_player_seasons_with_clusters.csv")
 # you now have: player_id, team_id, season, corsi_for, corsi_against,
@@ -15,8 +17,9 @@ df_corsi["CA60"] = df_corsi["corsi_against"] / df_corsi["toi_corsi_min"] * 60.0
 df_corsi["CF_pct"] = df_corsi["cf_percent"]  # already 0–1 if you set it that way
 
 # merge into your existing df_season:
-df_merged = df_season.merge(
-    df_corsi[["player_id", "season", "CF60", "CA60", "CF_pct", "cap_hit"]],
-    on=["player_id", "season"],
-    how="left",
-)
+df_merged = add_corsi_rates_and_merge(df_season, df_corsi)
+# df_merged = df_season.merge(
+#     df_corsi[["player_id", "season", "CF60", "CA60", "CF_pct", "cap_hit"]],
+#     on=["player_id", "season"],
+#     how="left",
+# )

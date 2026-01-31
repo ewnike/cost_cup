@@ -19,6 +19,8 @@ from sklearn.cluster import KMeans
 # from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import StandardScaler
+from stats_utils import add_corsi_rates_and_merge
+
 
 # --------------------------------------------------
 # 1. Load game-by-game skater stats
@@ -171,11 +173,12 @@ df_corsi["CF60"] = df_corsi["corsi_for"] / df_corsi["toi_corsi_min"] * 60.0
 df_corsi["CA60"] = df_corsi["corsi_against"] / df_corsi["toi_corsi_min"] * 60.0
 df_corsi["CF_pct"] = df_corsi["cf_percent"]
 
-df_merged = df_season.merge(
-    df_corsi[["player_id", "season", "CF60", "CA60", "CF_pct", "cap_hit"]],
-    on=["player_id", "season"],
-    how="left",
-)
+df_merged = add_corsi_rates_and_merge(df_season, df_corsi)
+# df_merged = df_season.merge(
+#     df_corsi[["player_id", "season", "CF60", "CA60", "CF_pct", "cap_hit"]],
+#     on=["player_id", "season"],
+#     how="left",
+# )
 
 # 3. use df_merged for clustering, not df_season
 features = [
