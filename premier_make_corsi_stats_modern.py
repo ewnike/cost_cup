@@ -24,7 +24,9 @@ from constants import SEASONS_MODERN
 from db_utils import get_db_engine
 from log_utils import setup_logger
 from schema_utils import fq
-from strength_utils import get_num_players
+
+# from strength_utils import get_num_players
+from strength_utils import build_exclude_timeline_equal_strength
 
 # from .strength_utils import (
 #     apply_exclude_to_plays,
@@ -164,50 +166,119 @@ def drop_probable_goalies(game_shifts: pd.DataFrame, *, toi_threshold: int = 220
     return gs
 
 
-def get_exclude_timeline(game_shifts: pd.DataFrame, *, log_rows: bool = False) -> pd.DataFrame:
+# def get_exclude_timeline(game_shifts: pd.DataFrame, *, log_rows: bool = False) -> pd.DataFrame:
+#     """
+#     Build exclude timeline based on SKATER counts per team.
+
+#     Your chosen rule:
+#       exclude = (team_1 != team_2) & (team_1 <= 6) & (team_2 <= 6)
+
+#     Allows 5v5, 4v4, 3v3 OT (equal) and excludes 6v5, 5v4, 4v3, etc.
+#     """
+#     if game_shifts.empty:
+#         return pd.DataFrame(columns=["time", "team_1", "team_2", "exclude"])
+
+#     gs = game_shifts.copy()
+
+#     # Filter goalies BEFORE counting skaters
+#     gs = drop_probable_goalies(gs)
+
+# team_ids = sorted(gs["team_id"].dropna().unique())
+# if len(team_ids) != 2:
+#     logger.warning(f"Expected 2 teams in shifts, found {len(team_ids)}: {team_ids}")
+#     return pd.DataFrame(columns=["time", "team_1", "team_2", "exclude"])
+
+# t1, t2 = team_ids
+# s1 = gs[gs["team_id"] == t1]
+# s2 = gs[gs["team_id"] == t2]
+
+# df1 = get_num_players(s1).rename(columns={"value": "time", "num_players": "team_1"})
+# df2 = get_num_players(s2).rename(columns={"value": "time", "num_players": "team_2"})
+
+# df_ex = (
+#     pd.concat([df1, df2], ignore_index=True)
+#     .sort_values("time", ignore_index=True)
+#     .ffill()
+#     .bfill()
+# )
+
+# # breakpoint rows only
+# df_ex = df_ex[df_ex["time"].shift(-1) != df_ex["time"]].reset_index(drop=True)
+
+# df_ex["exclude"] = (
+#     (df_ex["team_1"] != df_ex["team_2"]) & (df_ex["team_1"] <= 6) & (df_ex["team_2"] <= 6)
+# )
+# df_ex = build_exclude_timeline_equal_strength(gs)
+
+# if log_rows:
+#     logger.info("Exclude timeline (first 50 rows):")
+#     logger.info(df_ex.head(50))
+
+
+# return df_ex
+# def get_exclude_timeline(game_shifts: pd.DataFrame, *, log_rows: bool = False) -> pd.DataFrame:
+#     """
+#     Build exclude timeline based on SKATER counts per team.
+
+#     Your chosen rule:
+#       exclude = (team_1 != team_2) & (team_1 <= 6) & (team_2 <= 6)
+
+#     Allows 5v5, 4v4, 3v3 OT (equal) and excludes 6v5, 5v4, 4v3, etc.
+#     """
+#     if game_shifts.empty:
+#         return pd.DataFrame(columns=["time", "team_1", "team_2", "exclude"])
+
+#     gs = game_shifts.copy()
+
+#     # Filter goalies BEFORE counting skaters
+#     # gs = drop_probable_goalies(gs)
+
+#     # Delegate the core timeline build to the shared utility
+#     df_ex = build_exclude_timeline_equal_strength(gs)
+
+#     if df_ex.empty:
+#         return pd.DataFrame(columns=["time", "team_1", "team_2", "exclude"])
+
+#     if log_rows:
+#         logger.info("Exclude timeline (first 50 rows):")
+#         logger.info(df_ex.head(50))
+
+
+#     return df_ex
+# def get_exclude_timeline(
+#     game_shifts_skaters: pd.DataFrame, *, log_rows: bool = False
+# ) -> pd.DataFrame:
+#     """
+#     Build exclude timeline based on SKATER counts per team.
+
+#     Assumes goalies have already been removed from game_shifts_skaters.
+#     """
+#     if game_shifts_skaters.empty:
+#         return pd.DataFrame(columns=["time", "team_1", "team_2", "exclude"])
+
+#     df_ex = build_exclude_timeline_equal_strength(game_shifts_skaters)
+
+#     if log_rows and not df_ex.empty:
+#         logger.info("Exclude timeline (first 50 rows):")
+#         logger.info(df_ex.head(50))
+
+#     return df_ex
+
+
+def get_exclude_timeline(
+    game_shifts_skaters: pd.DataFrame, *, log_rows: bool = False
+) -> pd.DataFrame:
     """
     Build exclude timeline based on SKATER counts per team.
 
-    Your chosen rule:
-      exclude = (team_1 != team_2) & (team_1 <= 6) & (team_2 <= 6)
-
-    Allows 5v5, 4v4, 3v3 OT (equal) and excludes 6v5, 5v4, 4v3, etc.
+    Assumes goalies have already been removed.
     """
-    if game_shifts.empty:
+    if game_shifts_skaters.empty:
         return pd.DataFrame(columns=["time", "team_1", "team_2", "exclude"])
 
-    gs = game_shifts.copy()
+    df_ex = build_exclude_timeline_equal_strength(game_shifts_skaters)
 
-    # Filter goalies BEFORE counting skaters
-    gs = drop_probable_goalies(gs)
-
-    team_ids = sorted(gs["team_id"].dropna().unique())
-    if len(team_ids) != 2:
-        logger.warning(f"Expected 2 teams in shifts, found {len(team_ids)}: {team_ids}")
-        return pd.DataFrame(columns=["time", "team_1", "team_2", "exclude"])
-
-    t1, t2 = team_ids
-    s1 = gs[gs["team_id"] == t1]
-    s2 = gs[gs["team_id"] == t2]
-
-    df1 = get_num_players(s1).rename(columns={"value": "time", "num_players": "team_1"})
-    df2 = get_num_players(s2).rename(columns={"value": "time", "num_players": "team_2"})
-
-    df_ex = (
-        pd.concat([df1, df2], ignore_index=True)
-        .sort_values("time", ignore_index=True)
-        .ffill()
-        .bfill()
-    )
-
-    # breakpoint rows only
-    df_ex = df_ex[df_ex["time"].shift(-1) != df_ex["time"]].reset_index(drop=True)
-
-    df_ex["exclude"] = (
-        (df_ex["team_1"] != df_ex["team_2"]) & (df_ex["team_1"] <= 6) & (df_ex["team_2"] <= 6)
-    )
-
-    if log_rows:
+    if log_rows and not df_ex.empty:
         logger.info("Exclude timeline (first 50 rows):")
         logger.info(df_ex.head(50))
 
@@ -325,24 +396,60 @@ def calculate_corsi_for_game(df_corsi: pd.DataFrame, df_game: dict) -> pd.DataFr
     if plays is None or plays.empty:
         return df_corsi
 
+    # # Build exclude timeline (skater imbalance)
+    # gs = drop_probable_goalies(gs)
+    # df_ex = get_exclude_timeline(gs)
+
+    # if df_ex.empty:
+    #     # no exclude timeline; proceed without exclusions
+    #     for _, event in plays.iterrows():
+    #         df_corsi = update_corsi(df_corsi, event, gs)
+    #     return df_corsi
+
+    # if not df_ex.empty:
+    #     assert df_ex["time"].is_monotonic_increasing
+    #     assert set(df_ex.columns) >= {"time", "team_1", "team_2", "exclude"}
+
+    # df_ex["time"] = df_ex["time"].astype(int)
+    # plays["time"] = plays["time"].astype(int)
+
+    # # Map play times to breakpoint index
+    # idx = df_ex["time"].searchsorted(plays["time"]) - 1
+    # idx[idx < 0] = 0
+    # idx = idx.clip(0, len(df_ex) - 1)
+
+    # mask = df_ex["exclude"].iloc[idx].reset_index(drop=True).to_numpy()
+    # plays = plays.loc[~mask]
+
+    # for _, event in plays.iterrows():
+    #     df_corsi = update_corsi(df_corsi, event, gs)
+
+    # return df_corsi
     # Build exclude timeline (skater imbalance)
+    gs = drop_probable_goalies(gs)
     df_ex = get_exclude_timeline(gs)
+
     if df_ex.empty:
         # no exclude timeline; proceed without exclusions
         for _, event in plays.iterrows():
             df_corsi = update_corsi(df_corsi, event, gs)
         return df_corsi
 
+    # df_ex is non-empty here
+    assert df_ex["time"].is_monotonic_increasing
+    assert {"time", "team_1", "team_2", "exclude"}.issubset(df_ex.columns)
+
+    df_ex["time"] = df_ex["time"].astype(int)
+    plays = plays.copy()
+    plays["time"] = plays["time"].astype(int)
+
     # Map play times to breakpoint index
     idx = df_ex["time"].searchsorted(plays["time"]) - 1
     idx[idx < 0] = 0
     idx = idx.clip(0, len(df_ex) - 1)
 
-    mask = df_ex["exclude"].iloc[idx].reset_index(drop=True).to_numpy()
+    mask = df_ex["exclude"].iloc[idx].to_numpy()
     plays = plays.loc[~mask]
-
-    # Filter goalies out of shifts BEFORE on-ice player identification too
-    gs = drop_probable_goalies(gs)
 
     for _, event in plays.iterrows():
         df_corsi = update_corsi(df_corsi, event, gs)

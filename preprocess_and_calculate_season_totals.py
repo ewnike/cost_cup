@@ -14,6 +14,7 @@ import pandas as pd
 from constants import SEASONS_ACTIVE as SEASONS
 from load_data import get_env_vars, load_data
 from log_utils import setup_logger
+from strength_utils import build_exclude_timeline_equal_strength, ensure_team_id_on_shifts_legacy
 
 # Set up logging with explicit confirmation of path
 # Define the log file path
@@ -46,7 +47,8 @@ def organize_data_by_season(df_master, season_game_ids):
     # Ensure cumulative time is calculated for game_plays
     if "time" not in organized_data["game_plays"].columns:
         if "periodTime" in organized_data["game_plays"].columns:
-            organized_data["game_plays"]["time"] = (
+            organized_data["game_plays"] = organized_data["game_plays"].copy()
+            organized_data["game_plays"].loc[:, "time"] = (
                 organized_data["game_plays"]["periodTime"]
                 + (organized_data["game_plays"]["period"] - 1) * 1200
             )
@@ -169,25 +171,92 @@ def verify_penalty(game_id, time, game_plays):
     return "Penalty"
 
 
-def get_num_players(shift_df):
-    """
-    Compute the number of players on the ice at each timestamp.
+# def get_num_players(shift_df):
+#     """
+#     Compute the number of players on the ice at each timestamp.
 
-    This function processes a DataFrame containing player shift start and end times, melts the data
-    to create a sorted event timeline, and computes the number of players on the ice at each
-    unique time point.
-    """
-    shifts_melted = pd.melt(
-        shift_df,
-        id_vars=["game_id", "player_id"],
-        value_vars=["shift_start", "shift_end"],
-    ).sort_values("value", ignore_index=True)
-    shifts_melted["change"] = 2 * (shifts_melted["variable"] == "shift_start").astype(int) - 1
-    shifts_melted["num_players"] = shifts_melted["change"].cumsum()
-    df_num_players = shifts_melted.groupby("value")["num_players"].last().reset_index()
-    return df_num_players[
-        df_num_players["num_players"].shift() != df_num_players["num_players"]
-    ].reset_index(drop=True)
+#     This function processes a DataFrame containing player shift start and end times, melts the data
+#     to create a sorted event timeline, and computes the number of players on the ice at each
+#     unique time point.
+#     """
+#     shifts_melted = pd.melt(
+#         shift_df,
+#         id_vars=["game_id", "player_id"],
+#         value_vars=["shift_start", "shift_end"],
+#     ).sort_values("value", ignore_index=True)
+#     shifts_melted["change"] = 2 * (shifts_melted["variable"] == "shift_start").astype(int) - 1
+#     shifts_melted["num_players"] = shifts_melted["change"].cumsum()
+#     df_num_players = shifts_melted.groupby("value")["num_players"].last().reset_index()
+#     return df_num_players[
+#         df_num_players["num_players"].shift() != df_num_players["num_players"]
+#     ].reset_index(drop=True)
+
+
+# def get_penalty_exclude_times(game_shifts, game_skater_stats, game_plays):
+#     """
+#     Determine time periods where game events should be excluded due to penalties.
+
+#     This function identifies time intervals where penalties create an imbalance in the number
+#     of players on the ice. It processes shift data, determines team player counts, and applies
+#     penalty-based exclusions based on game events.
+#     """
+#     if game_shifts.empty:
+#         logger.warning("game_shifts is empty.")
+#         return pd.DataFrame()
+
+#     game_shifts = pd.merge(
+#         game_shifts,
+#         game_skater_stats[["game_id", "player_id", "team_id"]],
+#         on=["game_id", "player_id"],
+#         how="left",
+#     )
+#     game_shifts = game_shifts.drop(columns=["team_id_y"], errors="ignore").rename(
+#         columns={"team_id_x": "team_id"}
+#     )
+
+#     # Divide shifts by team
+#     team_1 = game_shifts.iloc[0]["team_id"]
+#     shifts_1 = game_shifts[game_shifts["team_id"] == team_1]
+#     shifts_2 = game_shifts[game_shifts["team_id"] != team_1]
+
+#     df_num_players_1 = get_num_players(shifts_1).rename(
+#         columns={"value": "time", "num_players": "team_1"}
+#     )
+#     df_num_players_2 = get_num_players(shifts_2).rename(
+#         columns={"value": "time", "num_players": "team_2"}
+#     )
+#     df_exclude = (
+#         pd.concat([df_num_players_1, df_num_players_2])
+#         .sort_values("time", ignore_index=True)
+#         .ffill()
+#     )
+
+#     # Ensure `game_id` is preserved
+#     df_exclude["game_id"] = game_shifts["game_id"].iloc[0]
+
+#     mask = df_exclude["time"].shift(-1) != df_exclude["time"]
+#     df_exclude = df_exclude[mask]
+
+#     exclude_list = []
+#     for _, row in df_exclude.iterrows():
+#         # Safeguard against missing `game_id`
+#         if "game_id" not in row or pd.isna(row["game_id"]):
+#             logger.error("Missing game_id in df_exclude row.")
+#             exclude_list.append(False)
+#             continue
+
+#         penalty_type = verify_penalty(row["game_id"], row["time"], game_plays)
+#         if penalty_type == "Penalty":
+#             exclude_list.append(True)
+#         elif penalty_type == "Offsetting":
+#             exclude_list.append(False)
+#         else:
+#             exclude = (row["team_1"] != row["team_2"]) & (row["team_1"] <= 6) & (row["team_2"] <= 6)
+#             exclude_list.append(exclude)
+
+#     df_exclude["exclude"] = exclude_list
+#     print(df_exclude.head())
+#     return df_exclude.reset_index(drop=True)
 
 
 def get_penalty_exclude_times(game_shifts, game_skater_stats, game_plays):
@@ -198,63 +267,17 @@ def get_penalty_exclude_times(game_shifts, game_skater_stats, game_plays):
     of players on the ice. It processes shift data, determines team player counts, and applies
     penalty-based exclusions based on game events.
     """
-    if game_shifts.empty:
-        logger.warning("game_shifts is empty.")
-        return pd.DataFrame()
+    if game_shifts.empty or game_skater_stats.empty:
+        return pd.DataFrame(columns=["time", "team_1", "team_2", "exclude", "game_id"])
 
-    game_shifts = pd.merge(
-        game_shifts,
-        game_skater_stats[["game_id", "player_id", "team_id"]],
-        on=["game_id", "player_id"],
-        how="left",
-    )
-    game_shifts = game_shifts.drop(columns=["team_id_y"], errors="ignore").rename(
-        columns={"team_id_x": "team_id"}
-    )
+    shifts_skaters = ensure_team_id_on_shifts_legacy(game_shifts, game_skater_stats)
+    df_ex = build_exclude_timeline_equal_strength(shifts_skaters)
 
-    # Divide shifts by team
-    team_1 = game_shifts.iloc[0]["team_id"]
-    shifts_1 = game_shifts[game_shifts["team_id"] == team_1]
-    shifts_2 = game_shifts[game_shifts["team_id"] != team_1]
+    if df_ex.empty:
+        return pd.DataFrame(columns=["time", "team_1", "team_2", "exclude", "game_id"])
 
-    df_num_players_1 = get_num_players(shifts_1).rename(
-        columns={"value": "time", "num_players": "team_1"}
-    )
-    df_num_players_2 = get_num_players(shifts_2).rename(
-        columns={"value": "time", "num_players": "team_2"}
-    )
-    df_exclude = (
-        pd.concat([df_num_players_1, df_num_players_2])
-        .sort_values("time", ignore_index=True)
-        .ffill()
-    )
-
-    # Ensure `game_id` is preserved
-    df_exclude["game_id"] = game_shifts["game_id"].iloc[0]
-
-    mask = df_exclude["time"].shift(-1) != df_exclude["time"]
-    df_exclude = df_exclude[mask]
-
-    exclude_list = []
-    for _, row in df_exclude.iterrows():
-        # Safeguard against missing `game_id`
-        if "game_id" not in row or pd.isna(row["game_id"]):
-            logger.error("Missing game_id in df_exclude row.")
-            exclude_list.append(False)
-            continue
-
-        penalty_type = verify_penalty(row["game_id"], row["time"], game_plays)
-        if penalty_type == "Penalty":
-            exclude_list.append(True)
-        elif penalty_type == "Offsetting":
-            exclude_list.append(False)
-        else:
-            exclude = (row["team_1"] != row["team_2"]) & (row["team_1"] <= 6) & (row["team_2"] <= 6)
-            exclude_list.append(exclude)
-
-    df_exclude["exclude"] = exclude_list
-    print(df_exclude.head())
-    return df_exclude.reset_index(drop=True)
+    df_ex["game_id"] = int(shifts_skaters["game_id"].iloc[0])
+    return df_ex
 
 
 def assemble_arrays_for_processing(organized_data, exclude_times):
