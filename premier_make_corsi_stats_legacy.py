@@ -28,8 +28,9 @@ from strength_utils import (
     apply_exclude_to_plays,
     build_exclude_timeline_equal_strength,
     ensure_team_id_on_shifts_legacy,
-    # get_num_players,
 )
+
+# pylint: disable=duplicate-code
 
 GAME_TBL = fq(*TABLES["game"])
 
@@ -39,148 +40,6 @@ logger = setup_logger(LOG_FILE_PATH)
 logger.info("Logger configured successfully. Test message to ensure logging works.")
 
 
-# def get_num_players(shift_df: pd.DataFrame) -> pd.DataFrame:
-#     """
-#     Compute number of players (skaters) on ice at each time breakpoint.
-
-#     shift_df columns required: ['game_id', 'player_id', 'shift_start', 'shift_end']
-#     Returns: DataFrame with columns ['value' (time), 'num_players'].
-#     """
-#     if shift_df.empty:
-#         return pd.DataFrame(columns=["value", "num_players"])
-
-#     shifts_melted = (
-#         pd.melt(
-#             shift_df,
-#             id_vars=["game_id", "player_id"],
-#             value_vars=["shift_start", "shift_end"],
-#         )
-#         .sort_values("value", ignore_index=True)
-#         .copy()
-#     )
-
-#     # shift_start => +1, shift_end => -1
-#     shifts_melted["change"] = 2 * (shifts_melted["variable"] == "shift_start").astype(int) - 1
-#     shifts_melted["num_players"] = shifts_melted["change"].cumsum()
-
-#     df_num_players = shifts_melted.groupby("value")["num_players"].last().reset_index()
-
-#     # Keep only rows where the count changes
-#     df_num_players = df_num_players[
-#         df_num_players["num_players"].shift() != df_num_players["num_players"]
-#     ].reset_index(drop=True)
-
-#     return df_num_players
-
-
-# def _ensure_team_id_on_shifts(
-#     game_shifts: pd.DataFrame,
-#     game_skater_stats: pd.DataFrame,
-# ) -> pd.DataFrame:
-#     """
-#     Ensure game_shifts has a 'team_id' column for skaters, and drop goalie rows.
-
-#     Legacy: game_shifts has no team_id. We merge from game_skater_stats (skaters-only).
-#     Goalies won't match -> team_id null -> dropped.
-
-#     Returns:
-#       game_shifts with team_id, and goalies removed.
-
-#     """
-#     if game_shifts.empty:
-#         return game_shifts
-
-#     if game_skater_stats is None or game_skater_stats.empty:
-#         raise ValueError("game_skater_stats is required to attach team_id and filter goalies.")
-
-#     merged = pd.merge(
-#         game_shifts,
-#         game_skater_stats[["game_id", "player_id", "team_id"]],
-#         on=["game_id", "player_id"],
-#         how="left",
-#         suffixes=("_shift", "_gss"),
-#     )
-
-#     # If shifts already had team_id, prefer it; otherwise use gss.
-#     if "team_id_shift" in merged.columns and "team_id_gss" in merged.columns:
-#         merged["team_id"] = merged["team_id_shift"].combine_first(merged["team_id_gss"])
-#         merged = merged.drop(columns=["team_id_shift", "team_id_gss"], errors="ignore")
-#     elif "team_id_gss" in merged.columns and "team_id" not in merged.columns:
-#         merged = merged.rename(columns={"team_id_gss": "team_id"})
-#     elif "team_id" not in merged.columns:
-#         raise ValueError("Unable to construct 'team_id' on game_shifts.")
-
-#     # ✅ filter out goalies/unmatched
-#     merged = merged.dropna(subset=["team_id"]).copy()
-#     merged["team_id"] = merged["team_id"].astype(int)
-
-#     return merged
-
-
-# def get_penalty_exclude_times(
-#     game_shifts: pd.DataFrame,
-#     game_skater_stats: pd.DataFrame,
-#     *,
-#     log_rows: bool = False,
-# ) -> pd.DataFrame:
-#     """
-#     Build exclude timeline based on skater counts by team.
-
-#     ALLOW: equal-strength skater counts (5v5, 4v4, 3v3 OT, etc.)
-#     EXCLUDE: imbalanced skater counts (6v5, 5v4, 4v3, etc.)
-
-#     Returns columns: time, team_1, team_2, exclude
-#     """
-#     if game_shifts.empty:
-#         logger.warning("Warning: game_shifts is empty in get_penalty_exclude_times")
-#         return pd.DataFrame(columns=["time", "team_1", "team_2", "exclude"])
-
-#     game_shifts = _ensure_team_id_on_shifts(game_shifts, game_skater_stats)
-
-#     team_ids = sorted(game_shifts["team_id"].unique())
-#     if len(team_ids) != 2:
-#         logger.warning(f"Expected 2 teams in game_shifts, found {len(team_ids)}: {team_ids}")
-#         return pd.DataFrame(columns=["time", "team_1", "team_2", "exclude"])
-
-#     t1, t2 = team_ids
-#     shifts_1 = game_shifts[game_shifts["team_id"] == t1]
-#     shifts_2 = game_shifts[game_shifts["team_id"] == t2]
-
-#     df_num_players_1 = get_num_players(shifts_1).rename(
-#         columns={"value": "time", "num_players": "team_1"}
-#     )
-#     df_num_players_2 = get_num_players(shifts_2).rename(
-#         columns={"value": "time", "num_players": "team_2"}
-#     )
-
-#     df_exclude = (
-#         pd.concat([df_num_players_1, df_num_players_2], ignore_index=True)
-#         .sort_values("time", ignore_index=True)
-#         .ffill()
-#         .bfill()
-#     )
-
-#     # Keep only breakpoint rows
-#     df_exclude = df_exclude[df_exclude["time"].shift(-1) != df_exclude["time"]].reset_index(
-#         drop=True
-#     )
-
-#     # ✅ Your agreed rule: exclude imbalance (includes 6v5, excludes 5v4, etc.; allows 4v4/3v3)
-#     df_exclude["exclude"] = (
-#         (df_exclude["team_1"] != df_exclude["team_2"])
-#         & (df_exclude["team_1"] <= 6)
-#         & (df_exclude["team_2"] <= 6)
-#     )
-
-#     if log_rows:
-#         logger.info("Exclude Timeline (skater imbalance):")
-#         for _, row in df_exclude.iterrows():
-#             logger.info(
-#                 f"Time={row['time']} team_1={row['team_1']} team_2={row['team_2']} exclude={row['exclude']}"
-#             )
-
-
-#     return df_exclude
 def get_penalty_exclude_times(
     game_shifts: pd.DataFrame,
     game_skater_stats: pd.DataFrame,
