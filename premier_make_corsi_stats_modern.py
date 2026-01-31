@@ -24,6 +24,7 @@ from constants import SEASONS_MODERN
 from db_utils import get_db_engine
 from log_utils import setup_logger
 from schema_utils import fq
+from strength_utils import get_num_players
 
 # from .strength_utils import (
 #     apply_exclude_to_plays,
@@ -93,33 +94,33 @@ def add_cumulative_time_from_period(gp: pd.DataFrame) -> pd.DataFrame:
 # -------------------------
 # Skater counting helpers
 # -------------------------
-def get_num_players(shift_df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Compute number of skaters on ice at each time breakpoint.
+# def get_num_players(shift_df: pd.DataFrame) -> pd.DataFrame:
+#     """
+#     Compute number of skaters on ice at each time breakpoint.
 
-    shift_df must have: game_id, player_id, shift_start, shift_end
-    """
-    if shift_df.empty:
-        return pd.DataFrame(columns=["value", "num_players"])
+#     shift_df must have: game_id, player_id, shift_start, shift_end
+#     """
+#     if shift_df.empty:
+#         return pd.DataFrame(columns=["value", "num_players"])
 
-    shifts_melted = (
-        pd.melt(
-            shift_df,
-            id_vars=["game_id", "player_id"],
-            value_vars=["shift_start", "shift_end"],
-        )
-        .sort_values("value", ignore_index=True)
-        .copy()
-    )
+#     shifts_melted = (
+#         pd.melt(
+#             shift_df,
+#             id_vars=["game_id", "player_id"],
+#             value_vars=["shift_start", "shift_end"],
+#         )
+#         .sort_values("value", ignore_index=True)
+#         .copy()
+#     )
 
-    shifts_melted["change"] = 2 * (shifts_melted["variable"] == "shift_start").astype(int) - 1
-    shifts_melted["num_players"] = shifts_melted["change"].cumsum()
+#     shifts_melted["change"] = 2 * (shifts_melted["variable"] == "shift_start").astype(int) - 1
+#     shifts_melted["num_players"] = shifts_melted["change"].cumsum()
 
-    df_num_players = shifts_melted.groupby("value")["num_players"].last().reset_index()
+#     df_num_players = shifts_melted.groupby("value")["num_players"].last().reset_index()
 
-    return df_num_players[
-        df_num_players["num_players"].shift() != df_num_players["num_players"]
-    ].reset_index(drop=True)
+#     return df_num_players[
+#         df_num_players["num_players"].shift() != df_num_players["num_players"]
+#     ].reset_index(drop=True)
 
 
 def drop_probable_goalies(game_shifts: pd.DataFrame, *, toi_threshold: int = 2200) -> pd.DataFrame:

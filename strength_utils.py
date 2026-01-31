@@ -27,12 +27,13 @@ def get_num_players(shift_df: pd.DataFrame) -> pd.DataFrame:
     """
     Compute number of players (skaters) on ice at each time breakpoint.
 
-    Returns columns: value (time), num_players
+    shift_df columns required: ['game_id', 'player_id', 'shift_start', 'shift_end']
+    Returns: DataFrame with columns ['value' (time), 'num_players'].
     """
     if shift_df.empty:
         return pd.DataFrame(columns=["value", "num_players"])
 
-    melted = (
+    shifts_melted = (
         pd.melt(
             shift_df,
             id_vars=["game_id", "player_id"],
@@ -41,13 +42,19 @@ def get_num_players(shift_df: pd.DataFrame) -> pd.DataFrame:
         .sort_values("value", ignore_index=True)
         .copy()
     )
-    # shift_start => +1, shift_end => -1
-    melted["change"] = 2 * (melted["variable"] == "shift_start").astype(int) - 1
-    melted["num_players"] = melted["change"].cumsum()
 
-    out = melted.groupby("value")["num_players"].last().reset_index()
-    out = out[out["num_players"].shift() != out["num_players"]].reset_index(drop=True)
-    return out
+    # shift_start => +1, shift_end => -1
+    shifts_melted["change"] = 2 * (shifts_melted["variable"] == "shift_start").astype(int) - 1
+    shifts_melted["num_players"] = shifts_melted["change"].cumsum()
+
+    df_num_players = shifts_melted.groupby("value")["num_players"].last().reset_index()
+
+    # Keep only rows where the count changes
+    df_num_players = df_num_players[
+        df_num_players["num_players"].shift() != df_num_players["num_players"]
+    ].reset_index(drop=True)
+
+    return df_num_players
 
 
 def ensure_team_id_on_shifts_legacy(

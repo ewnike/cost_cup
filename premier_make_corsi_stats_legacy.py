@@ -28,6 +28,7 @@ from strength_utils import (
     apply_exclude_to_plays,
     build_exclude_timeline_equal_strength,
     ensure_team_id_on_shifts_legacy,
+    get_num_players,
 )
 
 GAME_TBL = fq(*TABLES["game"])
@@ -38,38 +39,38 @@ logger = setup_logger(LOG_FILE_PATH)
 logger.info("Logger configured successfully. Test message to ensure logging works.")
 
 
-def get_num_players(shift_df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Compute number of players (skaters) on ice at each time breakpoint.
+# def get_num_players(shift_df: pd.DataFrame) -> pd.DataFrame:
+#     """
+#     Compute number of players (skaters) on ice at each time breakpoint.
 
-    shift_df columns required: ['game_id', 'player_id', 'shift_start', 'shift_end']
-    Returns: DataFrame with columns ['value' (time), 'num_players'].
-    """
-    if shift_df.empty:
-        return pd.DataFrame(columns=["value", "num_players"])
+#     shift_df columns required: ['game_id', 'player_id', 'shift_start', 'shift_end']
+#     Returns: DataFrame with columns ['value' (time), 'num_players'].
+#     """
+#     if shift_df.empty:
+#         return pd.DataFrame(columns=["value", "num_players"])
 
-    shifts_melted = (
-        pd.melt(
-            shift_df,
-            id_vars=["game_id", "player_id"],
-            value_vars=["shift_start", "shift_end"],
-        )
-        .sort_values("value", ignore_index=True)
-        .copy()
-    )
+#     shifts_melted = (
+#         pd.melt(
+#             shift_df,
+#             id_vars=["game_id", "player_id"],
+#             value_vars=["shift_start", "shift_end"],
+#         )
+#         .sort_values("value", ignore_index=True)
+#         .copy()
+#     )
 
-    # shift_start => +1, shift_end => -1
-    shifts_melted["change"] = 2 * (shifts_melted["variable"] == "shift_start").astype(int) - 1
-    shifts_melted["num_players"] = shifts_melted["change"].cumsum()
+#     # shift_start => +1, shift_end => -1
+#     shifts_melted["change"] = 2 * (shifts_melted["variable"] == "shift_start").astype(int) - 1
+#     shifts_melted["num_players"] = shifts_melted["change"].cumsum()
 
-    df_num_players = shifts_melted.groupby("value")["num_players"].last().reset_index()
+#     df_num_players = shifts_melted.groupby("value")["num_players"].last().reset_index()
 
-    # Keep only rows where the count changes
-    df_num_players = df_num_players[
-        df_num_players["num_players"].shift() != df_num_players["num_players"]
-    ].reset_index(drop=True)
+#     # Keep only rows where the count changes
+#     df_num_players = df_num_players[
+#         df_num_players["num_players"].shift() != df_num_players["num_players"]
+#     ].reset_index(drop=True)
 
-    return df_num_players
+#     return df_num_players
 
 
 def _ensure_team_id_on_shifts(
