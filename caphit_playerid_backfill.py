@@ -30,6 +30,8 @@ from sqlalchemy import text
 from constants import SCHEMA
 from db_utils import get_db_engine
 
+# pylint: disable=duplicate-code
+
 SEARCH_URL = "https://search.d3.nhle.com/api/v1/search/player"
 
 NAME_ALIAS = {

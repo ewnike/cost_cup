@@ -26,6 +26,8 @@ from sqlalchemy import text
 
 from db_utils import get_db_engine
 
+# pylint: disable=duplicate-code
+
 ENGINE = get_db_engine()
 
 
