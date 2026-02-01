@@ -11,7 +11,6 @@ Pipeline:
 - Inspect cluster centers & example players
 """
 
-# import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
@@ -19,40 +18,66 @@ from sklearn.cluster import KMeans
 # from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import StandardScaler
-from stats_utils import add_corsi_rates_and_merge
+from sqlalchemy import text
 
+from db_utils import get_db_engine
+
+engine = get_db_engine()
 
 # --------------------------------------------------
 # 1. Load game-by-game skater stats
 # --------------------------------------------------
 
-csv_path = "game_skater_stats.csv"  # <-- change if needed
-df_games = pd.read_csv(csv_path)
+# csv_path = "game_skater_stats.csv"  # <-- change if needed
+# df_games = pd.read_csv(csv_path)
 
-print("Columns:", df_games.columns.tolist())
-print("Player-game rows:", len(df_games))
+
+try:
+    with engine.connect() as conn:
+        df_games = pd.read_sql_query(
+            text("""
+                SELECT
+                    g.season,
+                    gss.game_id,
+                    gss.player_id,
+                    gss.team_id,
+                    gss.timeOnIce,
+                    gss.assists,
+                    gss.goals,
+                    gss.shots,
+                    gss.hits,
+                    gss.powerPlayGoals,
+                    gss.powerPlayAssists,
+                    gss.penaltyMinutes,
+                    gss.faceOffWins,
+                    gss.faceoffTaken,
+                    gss.takeaways,
+                    gss.giveaways,
+                    gss.shortHandedGoals,
+                    gss.shortHandedAssists,
+                    gss.blocked,
+                    gss.plusMinus,
+                    gss.evenTimeOnIce,
+                    gss.shortHandedTimeOnIce,
+                    gss.powerPlayTimeOnIce
+                FROM game_skater_stats gss
+                JOIN game g
+                    ON g.game_id = gss.game_id
+                WHERE g.season >= 20152016
+            """),
+            conn,
+        )
+finally:
+    engine.dispose()
+
+print("df_games seasons:", sorted(df_games["season"].astype(str).unique())[-10:])
+print("player-game rows:", len(df_games))
 
 
 # --------------------------------------------------
 # 2. Derive season from game_id
 # --------------------------------------------------
 # game_id like 2016020045 -> season "20162017"
-
-
-def game_id_to_season(gid: int) -> str:
-    """
-    Transform game_id_to_season.
-
-    :param gid: Description
-    :type gid: int
-    :return: Description
-    :rtype: str
-    """
-    year_start = gid // 1_000_000
-    return f"{year_start}{year_start + 1}"
-
-
-df_games["season"] = df_games["game_id"].astype(int).apply(game_id_to_season)
 
 
 # --------------------------------------------------
@@ -159,26 +184,39 @@ df_season["PLUSMINUS60"] = df_season["plusMinus"] / df_season["toi_total_min"] *
 # 6. Select features for clustering
 # --------------------------------------------------
 
-# 2. --- CORSI MERGE BLOCK GOES HERE ---
-df_corsi = pd.read_csv("player_season_corsi_2015_2018.csv")
 
-# make sure 'season' matches df_season (both as string)
+# --- CORSI MERGE BLOCK ---
+df_corsi = pd.read_csv("player_season_corsi_all.csv")
+print("df_season season dtype:", df_season["season"].dtype, "sample:", df_season["season"].iloc[0])
+print("df_corsi  season dtype:", df_corsi["season"].dtype, "sample:", df_corsi["season"].iloc[0])
+# make sure season types match
 df_corsi["season"] = df_corsi["season"].astype(str)
 df_season["season"] = df_season["season"].astype(str)
+# keep only seasons that exist in raw_corsi export
+valid_seasons = set(df_corsi["season"].unique())
+df_season = df_season[df_season["season"].isin(valid_seasons)].copy()
+print("df_season seasons after filter:", sorted(df_season["season"].unique()))
+# merge corsi onto df_season
+df_merged = df_season.merge(
+    df_corsi[["player_id", "season", "corsi_for", "corsi_against", "cf_percent"]],
+    on=["player_id", "season"],
+    how="left",
+)
 
-df_corsi["toi_corsi_min"] = df_corsi["time_on_ice"] / 60.0
-df_corsi = df_corsi[df_corsi["toi_corsi_min"] > 0].copy()
+# compute CF60/CA60 using TOI from df_season (pick the denominator you want)
+df_merged["toi_corsi_min"] = df_merged["toi_ev_min"]  # or "toi_total_min"
 
-df_corsi["CF60"] = df_corsi["corsi_for"] / df_corsi["toi_corsi_min"] * 60.0
-df_corsi["CA60"] = df_corsi["corsi_against"] / df_corsi["toi_corsi_min"] * 60.0
-df_corsi["CF_pct"] = df_corsi["cf_percent"]
+df_merged["CF60"] = (df_merged["corsi_for"] / df_merged["toi_corsi_min"]) * 60.0
+df_merged["CA60"] = (df_merged["corsi_against"] / df_merged["toi_corsi_min"]) * 60.0
+df_merged["CF_pct"] = df_merged["cf_percent"]
 
-df_merged = add_corsi_rates_and_merge(df_season, df_corsi)
-# df_merged = df_season.merge(
-#     df_corsi[["player_id", "season", "CF60", "CA60", "CF_pct", "cap_hit"]],
-#     on=["player_id", "season"],
-#     how="left",
-# )
+# clean up inf/NaN
+df_merged[["CF60", "CA60"]] = df_merged[["CF60", "CA60"]].replace(
+    [float("inf"), -float("inf")], pd.NA
+)
+df_merged["CF_pct"] = df_merged["CF_pct"].fillna(0.0)
+print("Corsi match rate:", df_merged["corsi_for"].notna().mean())
+
 
 # 3. use df_merged for clustering, not df_season
 features = [
@@ -204,8 +242,6 @@ features = [
     "CF60",
     "CA60",
     "CF_pct",
-    # optional:
-    "cap_hit",
 ]
 
 # keep only seasons where we actually have Corsi
@@ -248,10 +284,6 @@ print(f"\nBest k = {best_k} (silhouette={best_score:.3f})")
 # --------------------------------------------------
 # 9. Fit final model & assign clusters
 # --------------------------------------------------
-
-# k_final = best_k
-# kmeans_final = KMeans(n_clusters=k_final, n_init=50, random_state=42)
-# df_season["cluster"] = kmeans_final.fit_predict(X_scaled)
 
 k_final = best_k
 kmeans_final = KMeans(n_clusters=k_final, n_init=50, random_state=42)
@@ -299,53 +331,13 @@ for c in range(k_final):
 
 
 # --------------------------------------------------
-# 12. Optional: PCA 2D visualization
+# 12. Save results
 # --------------------------------------------------
 
-# from mpl_toolkits.mplot3d import Axes3D  # just to register 3D projection
-# from sklearn.decomposition import PCA
-
-# # 3D PCA
-# pca = PCA(n_components=3)
-# X_pca = pca.fit_transform(X_scaled)
-
-# df_model["PC1"] = X_pca[:, 0]
-# df_model["PC2"] = X_pca[:, 1]
-# df_model["PC3"] = X_pca[:, 2]
-
-# print("\nExplained variance by PC1, PC2, PC3:", pca.explained_variance_ratio_)
-# print("Total variance in first 3 PCs:", pca.explained_variance_ratio_.sum())
-
-# # 3D scatter plot
-# fig = plt.figure(figsize=(9, 7))
-# ax = fig.add_subplot(111, projection="3d")
-
-# for c in range(k_final):
-#     subset = df_model[df_model["cluster"] == c]
-#     ax.scatter(
-#         subset["PC1"],
-#         subset["PC2"],
-#         subset["PC3"],
-#         s=np.clip(subset["TOI_per_game"] * 2.0, 10, 80),
-#         alpha=0.6,
-#         label=f"Cluster {c}",
-#     )
-
-# ax.set_xlabel("PC1")
-# ax.set_ylabel("PC2")
-# ax.set_zlabel("PC3")
-# ax.set_title("Skater player-season clusters (3D PCA)")
-# ax.legend()
-# plt.tight_layout()
-# plt.show()
-
-
-# --------------------------------------------------
-# 13. Save results
-# --------------------------------------------------
-
-df_model.to_csv("skater_merged_player_seasons_with_clusters.csv", index=False)
-cluster_centers.to_csv("skater_merged_cluster_centers.csv")
+# df_model.to_csv("skater_merged_player_seasons_with_clusters.csv", index=False)
+# cluster_centers.to_csv("skater_merged_cluster_centers.csv")
+df_model.to_csv("skater_merged_player_seasons_with_clusters_all.csv", index=False)
+cluster_centers.to_csv("skater_merged_cluster_centers_all.csv", index=False)
 
 print("\nSaved:")
 print("  skater_merged_player_seasons_with_clusters.csv")

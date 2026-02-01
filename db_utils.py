@@ -54,73 +54,175 @@ def load_environment_variables():
 
 
 # 🔹 **Step 2: Get Database Engine**
+# def get_db_engine():
+#     """
+#     Create and return a SQLAlchemy database engine.
+
+#     - Uses `DATABASE_URL` if available.
+#     - Otherwise, constructs a connection string from individual environment variables.
+
+#     Returns
+#     -------
+#         sqlalchemy.engine.Engine: A SQLAlchemy database engine instance.
+
+#     Raises
+#     ------
+#         ValueError: If `DATABASE_URL` is missing and required variables are not set.
+
+#     Environment Variables:
+#         - DATABASE_URL (optional, takes priority if set)
+#         - DATABASE_TYPE
+#         - DBAPI
+#         - ENDPOINT
+#         - USER
+#         - PASSWORD
+#         - PORT (default: 5432)
+#         - DATABASE
+
+#     """
+#     load_environment_variables()  # Ensure variables are loaded
+
+#     # Check if DATABASE_URL is set
+#     # pylint: disable=invalid-name
+#     DATABASE_URL = os.getenv("DATABASE_URL")
+
+#     if DATABASE_URL:
+#         logger.info("Using DATABASE_URL from environment.")
+#         return create_engine(DATABASE_URL)
+
+#     # Otherwise, construct from individual variables
+
+#     DATABASE_TYPE = os.getenv("DATABASE_TYPE")
+#     DBAPI = os.getenv("DBAPI")
+#     ENDPOINT = os.getenv("ENDPOINT")
+#     USER = os.getenv("DB_USER")
+#     PASSWORD = os.getenv("DB_PASSWORD")
+#     PORT = os.getenv("PORT", "5432")  # Default PostgreSQL port
+#     DATABASE = os.getenv("DATABASE")
+
+#     # pylint: enable=invalid-name
+#     # Ensure all required variables are available
+#     missing_vars = [
+#         var
+#         for var in ["DATABASE_TYPE", "DBAPI", "ENDPOINT", "DB_USER", "DB_PASSWORD", "DATABASE"]
+#         if not os.getenv(var)
+#     ]
+#     if missing_vars:
+#         logger.error(f"Missing required environment variables: {', '.join(missing_vars)}")
+#         raise ValueError("ERROR: One or more required environment variables are missing.")
+
+#     # URL encode the password in case it contains special characters
+#     encoded_password = quote_plus(PASSWORD)
+
+#     # Create the connection string
+#     connection_string = (
+#         f"{DATABASE_TYPE}+{DBAPI}://{USER}:{encoded_password}@{ENDPOINT}:{PORT}/{DATABASE}"
+#     )
+#     logger.info("Database connection string created.")
+
+
+#     return create_engine(connection_string)
 def get_db_engine():
     """
     Create and return a SQLAlchemy database engine.
 
-    - Uses `DATABASE_URL` if available.
-    - Otherwise, constructs a connection string from individual environment variables.
+    Priority:
+      1) DATABASE_URL (if set)
+      2) If APP_ENV=aws, use AWS_DB_* variables
+      3) Otherwise use local DB_* variables
 
-    Returns
-    -------
-        sqlalchemy.engine.Engine: A SQLAlchemy database engine instance.
+    Local env vars:
+      DATABASE_TYPE, DBAPI, ENDPOINT, PORT, DATABASE, DB_USER, DB_PASSWORD, SSL_MODE(optional)
 
-    Raises
-    ------
-        ValueError: If `DATABASE_URL` is missing and required variables are not set.
-
-    Environment Variables:
-        - DATABASE_URL (optional, takes priority if set)
-        - DATABASE_TYPE
-        - DBAPI
-        - ENDPOINT
-        - USER
-        - PASSWORD
-        - PORT (default: 5432)
-        - DATABASE
-
+    AWS env vars:
+      AWS_DB_HOST, AWS_DB_PORT, AWS_DB_NAME, AWS_DB_USER, AWS_DB_PASSWORD, AWS_DB_SSLMODE(optional)
     """
-    load_environment_variables()  # Ensure variables are loaded
+    load_environment_variables()
 
-    # Check if DATABASE_URL is set
-    # pylint: disable=invalid-name
-    DATABASE_URL = os.getenv("DATABASE_URL")
-
-    if DATABASE_URL:
+    database_url = os.getenv("DATABASE_URL")
+    if database_url:
         logger.info("Using DATABASE_URL from environment.")
-        return create_engine(DATABASE_URL)
+        return create_engine(database_url, pool_pre_ping=True)
 
-    # Otherwise, construct from individual variables
+    database_type = os.getenv("DATABASE_TYPE")
+    dbapi = os.getenv("DBAPI")
+    app_env = (os.getenv("APP_ENV") or "local").strip().lower()
 
-    DATABASE_TYPE = os.getenv("DATABASE_TYPE")
-    DBAPI = os.getenv("DBAPI")
-    ENDPOINT = os.getenv("ENDPOINT")
-    USER = os.getenv("DB_USER")
-    PASSWORD = os.getenv("DB_PASSWORD")
-    PORT = os.getenv("PORT", "5432")  # Default PostgreSQL port
-    DATABASE = os.getenv("DATABASE")
+    if not database_type or not dbapi:
+        raise ValueError("Missing DATABASE_TYPE or DBAPI in environment.")
 
-    # pylint: enable=invalid-name
-    # Ensure all required variables are available
-    missing_vars = [
-        var
-        for var in ["DATABASE_TYPE", "DBAPI", "ENDPOINT", "DB_USER", "DB_PASSWORD", "DATABASE"]
-        if not os.getenv(var)
-    ]
-    if missing_vars:
-        logger.error(f"Missing required environment variables: {', '.join(missing_vars)}")
-        raise ValueError("ERROR: One or more required environment variables are missing.")
+    if app_env == "aws":
+        host = os.getenv("AWS_DB_HOST")
+        port = os.getenv("AWS_DB_PORT", "5432")
+        dbname = os.getenv("AWS_DB_NAME")
+        user = os.getenv("AWS_DB_USER")
+        password = os.getenv("AWS_DB_PASSWORD")
+        ssl_mode = os.getenv("AWS_DB_SSLMODE") or os.getenv("SSL_MODE") or "require"
 
-    # URL encode the password in case it contains special characters
-    encoded_password = quote_plus(PASSWORD)
+        missing = [
+            k
+            for k, v in {
+                "AWS_DB_HOST": host,
+                "AWS_DB_NAME": dbname,
+                "AWS_DB_USER": user,
+                "AWS_DB_PASSWORD": password,
+            }.items()
+            if not v
+        ]
 
-    # Create the connection string
+        if missing:
+            logger.error("Missing required AWS env vars: %s", ", ".join(missing))
+            raise ValueError("Missing required AWS database environment variables.")
+
+        logger.info(
+            "Using AWS database config (APP_ENV=aws). host=%s db=%s port=%s", host, dbname, port
+        )
+
+    else:
+        host = os.getenv("ENDPOINT")
+        port = os.getenv("PORT", "5432")
+        dbname = os.getenv("DATABASE")
+        user = os.getenv("DB_USER") or os.getenv("USER")
+        password = os.getenv("DB_PASSWORD") or os.getenv("PASSWORD")
+        ssl_mode = os.getenv("SSL_MODE")  # optional
+
+        missing = [
+            k
+            for k, v in {
+                "ENDPOINT": host,
+                "DATABASE": dbname,
+                "DB_USER (or USER)": user,
+                "DB_PASSWORD (or PASSWORD)": password,
+            }.items()
+            if not v
+        ]
+
+        if missing:
+            logger.error("Missing required local env vars: %s", ", ".join(missing))
+            raise ValueError("Missing required local database environment variables.")
+
+        logger.info(
+            "Using local database config (APP_ENV=%s). host=%s db=%s port=%s",
+            app_env,
+            host,
+            dbname,
+            port,
+        )
+
+    encoded_password = quote_plus(password)
     connection_string = (
-        f"{DATABASE_TYPE}+{DBAPI}://{USER}:{encoded_password}@{ENDPOINT}:{PORT}/{DATABASE}"
+        f"{database_type}+{dbapi}://{user}:{encoded_password}@{host}:{port}/{dbname}"
     )
-    logger.info("Database connection string created.")
 
-    return create_engine(connection_string)
+    connect_args = {}
+    if ssl_mode:
+        connect_args["sslmode"] = ssl_mode
+
+    return create_engine(
+        connection_string,
+        connect_args=connect_args,
+        pool_pre_ping=True,
+    )
 
 
 # 🔹 **Step 3: Global MetaData Object (Prevents Duplication Issues)**
