@@ -262,7 +262,7 @@ ORDER BY share_most_common ASC, seasons DESC
 LIMIT 50;
 ```
 
-### C)Transition rate across seasons (player-level)
+### C) Transition rate across seasons (player-level)
 #### Transition rate = transitions/(seasons-1)
 #### This assumes the cluster table has one row per season(or at least one).
 ```sql
