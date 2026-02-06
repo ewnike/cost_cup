@@ -29,10 +29,14 @@ from sqlalchemy import (
     Table,
     Text,
     create_engine,
+    text,
 )
 from sqlalchemy.schema import Identity
 
 from log_utils import setup_logger
+
+DERIVED_SCHEMA = "derived"  # you already have this constant
+RAW_SCHEMA = "raw"
 
 setup_logger()
 logger = logging.getLogger(__name__)  # ✅ define logger
@@ -565,6 +569,72 @@ def create_player_game_es_table(table_name: str, metadata: MetaData) -> Table:
     Index(f"ix_{table_name}_game", t.c.game_id)
     Index(f"ix_{table_name}_team", t.c.team_id)
     return t
+
+
+def ctas_game_plays_from_raw_pbp(engine, season: int, *, drop: bool = True) -> str:
+    """
+    Build derived.game_plays_{season}_from_raw_pbp from raw.raw_pbp_{season}.
+
+    Returns fully-qualified derived table name.
+    """
+    derived_table = f"game_plays_{season}_from_raw_pbp"
+    raw_table = f"raw_pbp_{season}"
+
+    sql_drop = text(f'DROP TABLE IF EXISTS "{DERIVED_SCHEMA}"."{derived_table}";')
+
+    sql_ctas = text(
+        f"""
+        CREATE TABLE "{DERIVED_SCHEMA}"."{derived_table}" AS
+        SELECT
+          r.season,
+          r.game_id,
+          r.game_date,
+          r.session,
+          r.event_index,
+          r.game_period,
+          r.game_seconds,
+          r.clock_time,
+          r.event_type,
+          r.event_description,
+          r.event_detail,
+          r.event_zone,
+          r.event_team,
+          r.event_player_1,
+          r.event_player_2,
+          r.event_player_3,
+          r.home_team,
+          r.away_team,
+          r.home_skaters,
+          r.away_skaters,
+          r.home_score,
+          r.away_score,
+          r.game_score_state,
+          r.game_strength_state,
+          r.coords_x,
+          r.coords_y,
+          r.event_distance,
+          r.event_angle,
+          r.pred_goal
+        FROM "{RAW_SCHEMA}"."{raw_table}" r
+        WHERE r.season = :season
+          AND r.session = 'R';
+        """
+    )
+
+    sql_idx = text(
+        f"""
+        CREATE INDEX IF NOT EXISTS ix_{derived_table}_game_event
+        ON "{DERIVED_SCHEMA}"."{derived_table}" (game_id, event_index);
+        """
+    )
+
+    with engine.begin() as conn:
+        if drop:
+            conn.execute(sql_drop)
+        conn.execute(sql_ctas, {"season": int(season)})
+        conn.execute(sql_idx)
+
+    return f"{DERIVED_SCHEMA}.{derived_table}"
 
 
 def create_table(engine, metadata, table):
