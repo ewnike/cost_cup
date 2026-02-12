@@ -22,6 +22,7 @@ from sqlalchemy import text
 
 from db_utils import get_db_engine
 
+TARGET_SEASONS = ["20152016", "20162017", "20172018"]
 engine = get_db_engine()
 
 # --------------------------------------------------
@@ -37,39 +38,41 @@ try:
         df_games = pd.read_sql_query(
             text("""
                 SELECT
-                    g.season,
+                    g.season::text AS season,
                     gss.game_id,
                     gss.player_id,
                     gss.team_id,
-                    gss.timeOnIce,
+                    gss."timeOnIce"            AS time_on_ice,
                     gss.assists,
                     gss.goals,
                     gss.shots,
                     gss.hits,
-                    gss.powerPlayGoals,
-                    gss.powerPlayAssists,
-                    gss.penaltyMinutes,
-                    gss.faceOffWins,
-                    gss.faceoffTaken,
+                    gss."powerPlayGoals"       AS power_play_goals,
+                    gss."powerPlayAssists"     AS power_play_assists,
+                    gss."penaltyMinutes"       AS penalty_minutes,
+                    gss."faceOffWins"          AS face_off_wins,
+                    gss."faceoffTaken"         AS faceoff_taken,
                     gss.takeaways,
                     gss.giveaways,
-                    gss.shortHandedGoals,
-                    gss.shortHandedAssists,
+                    gss."shortHandedGoals"     AS short_handed_goals,
+                    gss."shortHandedAssists"   AS short_handed_assists,
                     gss.blocked,
-                    gss.plusMinus,
-                    gss.evenTimeOnIce,
-                    gss.shortHandedTimeOnIce,
-                    gss.powerPlayTimeOnIce
-                FROM game_skater_stats gss
-                JOIN game g
-                    ON g.game_id = gss.game_id
-                WHERE g.season >= 20152016
+                    gss."plusMinus"            AS plus_minus,
+                    gss."evenTimeOnIce"        AS even_time_on_ice,
+                    gss."shortHandedTimeOnIce" AS short_handed_time_on_ice,
+                    gss."powerPlayTimeOnIce"   AS power_play_time_on_ice
+                FROM raw.game_skater_stats gss
+                JOIN raw.game g
+                ON g.game_id = gss.game_id
+                WHERE g.season >= 20152016;
             """),
             conn,
         )
 finally:
     engine.dispose()
 
+df_games["season"] = df_games["season"].astype(str)
+df_games = df_games[df_games["season"].isin(TARGET_SEASONS)].copy()
 print("df_games seasons:", sorted(df_games["season"].astype(str).unique())[-10:])
 print("player-game rows:", len(df_games))
 
@@ -87,26 +90,26 @@ print("player-game rows:", len(df_games))
 group_cols = ["player_id", "season", "team_id"]
 
 agg_dict = {
-    "game_id": "nunique",  # games played
-    "timeOnIce": "sum",
-    "evenTimeOnIce": "sum",
-    "powerPlayTimeOnIce": "sum",
-    "shortHandedTimeOnIce": "sum",
+    "game_id": "nunique",
+    "time_on_ice": "sum",
+    "even_time_on_ice": "sum",
+    "power_play_time_on_ice": "sum",
+    "short_handed_time_on_ice": "sum",
     "goals": "sum",
     "assists": "sum",
     "shots": "sum",
     "hits": "sum",
-    "powerPlayGoals": "sum",
-    "powerPlayAssists": "sum",
-    "shortHandedGoals": "sum",
-    "shortHandedAssists": "sum",
-    "penaltyMinutes": "sum",
-    "faceOffWins": "sum",
-    "faceoffTaken": "sum",
+    "power_play_goals": "sum",
+    "power_play_assists": "sum",
+    "short_handed_goals": "sum",
+    "short_handed_assists": "sum",
+    "penalty_minutes": "sum",
+    "face_off_wins": "sum",
+    "faceoff_taken": "sum",
     "takeaways": "sum",
     "giveaways": "sum",
     "blocked": "sum",
-    "plusMinus": "sum",
+    "plus_minus": "sum",  # ✅ THIS fixes the typo situation
 }
 
 df_season = df_games.groupby(group_cols).agg(agg_dict).reset_index()
@@ -120,10 +123,10 @@ print("Player-season rows:", len(df_season))
 # --------------------------------------------------
 # timeOnIce is seconds -> convert to minutes
 
-df_season["toi_total_min"] = df_season["timeOnIce"] / 60.0
-df_season["toi_ev_min"] = df_season["evenTimeOnIce"] / 60.0
-df_season["toi_pp_min"] = df_season["powerPlayTimeOnIce"] / 60.0
-df_season["toi_sh_min"] = df_season["shortHandedTimeOnIce"] / 60.0
+df_season["toi_total_min"] = df_season["time_on_ice"] / 60.0
+df_season["toi_ev_min"] = df_season["even_time_on_ice"] / 60.0
+df_season["toi_pp_min"] = df_season["power_play_time_on_ice"] / 60.0
+df_season["toi_sh_min"] = df_season["short_handed_time_on_ice"] / 60.0
 
 MIN_TOI_MIN = 200  # tweak as you like
 df_season = df_season[df_season["toi_total_min"] >= MIN_TOI_MIN].copy()
@@ -147,16 +150,16 @@ df_season["HIT60"] = df_season["hits"] / df_season["toi_total_min"] * 60.0
 df_season["BLK60"] = df_season["blocked"] / df_season["toi_total_min"] * 60.0
 df_season["TAKE60"] = df_season["takeaways"] / df_season["toi_total_min"] * 60.0
 df_season["GIVE60"] = df_season["giveaways"] / df_season["toi_total_min"] * 60.0
-df_season["PIM60"] = df_season["penaltyMinutes"] / df_season["toi_total_min"] * 60.0
+df_season["PIM60"] = df_season["penalty_minutes"] / df_season["toi_total_min"] * 60.0
 
 # Special teams
 df_season["PP_PTS60"] = (
-    (df_season["powerPlayGoals"] + df_season["powerPlayAssists"])
+    (df_season["power_play_goals"] + df_season["power_play_assists"])
     / df_season["toi_total_min"]
     * 60.0
 )
 df_season["SH_PTS60"] = (
-    (df_season["shortHandedGoals"] + df_season["shortHandedAssists"])
+    (df_season["short_handed_goals"] + df_season["short_handed_assists"])
     / df_season["toi_total_min"]
     * 60.0
 )
@@ -168,16 +171,17 @@ df_season["SH_TOI_per_game"] = df_season["toi_sh_min"] / df_season["games_played
 df_season["TOI_per_game"] = df_season["toi_total_min"] / df_season["games_played"]
 
 # Faceoff win %
-df_season["fo_attempts"] = df_season["faceoffTaken"]
+df_season["fo_attempts"] = df_season["faceoff_taken"]
 df_season["fo_win_pct"] = np.where(
     df_season["fo_attempts"] > 0,
-    df_season["faceOffWins"] / df_season["fo_attempts"],
+    df_season["face_off_wins"] / df_season["fo_attempts"],
     np.nan,
 )
+
 df_season["fo_win_pct"] = df_season["fo_win_pct"].fillna(df_season["fo_win_pct"].mean())
 
 # plusMinus per 60 just as another flavor
-df_season["PLUSMINUS60"] = df_season["plusMinus"] / df_season["toi_total_min"] * 60.0
+df_season["PLUSMINUS60"] = df_season["plus_minus"] / df_season["toi_total_min"] * 60.0
 
 
 # --------------------------------------------------
@@ -244,12 +248,21 @@ features = [
     "CF_pct",
 ]
 
-# keep only seasons where we actually have Corsi
-target_seasons = ["20152016", "20162017", "20172018"]
-df_model = df_merged[df_merged["season"].isin(target_seasons)].copy()
+# Keep only legacy seasons (and make sure season is comparable)
+TARGET_SEASONS = ["20152016", "20162017", "20172018"]
+df_merged["season"] = df_merged["season"].astype(str)
 
-# drop rows with any NaN in the features
-df_model = df_model.dropna(subset=features)
+# "before" = after TOI filter + Corsi merge, but before dropna(features)
+before = df_merged[df_merged["season"].isin(TARGET_SEASONS)].copy()
+
+# Final modeling set = drop rows with any NaN in the features
+df_model = before.dropna(subset=features).copy()
+
+print("Dropped by season (due to dropna(features)):")
+print(
+    before.groupby("season").size().sub(df_model.groupby("season").size(), fill_value=0).astype(int)
+)
+
 
 X = df_model[features].values
 
@@ -263,36 +276,19 @@ X_scaled = scaler.fit_transform(X)
 
 
 # --------------------------------------------------
-# 8. Try different k and choose by silhouette
+# 8. Choose k (Option 1: force k=3)
 # --------------------------------------------------
-
-best_k = None
-best_score = -1.0
-
-for k in range(3, 11):  # 3–10 clusters
-    km = KMeans(n_clusters=k, n_init=25, random_state=42)
-    labels = km.fit_predict(X_scaled)
-    score = silhouette_score(X_scaled, labels)
-    print(f"k={k}, silhouette={score:.3f}")
-    if score > best_score:
-        best_score = score
-        best_k = k
-
-print(f"\nBest k = {best_k} (silhouette={best_score:.3f})")
-
+k_final = 3
 
 # --------------------------------------------------
 # 9. Fit final model & assign clusters
 # --------------------------------------------------
-
-k_final = best_k
 kmeans_final = KMeans(n_clusters=k_final, n_init=50, random_state=42)
 df_model["cluster"] = kmeans_final.fit_predict(X_scaled)
 
 # --------------------------------------------------
 # 10. Inspect cluster centers in original units
 # --------------------------------------------------
-
 centers_scaled = kmeans_final.cluster_centers_
 centers = scaler.inverse_transform(centers_scaled)
 
@@ -301,44 +297,17 @@ cluster_centers["cluster"] = range(k_final)
 cluster_centers = cluster_centers.set_index("cluster")
 
 print("\nCluster centers (original units, rounded):")
-print(cluster_centers.round(2))
-
-
-# --------------------------------------------------
-# 11. Sample players per cluster
-# --------------------------------------------------
-
-display_cols = (
-    [
-        "player_id",
-        "season",
-        "team_id",
-        "games_played",
-        "toi_total_min",
-    ]
-    + features
-    + ["cluster"]
-)
-
-for c in range(k_final):
-    print(f"\n=== Cluster {c} example players ===")
-    subset = df_model[df_model["cluster"] == c]
-    if subset.empty:
-        print("  (no players)")
-        continue
-    sample = subset.sample(n=min(10, len(subset)), random_state=42)
-    print(sample[display_cols].round(2).to_string(index=False))
-
+print(cluster_centers.round(2).to_string())
 
 # --------------------------------------------------
-# 12. Save results
+# 12. Save results (no duplicate confusing filenames)
 # --------------------------------------------------
+out_players = f"skater_merged_player_seasons_with_clusters_k{k_final}.csv"
+out_centers = f"skater_merged_cluster_centers_k{k_final}.csv"
 
-# df_model.to_csv("skater_merged_player_seasons_with_clusters.csv", index=False)
-# cluster_centers.to_csv("skater_merged_cluster_centers.csv")
-df_model.to_csv("skater_merged_player_seasons_with_clusters_all.csv", index=False)
-cluster_centers.to_csv("skater_merged_cluster_centers_all.csv", index=False)
+df_model.to_csv(out_players, index=False)
+cluster_centers.to_csv(out_centers)
 
 print("\nSaved:")
-print("  skater_merged_player_seasons_with_clusters.csv")
-print("  skater_merged_cluster_centers.csv")
+print(f"  {out_players}")
+print(f"  {out_centers}")

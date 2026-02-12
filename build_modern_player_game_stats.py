@@ -8,7 +8,7 @@ Phase 1 (available now):
 
 Inputs:
 - derived.game_plays_{season}_from_raw_pbp (team-level events, has time)
-- derived.raw_shifts_resolved (resolved shifts)
+- raw.raw_shifts_resolved_final (resolved shifts)
 - dim.dim_team_code
 
 Output:
@@ -22,14 +22,12 @@ from typing import List
 
 import numpy as np
 import pandas as pd
-from sqlalchemy import text
+from sqlalchemy import bindparam, text
 
 from constants import SEASONS_MODERN
 from db_utils import get_db_engine
 from log_utils import setup_logger
 from schema_utils import fq
-
-# Reuse from your modern ES builder
 from strength_utils import (
     apply_exclude_to_plays,
     build_exclude_timeline_equal_strength,
@@ -134,25 +132,123 @@ def update_corsi_counts(df_corsi: pd.DataFrame, event: pd.Series, gs_game: pd.Da
 
 
 def build_player_game_stats_for_season(
-    season: int, *, limit_games: int | None = None
+    season: int,
+    *,
+    limit_games: int | None = None,
+    game_ids_override: list[int] | None = None,
 ) -> pd.DataFrame:
+    """
+    Build player-game stats for one season.
+
+    Plays source (derived.game_plays_{season}_from_raw_pbp) columns used:
+      - game_id, game_seconds, event_type, event_team, home_team, away_team
+
+    Shifts source:
+      - raw.raw_shifts_resolved_final (player_id_resolved_final)
+
+    Team mapping:
+      - dim.dim_team_code (team_code -> team_id)
+
+    Output columns in result:
+      season, game_id, player_id, team_id, cf, ca, toi_total_sec, toi_es_sec, cf60, ca60, cf_percent
+    """
     engine = get_db_engine()
 
     plays_view = fq("derived", f"game_plays_{season}_from_raw_pbp")
-    shifts_resolved = fq("derived", "raw_shifts_resolved")
+    shifts_view = fq("raw", "raw_shifts_resolved_final")
     dim_team_code = fq("dim", "dim_team_code")
+
+    logger.info("plays_view=%s", plays_view)
+    logger.info("shifts_view=%s", shifts_view)
+    logger.info("dim_team_code=%s", dim_team_code)
 
     try:
         with engine.connect() as conn:
-            gp = pd.read_sql_query(text(f"SELECT * FROM {plays_view}"), conn)
+            # -------------------------
+            # LOAD plays (gp) with only needed columns
+            # -------------------------
+            gp = pd.read_sql_query(
+                text(
+                    f"""
+                    SELECT
+                        game_id,
+                        game_seconds,
+                        event_type,
+                        event_team,
+                        home_team,
+                        away_team
+                    FROM {plays_view}
+                    """
+                ),
+                conn,
+            )
 
+            # team_code -> team_id mapping
+            dt = pd.read_sql_query(
+                text(f"SELECT team_code, team_id FROM {dim_team_code}"),
+                conn,
+            )
+            team_code_to_id = dict(zip(dt["team_code"], dt["team_id"]))
+
+            # -------------------------
+            # NORMALIZE plays (gp) to expected schema
+            # -------------------------
+            gp = gp.copy()
+
+            # time
+            gp["time"] = pd.to_numeric(gp["game_seconds"], errors="coerce")
+
+            # event mapping: your view uses codes like SHOT/GOAL/MISS/BLOCK
+            event_map = {
+                "SHOT": "Shot",
+                "GOAL": "Goal",
+                "MISS": "Missed Shot",
+                "BLOCK": "Blocked Shot",
+            }
+            gp["event"] = gp["event_type"].map(event_map)
+
+            unknown = gp.loc[gp["event"].isna(), "event_type"].value_counts().head(10)
+            if not unknown.empty:
+                logger.info("%s: unmapped event_type sample: %s", season, unknown.to_dict())
+
+            # team_id_for
+            gp["team_id_for"] = gp["event_team"].map(team_code_to_id)
+
+            # team_id_against depends on whether event_team is home or away
+            is_home_for = gp["event_team"] == gp["home_team"]
+            gp["team_id_against"] = np.where(
+                is_home_for,
+                gp["away_team"].map(team_code_to_id),
+                gp["home_team"].map(team_code_to_id),
+            )
+
+            # drop unusable rows
+            gp = gp.dropna(
+                subset=["game_id", "time", "event", "team_id_for", "team_id_against"]
+            ).copy()
+
+            # dtypes
+            gp["game_id"] = pd.to_numeric(gp["game_id"], errors="coerce").astype("int64")
+            gp["time"] = gp["time"].astype("int64")
+            gp["team_id_for"] = gp["team_id_for"].astype("int64")
+            gp["team_id_against"] = gp["team_id_against"].astype("int64")
+
+            # keep only corsi-relevant events
+            gp = gp[gp["event"].isin(["Shot", "Goal", "Missed Shot", "Blocked Shot"])].copy()
+
+            gp = gp.sort_values(["game_id", "time"], ignore_index=True)
+
+            # -------------------------
+            # LOAD shifts (gs)
+            # -------------------------
             gs = pd.read_sql_query(
-                text(f"""
+                text(
+                    f"""
                     SELECT
                         rs.game_id,
-                        rs.player_id_resolved AS player_id,
+                        rs.player_id_resolved_final AS player_id,
                         dt.team_id,
-                        rs.position,
+                        rs."position" AS position,
                         rs.game_period AS period,
                         CASE WHEN rs.game_period IN (1,2,3)
                             THEN (rs.game_period - 1) * 1200 + rs.seconds_start
@@ -160,80 +256,73 @@ def build_player_game_stats_for_season(
                         CASE WHEN rs.game_period IN (1,2,3)
                             THEN (rs.game_period - 1) * 1200 + rs.seconds_end
                             ELSE 3600 + rs.seconds_end END AS shift_end
-                    FROM {shifts_resolved} rs
+                    FROM {shifts_view} rs
                     JOIN {dim_team_code} dt
                       ON dt.team_code = rs.team
                     WHERE rs.season = :season
                       AND rs.session = 'R'
+                      AND rs.player_id_resolved_final IS NOT NULL
                       AND rs.seconds_end > rs.seconds_start
-                """),
+                    """
+                ),
                 conn,
                 params={"season": int(season)},
             )
+
     finally:
         engine.dispose()
 
     if gp.empty or gs.empty:
-        logger.warning("%s: missing plays/shifts data", season)
+        logger.warning("%s: missing plays/shifts data (gp=%s gs=%s)", season, len(gp), len(gs))
         return pd.DataFrame()
 
-    # --- CLEAN SHIFTS DATA ---
+    # -------------------------
+    # CLEAN SHIFTS DATA
+    # -------------------------
     gs = gs.copy()
-
-    # coerce critical IDs and times
     for col in ["game_id", "player_id", "team_id", "shift_start", "shift_end"]:
         gs[col] = pd.to_numeric(gs[col], errors="coerce")
-
-    # drop rows missing critical fields
     gs = gs.dropna(subset=["game_id", "player_id", "team_id", "shift_start", "shift_end"]).copy()
 
-    # cast after dropna
     gs["game_id"] = gs["game_id"].astype("int64")
     gs["player_id"] = gs["player_id"].astype("int64")
     gs["team_id"] = gs["team_id"].astype("int64")
     gs["shift_start"] = gs["shift_start"].astype("int64")
     gs["shift_end"] = gs["shift_end"].astype("int64")
-
-    # sanity: enforce positive durations
     gs = gs[gs["shift_end"] > gs["shift_start"]].copy()
 
-    # ensure gp time numeric
-    gp = gp.copy()
-    gp["time"] = pd.to_numeric(gp["time"], errors="coerce").astype("Int64")
-    gp = gp.dropna(subset=["time"]).copy()
-    gp["time"] = gp["time"].astype("int64")
-
-    # ✅ ensure game_id numeric (needed for grouping/filtering)
-    gp["game_id"] = pd.to_numeric(gp["game_id"], errors="coerce")
-    gp = gp.dropna(subset=["game_id"]).copy()
-    gp["game_id"] = gp["game_id"].astype("int64")
-
-    # corsi-relevant events only (for phase 1)
-    gp = gp[gp["event"].isin(["Shot", "Goal", "Missed Shot", "Blocked Shot"])].copy()
-
-    gp["team_id_for"] = pd.to_numeric(gp["team_id_for"], errors="coerce")
-    gp["team_id_against"] = pd.to_numeric(gp["team_id_against"], errors="coerce")
-    gp = gp.dropna(subset=["team_id_for", "team_id_against"]).copy()
-
-    gp["team_id_for"] = gp["team_id_for"].astype("int64")
-    gp["team_id_against"] = gp["team_id_against"].astype("int64")
-
-    gp = gp.sort_values(["game_id", "time"], ignore_index=True)
-
-    # limit games for test runs
+    # -------------------------
+    # GAME LOOP
+    # -------------------------
     gp_ids = set(gp["game_id"].unique())
     gs_ids = set(gs["game_id"].unique())
     game_ids = sorted(gp_ids & gs_ids)
 
-    if limit_games is not None:
-        game_ids = game_ids[:limit_games]
-        gp = gp[gp["game_id"].isin(game_ids)].copy()
-        gs = gs[gs["game_id"].isin(game_ids)].copy()
+    # override to specific games (preferred for sanity checks)
+    if game_ids_override is not None:
+        game_ids = [g for g in game_ids_override if g in gp_ids and g in gs_ids]
 
-    out_rows: List[pd.DataFrame] = []
+    # otherwise slice for test mode
+    elif limit_games is not None:
+        game_ids = game_ids[:limit_games]
+
+    # now filter gp/gs to exactly what we will process
+    gp = gp[gp["game_id"].isin(game_ids)].copy()
+    gs = gs[gs["game_id"].isin(game_ids)].copy()
+
+    logger.info(
+        "%s: gp games=%s gs games=%s processing_games=%s first_games=%s",
+        season,
+        len(gp_ids),
+        len(gs_ids),
+        len(game_ids),
+        game_ids[:10],
+    )
 
     plays_by_game = dict(tuple(gp.groupby("game_id", sort=False)))
     shifts_by_game = dict(tuple(gs.groupby("game_id", sort=False)))
+
+    out_rows: List[pd.DataFrame] = []
 
     for game_id in game_ids:
         gp_game = plays_by_game.get(game_id)
@@ -272,11 +361,11 @@ def build_player_game_stats_for_season(
         )
         merged["cf_percent"] = np.where(
             (merged["cf"] + merged["ca"]) > 0,
-            100.0 * merged["cf"] / (merged["cf"] + merged["ca"]),
-            0.0,
+            merged["cf"] / (merged["cf"] + merged["ca"]),
+            np.nan,
         )
 
-        merged["season"] = str(season)
+        merged["season"] = int(season)
         out_rows.append(merged)
 
     if not out_rows:
@@ -284,14 +373,14 @@ def build_player_game_stats_for_season(
 
     out = pd.concat(out_rows, ignore_index=True)
 
-    # final dtype cleanup
+    # final dtypes
     out["game_id"] = out["game_id"].astype("int64")
     out["player_id"] = out["player_id"].astype("int64")
     out["team_id"] = out["team_id"].astype("int64")
     out["cf"] = out["cf"].astype("int64")
     out["ca"] = out["ca"].astype("int64")
-    out["toi_total_sec"] = out["toi_total_sec"].astype("int64")
-    out["toi_es_sec"] = out["toi_es_sec"].astype("int64")
+    out["toi_total_sec"] = out["toi_total_sec"].fillna(0).astype("int64")
+    out["toi_es_sec"] = out["toi_es_sec"].fillna(0).astype("int64")
 
     return out
 
@@ -299,23 +388,76 @@ def build_player_game_stats_for_season(
 def main() -> None:
     os.makedirs(OUT_DIR, exist_ok=True)
 
-    # Start with a small test:
-    # set limit_games=3 for a smoke test, then remove it.
-
-    TEST_MODE = False
+    TEST_MODE = True
     TEST_LIMIT_GAMES = 3 if TEST_MODE else None
+    suffix = "_test" if TEST_MODE else ""
 
     for season in SEASONS_MODERN:
-        logger.info("Building player-game stats for %s", season)
-        df = build_player_game_stats_for_season(int(season), limit_games=TEST_LIMIT_GAMES)
-        suffix = "_test" if TEST_MODE else ""
+        season_i = int(season)
+        logger.info("Building player-game stats for %s", season_i)
+
+        # ---- Optional targeted sanity override for 20182019 in TEST_MODE ----
+        if season_i == 20182019 and TEST_MODE:
+            wanted = [8475640, 8478427, 8483678]
+
+            engine = get_db_engine()
+            try:
+                with engine.connect() as conn:
+                    games_df = pd.read_sql_query(
+                        text(
+                            """
+                            SELECT DISTINCT game_id
+                            FROM raw.raw_shifts_resolved_final
+                            WHERE season = :season
+                              AND session = 'R'
+                              AND player_id_resolved_final = ANY(:wanted)
+                            ORDER BY game_id
+                            LIMIT 25
+                            """
+                        ),
+                        conn,
+                        params={"season": season_i, "wanted": wanted},
+                    )
+            finally:
+                engine.dispose()
+
+            game_ids_override = games_df["game_id"].astype(int).tolist()
+            logger.info(
+                "20182019 sanity override games count=%s sample=%s",
+                len(game_ids_override),
+                game_ids_override[:10],
+            )
+
+            df = build_player_game_stats_for_season(
+                season_i,
+                game_ids_override=game_ids_override,
+            )
+        else:
+            df = build_player_game_stats_for_season(season_i, limit_games=TEST_LIMIT_GAMES)
+
+        # ---- Season-specific sanity check (only for 20182019) ----
+        if season_i == 20182019:
+            wanted_set = {8475640, 8478427, 8483678}
+            present = set(df["player_id"].unique()) if not df.empty else set()
+            logger.info(
+                "20182019: wanted_present=%s missing=%s",
+                wanted_set & present,
+                wanted_set - present,
+            )
+            if not df.empty:
+                logger.info(
+                    "20182019 wanted sample:\n%s",
+                    df[df["player_id"].isin(list(wanted_set))].head(10).to_string(index=False),
+                )
+
+        # ---- Skip write if empty ----
         if df.empty:
-            logger.warning("%s: no rows produced", season)
+            logger.warning("%s: no rows produced", season_i)
             continue
 
-        out_file = os.path.join(OUT_DIR, f"player_game_stats_{season}{suffix}.csv")
+        out_file = os.path.join(OUT_DIR, f"player_game_stats_{season_i}{suffix}.csv")
         df.to_csv(out_file, index=False)
-        logger.info("%s: wrote %s rows -> %s", season, len(df), out_file)
+        logger.info("%s: wrote %s rows -> %s", season_i, len(df), out_file)
 
 
 if __name__ == "__main__":

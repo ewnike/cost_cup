@@ -27,6 +27,7 @@ def _run_ctas_game_plays(engine) -> None:
 def _run_jobs(engine) -> int:
     """
     Run pipeline jobs if modules exist.
+
     Return 0 if jobs ran (or are not wired yet); non-zero only for real failures.
     """
     try:

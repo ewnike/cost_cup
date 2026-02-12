@@ -40,6 +40,29 @@ YEAR_TO_SEASON = {
     2024: 20242025,
 }
 
+# --- RESOLVE player_id: prefer Spotrac URL mapping first ---
+SPOTRAC_ID_TO_NHL_ID = {
+    19956: 8478427,  # Sebastian Aho (CAR F)
+    24067: 8480222,  # Sebastian Aho (NYI D)
+}
+
+_SPOTRAC_ID_RE = re.compile(r"/(?:redirect/)?player/(\d+)\b")
+
+
+def spotrac_id_from_url(url: str | None) -> int | None:
+    """
+    Docstring for spotrac_id_from_url.
+
+    :param url: Description
+    :type url: str | None
+    :return: Description
+    :rtype: int | None
+    """
+    if not url:
+        return None
+    m = _SPOTRAC_ID_RE.search(str(url))
+    return int(m.group(1)) if m else None
+
 
 def py_norm_name(s: str) -> str:
     """Mirror your norm_name logic (good enough for cap-hit matching)."""
@@ -94,6 +117,26 @@ def main() -> None:
                 df["name_key"] = (df["firstName"].fillna("") + " " + df["lastName"].fillna("")).map(
                     py_norm_name
                 )
+                # Always create player_id column
+                df["player_id"] = pd.NA
+
+                # (0) Prefer deterministic mapping from Spotrac URL when possible
+                if "spotrac_url" in df.columns:
+                    spotrac_ids = df["spotrac_url"].map(spotrac_id_from_url)
+                    df.loc[spotrac_ids.notna(), "player_id"] = spotrac_ids.map(SPOTRAC_ID_TO_NHL_ID)
+
+                    print("spotrac-mapped rows:", df["player_id"].notna().sum())
+                    print(
+                        df.loc[
+                            df["spotrac_url"].isin(
+                                [
+                                    "https://www.spotrac.com/redirect/player/19956",
+                                    "https://www.spotrac.com/redirect/player/24067",
+                                ]
+                            ),
+                            ["spotrac_url", "player_id", "firstName", "lastName"],
+                        ]
+                    )
 
                 dim_player_unique = fqs("dim", "dim_player_name_unique")
                 dim_player_info = fqs("dim", "player_info")
@@ -107,11 +150,12 @@ def main() -> None:
                     """)
                     m1 = session.execute(q1, {"keys": name_key_rows}).fetchall()
                     map1 = {r[0]: int(r[1]) for r in m1 if r[1] is not None}
-                    df["player_id"] = df["name_key"].map(map1)
 
-                missing = df["player_id"].isna()
+                    missing = df["player_id"].isna()
+                    df.loc[missing, "player_id"] = df.loc[missing, "name_key"].map(map1)
+
                 # (2b) fallback: name_key match against dim.player_info normalized on the fly
-
+                missing = df["player_id"].isna()
                 if missing.any():
                     q = text(f'SELECT player_id, "firstName", "lastName" FROM {dim_player_info}')
                     pi = pd.DataFrame(
@@ -128,24 +172,6 @@ def main() -> None:
 
                     key_to_pid = dict(zip(pi["name_key"], pi["player_id"]))
                     df.loc[missing, "player_id"] = df.loc[missing, "name_key"].map(key_to_pid)
-
-                # if missing.any():
-                #     q2 = text(f"""
-                #         SELECT "firstName", "lastName", player_id
-                #         FROM {dim_player_info}
-                #     """)
-                #     pi = pd.DataFrame(
-                #         session.execute(q2).fetchall(),
-                #         columns=["firstName", "lastName", "player_id"],
-                #     )
-                #     pi["firstName"] = pi["firstName"].astype(str)
-                #     pi["lastName"] = pi["lastName"].astype(str)
-
-                #     df = df.merge(
-                #         pi, on=["firstName", "lastName"], how="left", suffixes=("", "_pi")
-                #     )
-                #     df["player_id"] = df["player_id"].fillna(df["player_id_pi"])
-                #     df = df.drop(columns=["player_id_pi"], errors="ignore")
 
                 out = df[["player_id", "firstName", "lastName", "capHit", "spotrac_url"]].copy()
                 out = out.drop_duplicates(subset=["spotrac_url"], keep="first")

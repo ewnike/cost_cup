@@ -39,6 +39,23 @@ NAME_ALIAS = {
     "grossman": "grossmann",
 }
 
+SPOTRAC_ID_TO_NHL_ID = {
+    19956: 8478427,  # CAR forward
+    24067: 8480222,  # NYI defenseman
+}
+
+
+def spotrac_id_from_url(url: str | None) -> int | None:
+    """
+    Extract Spotrac redirect player id from URLs.
+
+      https://www.spotrac.com/redirect/player/19956.
+    """
+    if not url:
+        return None
+    m = re.search(r"/redirect/player/(\d+)", str(url))
+    return int(m.group(1)) if m else None
+
 
 def py_norm_name(s: str) -> str:
     """
@@ -534,6 +551,8 @@ def backfill_season(season: int) -> None:
                 SELECT "firstName", "lastName", spotrac_url
                 FROM {table}
                 WHERE player_id IS NULL
+                    OR spotrac_url IN ('https://www.spotrac.com/redirect/player/19956',
+                      'https://www.spotrac.com/redirect/player/24067')
             """),
             conn,
         )
@@ -553,12 +572,21 @@ def backfill_season(season: int) -> None:
             first2, last2 = apply_alias(first, last)
             full = f"{first2} {last2}".strip()
 
-            try:
-                pid = nhl_search_player_id(full)
-            except Exception as e:
-                print(f"⚠️ {season}: search error for {full}: {e}")
-                skipped += 1
-                continue
+            pid = None
+
+            # 1) Prefer deterministic mapping from Spotrac URL
+            spotrac_id = spotrac_id_from_url(url) if url else None
+            if spotrac_id is not None:
+                pid = SPOTRAC_ID_TO_NHL_ID.get(spotrac_id)
+
+            # --- Fallback to NHL search only if no Spotrac mapping ---
+            if pid is None:
+                try:
+                    pid = nhl_search_player_id(full)
+                except Exception as e:
+                    print(f"⚠️ {season}: search error for {full}: {e}")
+                    skipped += 1
+                    continue
 
             if pid is None:
                 print(f"❌ {season}: no match: {full}")

@@ -580,7 +580,9 @@ def ctas_game_plays_from_raw_pbp(engine, season: int, *, drop: bool = True) -> s
     derived_table = f"game_plays_{season}_from_raw_pbp"
     raw_table = f"raw_pbp_{season}"
 
-    sql_drop = text(f'DROP TABLE IF EXISTS "{DERIVED_SCHEMA}"."{derived_table}";')
+    # Drop view first (if it exists), then table.
+    sql_drop_view = text(f'DROP VIEW IF EXISTS "{DERIVED_SCHEMA}"."{derived_table}" CASCADE;')
+    sql_drop_table = text(f'DROP TABLE IF EXISTS "{DERIVED_SCHEMA}"."{derived_table}" CASCADE;')
 
     sql_ctas = text(
         f"""
@@ -630,7 +632,8 @@ def ctas_game_plays_from_raw_pbp(engine, season: int, *, drop: bool = True) -> s
 
     with engine.begin() as conn:
         if drop:
-            conn.execute(sql_drop)
+            conn.execute(sql_drop_view)
+            conn.execute(sql_drop_table)
         conn.execute(sql_ctas, {"season": int(season)})
         conn.execute(sql_idx)
 
