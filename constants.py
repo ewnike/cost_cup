@@ -20,16 +20,15 @@ SEASONS_LEGACY = [
     20172018,
 ]
 
-# SEASONS_MODERN = [
-#     20182019,
-#     20192020,
-#     20202021,
-#     20212022,
-#     20222023,
-#     20232024,
-#     20242025,
-# ]
-SEASONS_MODERN = [20182019]
+SEASONS_MODERN = [
+    20182019,
+    20192020,
+    20202021,
+    20212022,
+    20222023,
+    20232024,
+    20242025,
+]
 
 # List of new NHL Seasons to be processed
 SEASONS_TO_RUN = [

@@ -146,20 +146,35 @@ def main() -> None:
         default=50,
         help="Max rows to print per query (default: 50).",
     )
+    parser.add_argument(
+        "--continue-on-error",
+        action="store_true",
+        help="Keep running remaining SQL files even if one fails.",
+    )
+    parser.add_argument(
+        "--file",
+        default="",
+        help="Run only a single .sql file (by filename) inside --dir, e.g. corsi_02b_missing_players_reason_codes.sql",
+    )
+    parser.add_argument(
+        "--continue-on-error",
+        action="store_true",
+        help="Continue running later SQL files even if one fails.",
+    )
+
+    failures: list[str] = []
     args = parser.parse_args()
 
     sql_dir = Path(args.dir)
     engine = get_db_engine()
     files = sorted(sql_dir.glob("*.sql"))
+    if args.file:
+        files = [sql_dir / args.file]
 
     if not files:
         raise FileNotFoundError(f"No .sql files found in {sql_dir}")
 
-    # ✅ Preflight: show exactly what will be run (and in what order)
-    print(f"\nSQL_DIR: {sql_dir.resolve()}")
-    print("Files to run (in order):")
-    for i, f in enumerate(files, start=1):
-        print(f"  {i:02d}. {f.name}")
+    failures = 0
 
     try:
         with engine.begin() as conn:
@@ -169,12 +184,25 @@ def main() -> None:
                     continue
 
                 print(f"\n=== RUN {f.name} ===")
-                result = conn.execute(text(sql))
 
-                # Print rows only if:
-                #  - user asked for it
-                #  - it's a SELECT/WITH
-                #  - and file matches --print-only (if provided)
+                failures: list[str] = []
+
+                try:
+                    result = conn.execute(text(sql))
+
+                except Exception as e:
+                    failures.append(f.name)
+                    print(f"❌ FAIL {f.name}: {e}")
+                    if not args.continue_on_error:
+                        raise
+                    continue  # move on to next file
+
+                if failures:
+                    print("\nFailures:")
+                    for n in failures:
+                        print(f" - {n}")
+                    raise SystemExit(1)
+
                 should_print = args.print_results and _looks_like_select(sql)
                 if args.print_only and args.print_only not in f.name:
                     should_print = False
@@ -185,7 +213,6 @@ def main() -> None:
                         cols = list(result.keys())
                         rows_tuples = [tuple(r) for r in rows]
                         _print_pretty_table(cols, rows_tuples)
-                        # show whether there are more rows not printed
                         extra = result.fetchone()
                         if extra is not None:
                             print(f"... (more rows not shown; limit={args.limit})")
@@ -195,6 +222,9 @@ def main() -> None:
                 print(f"✅ OK {f.name}")
     finally:
         engine.dispose()
+
+    if failures:
+        raise SystemExit(f"\nCompleted with {failures} failure(s).")
 
 
 if __name__ == "__main__":
