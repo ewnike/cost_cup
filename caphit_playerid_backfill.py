@@ -37,6 +37,11 @@ SEARCH_URL = "https://search.d3.nhle.com/api/v1/search/player"
 NAME_ALIAS = {
     "zuccarello-aasen": "zuccarello",
     "grossman": "grossmann",
+    "blueger": "blueger",
+}
+
+FIRST_ALIAS_BY_LAST = {
+    "blueger": {"theodor": "teddy"},
 }
 
 SPOTRAC_ID_TO_NHL_ID = {
@@ -44,16 +49,140 @@ SPOTRAC_ID_TO_NHL_ID = {
     24067: 8480222,  # NYI defenseman
 }
 
+_SPOTRAC_ID_RE = re.compile(r"/(\d+)(?=(/|$|\?|#))")
 
-def spotrac_id_from_url(url: str | None) -> int | None:
+
+def lookup_nhl_id_from_spotrac(conn, map_table: str, spotrac_id: int) -> int | None:
     """
-    Extract Spotrac redirect player id from URLs.
+    Docstring for lookup_nhl_id_from_spotrac.
 
-      https://www.spotrac.com/redirect/player/19956.
+    :param conn: Description
+    :param map_table: Description
+    :type map_table: str
+    :param spotrac_id: Description
+    :type spotrac_id: int
+    :return: Description
+    :rtype: int | None
+    """
+    row = conn.execute(
+        text(f"""
+            SELECT player_id
+            FROM {map_table}
+            WHERE spotrac_id = :sid
+        """),
+        {"sid": int(spotrac_id)},
+    ).fetchone()
+    return int(row[0]) if row and row[0] is not None else None
+
+
+# def upsert_spotrac_to_nhl(
+#     conn,
+#     spotrac_id: int,
+#     player_id: int,
+#     confidence: str,
+#     source: str,
+#     map_table: str | None = None,
+# ) -> None:
+#     """
+#     Docstring for upsert_spotrac_to_nhl.
+
+#     :param conn: Description
+#     :param spotrac_id: Description
+#     :type spotrac_id: int
+#     :param player_id: Description
+#     :type player_id: int
+#     :param confidence: Description
+#     :type confidence: str
+#     :param source: Description
+#     :type source: str
+#     :param map_table: Description
+#     :type map_table: str | None
+#     """
+#     map_table = map_table or f"{SCHEMA['dim']}.spotrac_to_nhl"
+
+
+#     conn.execute(
+#         text(f"""
+#             INSERT INTO {map_table} (spotrac_id, player_id, confidence, source, created_at)
+#             VALUES (:sid, :pid, :conf, :src, NOW())
+#             ON CONFLICT (spotrac_id) DO UPDATE
+#               SET player_id  = EXCLUDED.player_id,
+#                   confidence = EXCLUDED.confidence,
+#                   source     = EXCLUDED.source
+#             WHERE
+#               -- only update if this player_id isn't already mapped to another spotrac_id
+#               NOT EXISTS (
+#                 SELECT 1
+#                 FROM {map_table} m
+#                 WHERE m.player_id = EXCLUDED.player_id
+#                   AND m.spotrac_id <> EXCLUDED.spotrac_id
+#               )
+#         """),
+#         {"sid": int(spotrac_id), "pid": int(player_id), "conf": confidence, "src": source},
+#     )
+def upsert_spotrac_to_nhl(
+    conn,
+    map_table: str,
+    spotrac_id: int,
+    player_id: int,
+    confidence: str,
+    source: str,
+) -> bool:
+    """
+    Upsert spotrac_id -> player_id into dim.spotrac_to_nhl.
+
+    Returns:
+        True if inserted/updated, False if skipped due to player_id collision.
+
+    """
+    # If this player_id is already mapped to another spotrac_id, skip
+    row = conn.execute(
+        text(f"""
+            SELECT spotrac_id
+            FROM {map_table}
+            WHERE player_id = :pid
+              AND spotrac_id <> :sid
+        """),
+        {"pid": int(player_id), "sid": int(spotrac_id)},
+    ).fetchone()
+
+    if row:
+        existing_sid = int(row[0])
+        print(
+            f"⚠️ spotrac_to_nhl collision: player_id={player_id} already mapped "
+            f"to spotrac_id={existing_sid}; skipping new spotrac_id={spotrac_id}",
+            flush=True,
+        )
+        return False
+
+    # Otherwise safe upsert by spotrac_id
+    conn.execute(
+        text(f"""
+            INSERT INTO {map_table} (spotrac_id, player_id, confidence, source, created_at)
+            VALUES (:sid, :pid, :conf, :src, NOW())
+            ON CONFLICT (spotrac_id)
+            DO UPDATE SET
+                player_id  = EXCLUDED.player_id,
+                confidence = EXCLUDED.confidence,
+                source     = EXCLUDED.source
+        """),
+        {"sid": int(spotrac_id), "pid": int(player_id), "conf": confidence, "src": source},
+    )
+    return True
+
+
+def spotrac_id_from_url(url: str) -> int | None:
+    """
+    Docstring for spotrac_id_from_url.
+
+    :param url: Description
+    :type url: str
+    :return: Description
+    :rtype: int | None
     """
     if not url:
         return None
-    m = re.search(r"/redirect/player/(\d+)", str(url))
+    m = _SPOTRAC_ID_RE.search(url)
     return int(m.group(1)) if m else None
 
 
@@ -90,19 +219,28 @@ def py_norm_name(s: str) -> str:
 
 def apply_alias(first: str, last: str) -> tuple[str, str]:
     """
-    Apply known last-name aliases to handle spelling variations across sources.
+    Docstring for apply_alias.
 
-    Args:
-        first: First name (unchanged).
-        last: Last name, possibly with accents/punctuation.
-
-    Returns:
-        (first, last) where last may be replaced by a mapped alias.
-
+    :param first: Description
+    :type first: str
+    :param last: Description
+    :type last: str
+    :return: Description
+    :rtype: tuple[str, str]
     """
-    k = py_norm_name(last).replace(" ", "-")
-    if k in NAME_ALIAS:
-        return first, NAME_ALIAS[k]
+    last_norm = py_norm_name(last)
+    first_norm = py_norm_name(first)
+
+    # last-name alias
+    k_last = last_norm.replace(" ", "-")
+    if k_last in NAME_ALIAS:
+        last = NAME_ALIAS[k_last]
+        last_norm = py_norm_name(last)
+
+    # first-name alias gated by last
+    if last_norm in FIRST_ALIAS_BY_LAST:
+        first = FIRST_ALIAS_BY_LAST[last_norm].get(first_norm, first)
+
     return first, last
 
 
@@ -242,9 +380,16 @@ def _initials_from_first_parts(full_name: str) -> str:
     return initials
 
 
-def _bidirectional_nick_map() -> dict[str, set[str]]:
-    """Return a bidirectional mapping between formal first names and common nicknames."""
-    pairs = {
+def build_nickname_cliques() -> dict[str, set[str]]:
+    """
+    Build a fully-connected nickname map.
+
+    If alexander has {alex, sasha}, then:
+      alexander -> {alex, sasha}
+      alex      -> {alexander, sasha}
+      sasha     -> {alexander, alex}
+    """
+    buckets = {
         "michael": {"mike"},
         "nicholas": {"nick"},
         "christopher": {"chris"},
@@ -258,15 +403,21 @@ def _bidirectional_nick_map() -> dict[str, set[str]]:
         "patrick": {"pat"},
         "timothy": {"tim"},
         "benjamin": {"ben"},
+        "cristovel": {"boo"},
     }
 
-    # make it bidirectional
     out: dict[str, set[str]] = {}
-    for formal, nicks in pairs.items():
-        out.setdefault(formal, set()).update(nicks)
-        for nick in nicks:
-            out.setdefault(nick, set()).add(formal)
+
+    for formal, nicks in buckets.items():
+        bucket = {formal, *nicks}
+        for name in bucket:
+            out[name] = bucket - {name}  # everyone else in the same bucket
+
     return out
+
+
+def _bidirectional_nick_map() -> dict[str, set[str]]:
+    return build_nickname_cliques()
 
 
 def _first_name_variants(first_norm: str, full_name: str | None = None) -> set[str]:
@@ -532,27 +683,30 @@ def discover_cap_hit_seasons() -> list[int]:
 
 def backfill_season(season: int) -> None:
     """
-    Backfill missing player_id values for a given cap-hit season table.
+    Backfill dim.player_cap_hit_{season}.player_id using.
 
-    Reads rows from dim.player_cap_hit_{season} where player_id is NULL, resolves NHL player IDs
-    via `nhl_search_player_id`, upserts player info into dim.player_info, and updates the season
-    table (by spotrac_url when available, otherwise by name).
+      1) dim.spotrac_to_nhl lookup by parsed spotrac_id from spotrac_url
+      2) NHL search fallback (name-based) if mapping missing
 
-    Args:
-        season: Season identifier like 20152016.
-
+    When NHL search resolves and spotrac_id exists, upsert the mapping:
+      spotrac_id -> player_id.
     """
     engine = get_db_engine()
-    table = f"{SCHEMA['dim']}.player_cap_hit_{season}"
+    cap_table = f"{SCHEMA['dim']}.player_cap_hit_{season}"
+    map_table = f"{SCHEMA['dim']}.spotrac_to_nhl"
 
     with engine.begin() as conn:
+        # 0) Pull caphit rows that still need player_id
         missing = pd.read_sql(
             text(f"""
-                SELECT "firstName", "lastName", spotrac_url
-                FROM {table}
+                SELECT
+                    player_id,
+                    "firstName",
+                    "lastName",
+                    "capHit",
+                    spotrac_url
+                FROM {cap_table}
                 WHERE player_id IS NULL
-                    OR spotrac_url IN ('https://www.spotrac.com/redirect/player/19956',
-                      'https://www.spotrac.com/redirect/player/24067')
             """),
             conn,
         )
@@ -565,61 +719,72 @@ def backfill_season(season: int) -> None:
         skipped = 0
 
         for row in missing.itertuples(index=False):
-            first = str(row.firstName).strip()
-            last = str(row.lastName).strip()
-            url = row.spotrac_url
+            first = str(row.firstName).strip() if row.firstName is not None else ""
+            last = str(row.lastName).strip() if row.lastName is not None else ""
+            url = str(row.spotrac_url).strip() if row.spotrac_url is not None else ""
+
+            # must have URL to update deterministically (and you have UNIQUE(spotrac_url))
+            if not url:
+                print(f"⚠️ {season}: missing spotrac_url for '{first} {last}'; skipping")
+                skipped += 1
+                continue
 
             first2, last2 = apply_alias(first, last)
             full = f"{first2} {last2}".strip()
 
-            pid = None
+            spotrac_id = spotrac_id_from_url(url)
+            pid: int | None = None
 
-            # 1) Prefer deterministic mapping from Spotrac URL
-            spotrac_id = spotrac_id_from_url(url) if url else None
+            # 1) Spotrac→NHL mapping lookup first
             if spotrac_id is not None:
-                pid = SPOTRAC_ID_TO_NHL_ID.get(spotrac_id)
-
-            # --- Fallback to NHL search only if no Spotrac mapping ---
+                # pid = lookup_nhl_id_from_spotrac(conn, spotrac_id, map_table=map_table)
+                pid = lookup_nhl_id_from_spotrac(conn, map_table, spotrac_id)
+            # 2) NHL search fallback
             if pid is None:
                 try:
                     pid = nhl_search_player_id(full)
                 except Exception as e:
-                    print(f"⚠️ {season}: search error for {full}: {e}")
+                    print(f"⚠️ {season}: NHL search error for '{full}': {e}")
                     skipped += 1
                     continue
 
             if pid is None:
-                print(f"❌ {season}: no match: {full}")
+                print(f"❌ {season}: no NHL match: '{full}' ({url})")
                 skipped += 1
                 continue
 
-            upsert_dim_player_info(conn, pid, first, last)
-
-            # update cap-hit row by spotrac_url when available
-            if url is not None and str(url).strip() != "":
-                conn.execute(
-                    text(f"""
-                        UPDATE {table}
-                        SET player_id = :pid
-                        WHERE spotrac_url = :url
-                    """),
-                    {"pid": pid, "url": url},
+            # 3) Persist mapping if we have Spotrac id (only after NHL resolved)
+            if spotrac_id is not None:
+                upsert_spotrac_to_nhl(
+                    conn,
+                    map_table=map_table,
+                    spotrac_id=int(spotrac_id),
+                    player_id=int(pid),
+                    confidence="high",
+                    source="spotrac_url+nhl_search",
                 )
+
+            # 4) Upsert player_info
+            upsert_dim_player_info(conn, int(pid), first, last)
+
+            # 5) Update cap-hit row using unique natural key
+            result = conn.execute(
+                text(f"""
+                    UPDATE {cap_table}
+                    SET player_id = :pid
+                    WHERE spotrac_url = :url
+                      AND player_id IS NULL
+                """),
+                {"pid": int(pid), "url": url},
+            )
+
+            if result.rowcount and result.rowcount > 0:
+                resolved += 1
             else:
-                # fallback: update by name if no url (conservative)
-                conn.execute(
-                    text(f"""
-                        UPDATE {table}
-                        SET player_id = :pid
-                        WHERE player_id IS NULL
-                          AND "firstName" = :firstName
-                          AND "lastName"  = :lastName
-                    """),
-                    {"pid": pid, "firstName": first, "lastName": last},
-                )
+                # likely already updated in a prior run
+                skipped += 1
 
-            resolved += 1
-            time.sleep(0.08)  # be polite
+            time.sleep(0.08)
 
         print(f"✅ {season}: resolved={resolved}, skipped={skipped}")
 
@@ -629,3 +794,5 @@ def backfill_season(season: int) -> None:
 if __name__ == "__main__":
     for s in discover_cap_hit_seasons():
         backfill_season(s)
+    # for s in [20152016]:
+    #     backfill_season(s)

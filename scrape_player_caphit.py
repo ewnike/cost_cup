@@ -27,6 +27,8 @@ driver = webdriver.Safari()
 # Base URL to scrape
 BASE_URL = "https://www.spotrac.com/nhl/rankings/player/_/year/{}/sort/cap_total"
 
+VERBOSE = os.getenv("VERBOSE", "").strip().lower() in {"1", "true", "yes", "y", "on"}
+
 # Years to scrape
 # years = [2015, 2016, 2017]
 years = [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024]
@@ -117,16 +119,46 @@ for year in years:
     dfs_by_year[year] = df
 
     print(f"{year}: scraped {len(df)} players")
-    dupes = df.duplicated(subset=["firstName", "lastName"]).sum()
-    print(f"{year}: dupes by name = {dupes}")
 
-    dupe_rows = df[df.duplicated(subset=["firstName", "lastName"], keep=False)].sort_values(
-        ["lastName", "firstName"]
+    dupes_url = int(df.duplicated(subset=["spotrac_url"], keep=False).sum())
+    dupes_name = int(df.duplicated(subset=["firstName", "lastName"], keep=False).sum())
+
+    if dupes_url or dupes_name:
+        print(f"⚠️ {year}: dupes by spotrac_url: {dupes_url}")
+        print(f"⚠️ {year}: dupes by name: {dupes_name}")
+
+        if VERBOSE:
+            dupe_rows = df[df.duplicated(subset=["firstName", "lastName"], keep=False)].sort_values(
+                ["lastName", "firstName"]
+            )
+            if not dupe_rows.empty:
+                print(f"⚠️ {year}: duplicate names sample (up to 20 rows):")
+                print(dupe_rows.head(20).to_string(index=False))
+
+        # show a small sample of duplicate-name rows (avoid spamming)
+        dupe_rows = df[df.duplicated(subset=["firstName", "lastName"], keep=False)].sort_values(
+            ["lastName", "firstName"]
+        )
+        if not dupe_rows.empty:
+            print(f"⚠️ {year}: duplicate names sample (up to 20 rows):")
+            print(dupe_rows.head(20).to_string(index=False))
+    else:
+        print(f"✅ {year}: no duplicates by spotrac_url or name")
+
+    name_multi_url = (
+        df.dropna(subset=["spotrac_url"])
+        .groupby(["firstName", "lastName"])["spotrac_url"]
+        .nunique()
+        .reset_index(name="n_urls")
+        .query("n_urls > 1")
     )
-    if not dupe_rows.empty:
-        print(f"{year} duplicate names:")
-        print(dupe_rows)
 
+    if not name_multi_url.empty:
+        print("⚠️ same name mapped to multiple URLs (showing up to 20):")
+        print(name_multi_url.head(20).to_string(index=False))
+        if VERBOSE:
+            print("⚠️ full list:")
+            print(name_multi_url.to_string(index=False))
 driver.quit()
 
 for year, df in dfs_by_year.items():
