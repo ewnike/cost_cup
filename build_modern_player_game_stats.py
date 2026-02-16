@@ -8,7 +8,7 @@ Phase 1 (available now):
 
 Inputs:
 - derived.game_plays_{season}_from_raw_pbp (team-level events, has time)
-- raw.raw_shifts_resolved_final (resolved shifts)
+- raw.raw_shifts_resolved (resolved shifts)
 - dim.dim_team_code
 
 Output:
@@ -18,6 +18,7 @@ Output:
 from __future__ import annotations
 
 import os
+import pathlib
 from typing import List
 
 import numpy as np
@@ -33,6 +34,9 @@ from strength_utils import (
     build_exclude_timeline_equal_strength,
     filter_goalies_modern,
 )
+
+if os.getenv("DEBUG_IMPORTS") == "1":
+    print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
 
 logger = setup_logger()
 OUT_DIR = "player_game_stats"
@@ -144,7 +148,7 @@ def build_player_game_stats_for_season(
       - game_id, game_seconds, event_type, event_team, home_team, away_team
 
     Shifts source:
-      - raw.raw_shifts_resolved_final (player_id_resolved_final)
+      - raw.raw_shifts_resolved (player_id_resolved)
 
     Team mapping:
       - dim.dim_team_code (team_code -> team_id)
@@ -246,7 +250,7 @@ def build_player_game_stats_for_season(
                     f"""
                     SELECT
                         rs.game_id,
-                        rs.player_id_resolved_final AS player_id,
+                        rs.player_id_resolved AS player_id,
                         dt.team_id,
                         rs."position" AS position,
                         rs.game_period AS period,
@@ -261,7 +265,7 @@ def build_player_game_stats_for_season(
                       ON dt.team_code = rs.team
                     WHERE rs.season = :season
                       AND rs.session = 'R'
-                      AND rs.player_id_resolved_final IS NOT NULL
+                      AND rs.player_id_resolved IS NOT NULL
                       AND rs.seconds_end > rs.seconds_start
                     """
                 ),
@@ -407,10 +411,10 @@ def main() -> None:
                         text(
                             """
                             SELECT DISTINCT game_id
-                            FROM raw.raw_shifts_resolved_final
+                            FROM raw.raw_shifts_resolved
                             WHERE season = :season
                               AND session = 'R'
-                              AND player_id_resolved_final = ANY(:wanted)
+                              AND player_id_resolved = ANY(:wanted)
                             ORDER BY game_id
                             LIMIT 25
                             """

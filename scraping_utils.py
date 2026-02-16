@@ -8,10 +8,15 @@ the scraping files for this project.
 Eric Winiecke.
 """
 
+import os
+import pathlib
 import time
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+
+if os.getenv("DEBUG_IMPORTS") == "1":
+    print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
 
 
 def scroll_to_bottom(driver, wait_time: int = 2):  # noqa: D417

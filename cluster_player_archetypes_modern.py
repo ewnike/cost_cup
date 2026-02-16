@@ -1,3 +1,6 @@
+import os
+import pathlib
+
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
@@ -7,6 +10,9 @@ from sqlalchemy import text
 
 from db_utils import get_db_engine
 from log_utils import setup_logger
+
+if os.getenv("DEBUG_IMPORTS") == "1":
+    print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
 
 logger = setup_logger()
 

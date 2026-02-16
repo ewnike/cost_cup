@@ -5,6 +5,7 @@ Created on August 28, 2024 by Eric Winiecke. Uses Safari WebDriver.
 """
 
 import os
+import pathlib
 
 import pandas as pd
 from selenium import webdriver
@@ -14,6 +15,8 @@ from selenium.webdriver.safari.service import Service as SafariService
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
+if os.getenv("DEBUG_IMPORTS") == "1":
+    print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
 # Directory to store CSV files
 OUTPUT_DIR = "team_records"
 os.makedirs(OUTPUT_DIR, exist_ok=True)

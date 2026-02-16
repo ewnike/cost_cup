@@ -7,6 +7,7 @@ Eric Winiecke (updated)
 """
 
 import os
+import pathlib
 import re
 
 import pandas as pd
@@ -14,6 +15,9 @@ import pandas as pd
 from constants import SCHEMA
 from data_processing_utils import clear_dir_patterns
 from db_utils import get_db_engine
+
+if os.getenv("DEBUG_IMPORTS") == "1":
+    print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
 
 RECORDS_DIR = "team_records"
 SALARY_DIR = "team_salaries"

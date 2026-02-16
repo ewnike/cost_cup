@@ -1,7 +1,14 @@
-from sqlalchemy import text
+import os
+import pathlib
+
 import pandas as pd
+from sqlalchemy import text
+
 from db_utils import get_db_engine
 from schema_utils import fq
+
+if os.getenv("DEBUG_IMPORTS") == "1":
+    print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
 
 season = 20182019
 engine = get_db_engine()

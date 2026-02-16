@@ -5,7 +5,13 @@ Eric Winiecke
 January, 2026.
 """
 
+import os
+import pathlib
+
 import pandas as pd
+
+if os.getenv("DEBUG_IMPORTS") == "1":
+    print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
 
 # ------------- config: set the team you want to study ---------
 TEAM_ID = 16  # <-- change to the team_id you want to analyze

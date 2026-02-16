@@ -19,12 +19,17 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import os
+import pathlib
 
 from sqlalchemy import text
 
 from constants import SEASONS_MODERN
 from db_utils import get_db_engine
 from log_utils import setup_logger
+
+if os.getenv("DEBUG_IMPORTS") == "1":
+    print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
 
 logger = setup_logger()
 

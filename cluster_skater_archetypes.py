@@ -11,6 +11,9 @@ Pipeline:
 - Inspect cluster centers & example players
 """
 
+import os
+import pathlib
+
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
@@ -21,6 +24,9 @@ from sklearn.preprocessing import StandardScaler
 from sqlalchemy import text
 
 from db_utils import get_db_engine
+
+if os.getenv("DEBUG_IMPORTS") == "1":
+    print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
 
 TARGET_SEASONS = ["20152016", "20162017", "20172018"]
 engine = get_db_engine()

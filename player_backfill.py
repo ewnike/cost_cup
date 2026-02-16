@@ -19,12 +19,17 @@ Notes:
 
 """
 
+import os
+import pathlib
 import re
 
 import requests
 from sqlalchemy import text
 
 from db_utils import get_db_engine
+
+if os.getenv("DEBUG_IMPORTS") == "1":
+    print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
 
 # pylint: disable=duplicate-code
 

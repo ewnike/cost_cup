@@ -9,11 +9,16 @@ Order:
 
 from __future__ import annotations
 
+import os
+import pathlib
 import sys
 
 from constants import SEASONS_MODERN
 from db_utils import ctas_game_plays_from_raw_pbp, get_db_engine
 from scripts.validate_db_paths import main as validate_main
+
+if os.getenv("DEBUG_IMPORTS") == "1":
+    print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
 
 
 def _run_ctas_game_plays(engine) -> None:

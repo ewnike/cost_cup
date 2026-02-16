@@ -1,11 +1,16 @@
 """Export player_season_corsi_all."""
 
+import os
+import pathlib
 import re
 
 import pandas as pd
 from sqlalchemy import inspect, text
 
 from db_utils import get_db_engine
+
+if os.getenv("DEBUG_IMPORTS") == "1":
+    print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
 
 RAW_SCHEMA = "derived"
 OUT_CSV = "player_season_corsi_all.csv"

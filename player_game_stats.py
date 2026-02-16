@@ -8,7 +8,14 @@ Author: Eric Winiecke
 Date: December 6, 2025.
 """
 
+import os
+import pathlib
+
 import pandas as pd
+
+if os.getenv("DEBUG_IMPORTS") == "1":
+    print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
+
 
 df_corsi = pd.read_csv("player_game_corsi_2015_2018.csv")
 df_clusters = pd.read_csv("skater_merged_player_seasons_with_clusters.csv")

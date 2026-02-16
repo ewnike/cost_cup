@@ -11,12 +11,17 @@ Updated:
 
 from __future__ import annotations
 
+import os
+import pathlib
 from typing import Any
 
 import pandas as pd
 
 from db_utils import get_db_engine, load_environment_variables
 from schema_utils import fq
+
+if os.getenv("DEBUG_IMPORTS") == "1":
+    print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
 
 
 def get_env_vars() -> dict[str, Any]:

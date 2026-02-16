@@ -7,8 +7,12 @@ Eric Winiecke.
 """
 
 import os
+import pathlib
 
 from dotenv import load_dotenv
+
+if os.getenv("DEBUG_IMPORTS") == "1":
+    print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
 
 load_dotenv()
 
@@ -32,6 +36,7 @@ SEASONS_MODERN = [
 
 # List of new NHL Seasons to be processed
 SEASONS_TO_RUN = [
+    20182019,
     20192020,
     20202021,
     20212022,

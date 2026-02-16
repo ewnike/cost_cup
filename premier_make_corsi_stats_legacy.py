@@ -17,6 +17,7 @@ Date: October 30, 2024 (updated)
 """
 
 import os
+import pathlib
 
 import pandas as pd
 
@@ -29,6 +30,9 @@ from strength_utils import (
     build_exclude_timeline_equal_strength,
     ensure_team_id_on_shifts_legacy,
 )
+
+if os.getenv("DEBUG_IMPORTS") == "1":
+    print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
 
 # pylint: disable=duplicate-code
 

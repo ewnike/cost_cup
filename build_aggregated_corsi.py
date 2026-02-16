@@ -7,11 +7,17 @@ and enriches with dim.player_info + dim.player_cap_hit_{season}.
 
 from __future__ import annotations
 
+import os
+import pathlib
+
 import pandas as pd
 
 from constants import SCHEMA, SEASONS_ALL  # include 20152016..20242025
 from db_utils import get_db_engine
 from schema_utils import fq
+
+if os.getenv("DEBUG_IMPORTS") == "1":
+    print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
 
 
 def main() -> None:

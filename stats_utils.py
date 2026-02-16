@@ -1,6 +1,12 @@
 """Docstring for stats_utils."""
 
+import os
+import pathlib
+
 import pandas as pd
+
+if os.getenv("DEBUG_IMPORTS") == "1":
+    print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
 
 
 def add_corsi_rates_and_merge(

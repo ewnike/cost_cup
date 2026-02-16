@@ -6,9 +6,11 @@ last name from spotrac. Used selenium and set webdriver
 to safari.
 
 Eric Winiecke.
+Updated February 14, 2026.
 """
 
 import os
+import pathlib
 import re
 
 import pandas as pd
@@ -20,6 +22,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 # Import the shared scrolling function
 from scraping_utils import scroll_to_bottom
+
+if os.getenv("DEBUG_IMPORTS") == "1":
+    print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
 
 # Set up the Safari WebDriver
 driver = webdriver.Safari()

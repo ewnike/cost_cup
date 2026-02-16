@@ -68,7 +68,7 @@ The archetypes are intended to:
 - `derived.game_plays_{season}_from_raw_pbp`  
   Normalized game_plays-like view including `time`, `team_id_for`, `team_id_against`, etc.
 
-- `derived.raw_shifts_resolved`  
+- `Canonical: raw.raw_shifts_resolved (and derived.raw_shifts_resolved is an alias)`
   Shift data with resolved player IDs and team codes, including:
   `game_id`, `player_id_resolved`, `team`, `position`, `seconds_start`, `seconds_end`, `season`, `session`.
 

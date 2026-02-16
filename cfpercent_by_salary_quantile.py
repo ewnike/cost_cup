@@ -18,7 +18,7 @@ dataframes = []
 for season in seasons:
     QUERY = f"""
     SELECT "player_id", "capHit", "CF_Percent"
-    FROM public.aggregated_corsi_{season}
+    FROM mart.aggregated_corsi_{season}
     """
     # Fetch the data from the database for the current season
     df = pd.read_sql(QUERY, engine)

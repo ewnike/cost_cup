@@ -9,6 +9,7 @@ Date: February 2025
 
 import logging
 import os
+import pathlib
 from pathlib import Path
 from urllib.parse import quote_plus
 
@@ -34,6 +35,9 @@ from sqlalchemy import (
 from sqlalchemy.schema import Identity
 
 from log_utils import setup_logger
+
+if os.getenv("DEBUG_IMPORTS") == "1":
+    print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
 
 DERIVED_SCHEMA = "derived"  # you already have this constant
 RAW_SCHEMA = "raw"

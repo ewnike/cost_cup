@@ -6,6 +6,9 @@ Date: May 5, 2025
 
 """
 
+import os
+import pathlib
+
 from constants import (
     S3_BUCKET_NAME,
     SEASONS_ACTIVE,  # or SEASONS_TO_RUN
@@ -27,6 +30,9 @@ from db_utils import (
     define_raw_shifts_table,
     get_db_engine,
 )
+
+if os.getenv("DEBUG_IMPORTS") == "1":
+    print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
 
 # Lazily create the engine to avoid “freeze on import”
 _ENGINE = None

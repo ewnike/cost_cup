@@ -13,6 +13,7 @@ Notes:
 """
 
 import os
+import pathlib
 import re
 
 import pandas as pd
@@ -21,6 +22,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
+if os.getenv("DEBUG_IMPORTS") == "1":
+    print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
 BASE_URL = "https://www.spotrac.com/nhl/cap/_/year/{}/sort/cap_maximum_space2"
 YEARS = [2018, 2019, 2020, 2021, 2022, 2023, 2024]
 

@@ -2,12 +2,13 @@
 January 5, 2025.
 
 Code to calculate shot statistics
-per team per season.
+per team per season. Legacy.
 
 Eric Winiecke.
 """
 
 import os
+import pathlib
 
 import pandas as pd
 
@@ -16,6 +17,8 @@ from load_data import get_env_vars, load_data
 from log_utils import setup_logger
 from strength_utils import build_exclude_timeline_equal_strength, ensure_team_id_on_shifts_legacy
 
+if os.getenv("DEBUG_IMPORTS") == "1":
+    print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
 # Set up logging with explicit confirmation of path
 # Define the log file path
 LOG_FILE_PATH = "/Users/ericwiniecke/Documents/github/cost_cup/data_processing_II.log"
@@ -381,19 +384,19 @@ if __name__ == "__main__":
             event,
             team_id_for,
             team_id_against
-        FROM public.game_plays_20182019_from_raw_pbp
+        FROM derived.game_plays_20182019_from_raw_pbp
         ORDER BY game_id, period, "periodTime"
         """,
         engine,
     )
 
-    # Replace game_shifts with your final shifts table (season filtered)
+    # Replace game_shifts with your final shifts table (season filtered). Legacy seasons only.
     df_master["game_shifts"] = pd.read_sql(
         """
         SELECT gs.game_id, gs.player_id, gs.period, gs.shift_start, gs.shift_end
-        FROM public.game_shifts_final gs
-        JOIN public.game g ON g.game_id = gs.game_id
-        WHERE g.season = 20182019
+        FROM raw.game_shifts gs
+        JOIN raw.game g ON g.game_id = gs.game_id
+        WHERE g.season = 20172018
         """,
         engine,
     )

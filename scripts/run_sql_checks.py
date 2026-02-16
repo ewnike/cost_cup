@@ -1,39 +1,28 @@
-"""Docstring for scripts.run_sql_checks."""
+"""
+scripts.run_sql_checks.
+
+Run SQL sanity/validation checks from a directory of .sql files.
+"""
 
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from pathlib import Path
 
 from sqlalchemy import text
 
-from db_utils import get_db_engine
-
+# Ensure repo root is on sys.path so "import db_utils" works when running:
+#   python -m scripts.run_sql_checks ...
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-import re
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from db_utils import get_db_engine  # noqa: E402
 
+
 _BLOCK_COMMENT_RE = re.compile(r"^\s*/\*.*?\*/\s*", re.DOTALL)
-
-
-def parse_args() -> argparse.Namespace:
-    """
-    Docstring for parse_args.
-
-    :return: Description
-    :rtype: Namespace
-    """
-    p = argparse.ArgumentParser(description="Run SQL sanity checks from a directory.")
-    p.add_argument(
-        "--dir",
-        default="sql/sanity",
-        help="Directory containing .sql files (default: sql/sanity)",
-    )
-    return p.parse_args()
 
 
 def _looks_like_select(sql: str) -> bool:
@@ -78,19 +67,12 @@ def _looks_like_select(sql: str) -> bool:
 def _format_cell(v) -> str:
     if v is None:
         return "NULL"
-    # keep it readable for wide fields
-    s = str(v)
-    s = s.replace("\n", "\\n")
+    s = str(v).replace("\n", "\\n")
     return s
 
 
 def _print_pretty_table(cols: list[str], rows: list[tuple], *, max_width: int = 48) -> None:
-    """
-    Print rows as a simple ASCII table.
-
-    - max_width truncates very wide columns so your terminal stays sane.
-    """
-    # Compute column widths
+    """Print rows as a simple ASCII table."""
     widths = [min(len(c), max_width) for c in cols]
     for r in rows:
         for i, v in enumerate(r[: len(cols)]):
@@ -123,108 +105,72 @@ def _print_pretty_table(cols: list[str], rows: list[tuple], *, max_width: int = 
 
 
 def main() -> None:
-    """Run .sql sanity checks."""
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--dir",
-        default="sql/sanity",
-        help="Directory containing .sql checks (default: sql/sanity)",
-    )
-    parser.add_argument(
-        "--print-results",
-        action="store_true",
-        help="Print result rows for SELECT/WITH queries that return rows.",
-    )
-    parser.add_argument(
-        "--print-only",
-        default="",
-        help="Only print results for files whose name contains this substring (e.g. 'b_' or '05b').",
-    )
-    parser.add_argument(
-        "--limit",
-        type=int,
-        default=50,
-        help="Max rows to print per query (default: 50).",
-    )
-    parser.add_argument(
-        "--continue-on-error",
-        action="store_true",
-        help="Keep running remaining SQL files even if one fails.",
-    )
-    parser.add_argument(
-        "--file",
-        default="",
-        help="Run only a single .sql file (by filename) inside --dir, e.g. corsi_02b_missing_players_reason_codes.sql",
-    )
-    parser.add_argument(
-        "--continue-on-error",
-        action="store_true",
-        help="Continue running later SQL files even if one fails.",
-    )
-
-    failures: list[str] = []
+    parser = argparse.ArgumentParser(description="Run SQL sanity checks from a directory.")
+    parser.add_argument("--dir", default="sql/sanity")
+    parser.add_argument("--print-results", action="store_true")
+    parser.add_argument("--print-only", default="")
+    parser.add_argument("--limit", type=int, default=50)
+    parser.add_argument("--continue-on-error", action="store_true")
     args = parser.parse_args()
 
     sql_dir = Path(args.dir)
-    engine = get_db_engine()
     files = sorted(sql_dir.glob("*.sql"))
-    if args.file:
-        files = [sql_dir / args.file]
-
     if not files:
         raise FileNotFoundError(f"No .sql files found in {sql_dir}")
 
-    failures = 0
+    engine = get_db_engine()
+    failed_files: list[str] = []
+    fail_count = 0
 
     try:
-        with engine.begin() as conn:
-            for f in files:
-                sql = f.read_text(encoding="utf-8").strip()
-                if not sql:
-                    continue
+        for f in files:
+            sql = f.read_text(encoding="utf-8").strip()
+            if not sql:
+                continue
 
-                print(f"\n=== RUN {f.name} ===")
+            print(f"\n=== RUN {f.name} ===")
 
-                failures: list[str] = []
+            try:
+                with engine.connect() as conn:
+                    with conn.begin():  # ✅ per-file transaction; auto rollback on error
+                        result = conn.execute(text(sql))
 
-                try:
-                    result = conn.execute(text(sql))
+                    should_print = args.print_results and _looks_like_select(sql)
+                    if args.print_only and args.print_only not in f.name:
+                        should_print = False
 
-                except Exception as e:
-                    failures.append(f.name)
-                    print(f"❌ FAIL {f.name}: {e}")
-                    if not args.continue_on_error:
-                        raise
-                    continue  # move on to next file
-
-                if failures:
-                    print("\nFailures:")
-                    for n in failures:
-                        print(f" - {n}")
-                    raise SystemExit(1)
-
-                should_print = args.print_results and _looks_like_select(sql)
-                if args.print_only and args.print_only not in f.name:
-                    should_print = False
-
-                if should_print:
-                    rows = result.fetchmany(args.limit)
-                    if rows:
-                        cols = list(result.keys())
-                        rows_tuples = [tuple(r) for r in rows]
-                        _print_pretty_table(cols, rows_tuples)
-                        extra = result.fetchone()
-                        if extra is not None:
-                            print(f"... (more rows not shown; limit={args.limit})")
-                    else:
-                        print("(no rows)")
+                    if should_print:
+                        rows = result.fetchmany(args.limit)
+                        if rows:
+                            cols = list(result.keys())
+                            _print_pretty_table(cols, [tuple(r) for r in rows])
+                            extra = result.fetchone()
+                            if extra is not None:
+                                print(f"... (more rows not shown; limit={args.limit})")
+                        else:
+                            print("(no rows)")
 
                 print(f"✅ OK {f.name}")
-    finally:
-        engine.dispose()
 
-    if failures:
-        raise SystemExit(f"\nCompleted with {failures} failure(s).")
+            except Exception as e:
+                fail_count += 1
+                failed_files.append(f.name)
+                print(f"❌ FAIL {f.name}: {e}")
+                if not args.continue_on_error:
+                    raise
+
+    finally:
+        engine.dispose()  # ✅ only once, at the end
+
+    if failed_files:
+        print("\n====================")
+        print(f"❌ Failures: {fail_count}")
+        for n in failed_files:
+            print(f" - {n}")
+        raise SystemExit(1)
+
+    print("\n====================")
+    print("✅ All checks passed.")
 
 
 if __name__ == "__main__":

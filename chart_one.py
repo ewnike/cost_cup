@@ -23,7 +23,7 @@ df = pd.DataFrame()
 for season in SEASONS:
     QUERY = f"""
     SELECT "capHit"
-    FROM public.aggregated_corsi_{season}
+    FROM mart.aggregated_corsi_{season}
     """
     season_df = pd.read_sql(QUERY, engine)
     season_df["season"] = season  # Add the season column manually in Python

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import glob
 import os
+import pathlib
 import re
 
 import pandas as pd
@@ -25,6 +26,9 @@ from constants import SCHEMA
 from data_processing_utils import clear_player_cap_hits_dir  # noqa: F401
 from db_utils import create_caphit_table, get_db_engine, get_metadata  # noqa: F401
 from schema_utils import fqs  # quoted fq: "schema"."table"
+
+if os.getenv("DEBUG_IMPORTS") == "1":
+    print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
 
 CSV_GLOB = "player_cap_hits/player_cap_hits_*.csv"
 

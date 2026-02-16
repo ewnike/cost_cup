@@ -13,10 +13,15 @@ Author: Eric Winiecke
 Date: December 2025
 """
 
+import os
+import pathlib
+
 from config_helpers import pbp_raw_data_config
 from data_processing_utils import process_and_insert_data
 from log_utils import setup_logger
 
+if os.getenv("DEBUG_IMPORTS") == "1":
+    print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
 # ✅ Set up logging
 setup_logger()
 

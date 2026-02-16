@@ -11,6 +11,8 @@ Run:
 from __future__ import annotations
 
 import difflib
+import os
+import pathlib
 import re
 import time
 import unicodedata
@@ -21,6 +23,9 @@ from sqlalchemy import text
 
 from constants import SCHEMA
 from db_utils import get_db_engine
+
+if os.getenv("DEBUG_IMPORTS") == "1":
+    print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
 
 SEARCH_URL = "https://search.d3.nhle.com/api/v1/search/player"
 

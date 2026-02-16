@@ -17,6 +17,7 @@ Date: Oct 30, 2024 (updated January 2026.)
 """
 
 import os
+import pathlib
 
 import pandas as pd
 
@@ -25,6 +26,9 @@ from db_utils import get_db_engine
 from log_utils import setup_logger
 from schema_utils import fq
 from strength_utils import build_exclude_timeline_equal_strength
+
+if os.getenv("DEBUG_IMPORTS") == "1":
+    print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
 
 # pylint: disable=duplicate-code
 

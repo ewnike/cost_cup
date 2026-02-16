@@ -22,9 +22,13 @@ Date: February 2025
 
 import logging
 import os
+import pathlib
 
 import boto3
 import botocore
+
+if os.getenv("DEBUG_IMPORTS") == "1":
+    print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
 
 # Configure logging
 logging.basicConfig(

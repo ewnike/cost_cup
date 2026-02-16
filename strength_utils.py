@@ -20,7 +20,13 @@ Notes:
 
 from __future__ import annotations
 
+import os
+import pathlib
+
 import pandas as pd
+
+if os.getenv("DEBUG_IMPORTS") == "1":
+    print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
 
 
 def get_num_players(shift_df: pd.DataFrame) -> pd.DataFrame:

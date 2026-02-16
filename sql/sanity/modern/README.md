@@ -6,7 +6,7 @@ These checks validate the **modern even-strength player-game table(s)** in `mart
 - Cross-checks reference:
   - `dim.player_info`
   - `raw.game`
-  - and (optionally) `raw.raw_shifts_resolved_final` for coverage comparisons
+  - and (optionally) `raw.raw_shifts_resolved` for coverage comparisons
 
 The goal is to catch:
 - missing required columns / null keys

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import pathlib
 import re
 import unicodedata
 from typing import Dict, Tuple
@@ -17,6 +19,9 @@ RAW_SCHEMA = "raw"  # adjust if your raw pbp lives elsewhere
 DERIVED_SCHEMA = "derived"
 MART_SCHEMA = "mart"
 EVENT_TYPES = ("GOAL", "SHOT", "MISS", "BLOCK", "HIT", "GIVE", "TAKE", "FAC", "PENL")
+
+if os.getenv("DEBUG_IMPORTS") == "1":
+    print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
 
 
 def normalize_name(s: str) -> str:
