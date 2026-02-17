@@ -68,7 +68,8 @@ The archetypes are intended to:
 - `derived.game_plays_{season}_from_raw_pbp`  
   Normalized game_plays-like view including `time`, `team_id_for`, `team_id_against`, etc.
 
-- `Canonical: raw.raw_shifts_resolved (and derived.raw_shifts_resolved is an alias)`
+- **Canonical shifts view:** `raw.raw_shifts_resolved` (use this in code)
+- **Legacy alias:** `derived.raw_shifts_resolved` (kept for backward compatibility; do not reference in new code)
   Shift data with resolved player IDs and team codes, including:
   `game_id`, `player_id_resolved`, `team`, `position`, `seconds_start`, `seconds_end`, `season`, `session`.
 
@@ -90,6 +91,9 @@ The archetypes are intended to:
   - `cf`, `ca`
   - `toi_total_sec`, `toi_es_sec`
   - `cf60`, `ca60`, `cf_percent`
+
+  **Relationship**
+  - `mart.player_game_es_{season}` is the ES-only slice (CF/CA + ES TOI + rates) and does **not**  include `toi_total_sec`.
 
 **Notes**
 - Even-strength definition:

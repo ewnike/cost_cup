@@ -2,7 +2,7 @@
 Rebuild modern mart.player_game_stats_{season} for all SEASONS_MODERN.
 
 Builds:
-  1) mart.toi_total_{season} from derived.raw_shifts_resolved (skaters only, all strengths)
+  1) mart.toi_total_{season} from raw.raw_shifts_resolved (skaters only, all strengths)
   2) mart.player_game_stats_{season} from mart.player_game_es_{season} (authoritative keyset)
      LEFT JOIN toi_total_{season} for toi_total_sec
 
@@ -65,7 +65,7 @@ def rebuild_for_season(*, season: int, drop_toi_total: bool) -> None:
     out_schema = "mart"
     out_table = f"player_game_stats_{season}"
 
-    shifts_view = '"derived"."raw_shifts_resolved"'
+    shifts_view = '"raw"."raw_shifts_resolved"'
     dim_team = '"dim"."dim_team_code"'
 
     try:

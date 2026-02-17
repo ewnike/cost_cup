@@ -17,7 +17,7 @@ Metrics:
 
 Inputs:
 - derived.game_plays_{season}_from_raw_pbp
-- derived.raw_shifts_resolved
+- raw.raw_shifts_resolved
 - dim.dim_team_code
 
 Output:
@@ -131,7 +131,7 @@ def build_player_game_es_for_season(season: int) -> pd.DataFrame:
     engine = get_db_engine()
 
     plays_view = fq("derived", f"game_plays_{season}_from_raw_pbp")
-    shifts_resolved = fq("derived", "raw_shifts_resolved")
+    shifts_resolved = fq("raw", "raw_shifts_resolved")
     dim_team_code = fq("dim", "dim_team_code")
 
     gp = pd.read_sql(f"SELECT * FROM {plays_view}", engine)

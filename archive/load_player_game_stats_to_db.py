@@ -8,6 +8,13 @@ Assumes CSVs exist at:
   player_game_stats/player_game_stats_{season}.csv
 """
 
+raise SystemExit(
+    "DEPRECATED: load_player_game_stats_to_db.py was part of the older CSV-first flow.\n"
+    "Current source of truth is the SQL/DB pipeline:\n"
+    "  - build_player_game_es.py\n"
+    "  - rebuild_player_game_stats_all_modern.py (writes mart.player_game_stats_{season})\n"
+    "Do not use this loader unless you are explicitly backfilling from CSVs."
+)
 from __future__ import annotations
 
 import os
@@ -44,6 +51,13 @@ REQUIRED_COLS = [
 
 
 def load_one_season(engine, season: int) -> None:
+    """
+    Docstring for load_one_season.
+
+    :param engine: Description
+    :param season: Description
+    :type season: int
+    """
     path = os.path.join(OUT_DIR, f"player_game_stats_{season}.csv")
     if not os.path.exists(path):
         logger.warning("Missing file: %s", path)
@@ -117,6 +131,7 @@ def load_one_season(engine, season: int) -> None:
 
 
 def main() -> None:
+    """Docstring for main."""
     engine = get_db_engine()
     try:
         for season in SEASONS_MODERN:

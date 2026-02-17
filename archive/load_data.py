@@ -9,6 +9,12 @@ Updated:
 - Optional season/game_id filtering to avoid loading everything
 """
 
+raise SystemExit(
+    "ARCHIVED/DEPRECATED: This script is no longer part of the active Cost of Cup pipeline.\n"
+    "Do not run. Kept for historical reference only.\n\n"
+    "Use the modern/golden pipeline (raw.raw_shifts_resolved + derived.game_plays_* + mart builds)."
+)
+
 from __future__ import annotations
 
 import os
@@ -16,12 +22,27 @@ import pathlib
 from typing import Any
 
 import pandas as pd
+from sqlalchemy import text
+from sqlalchemy.exc import ProgrammingError
 
+from constants import SEASONS_MODERN
 from db_utils import get_db_engine, load_environment_variables
 from schema_utils import fq
 
 if os.getenv("DEBUG_IMPORTS") == "1":
     print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
+
+
+def _relation_exists(engine, fq_name: str) -> bool:
+    """
+    Return True if a fully-qualified relation exists (table/view/materialized view).
+
+    fq_name should look like: derived.game_20182019_from_raw_pbp
+    """
+    schema, rel = fq_name.split(".", 1)
+    q = text("SELECT to_regclass(:name) IS NOT NULL AS ok")
+    with engine.connect() as conn:
+        return bool(conn.execute(q, {"name": f'{schema}."{rel}"'}).scalar())
 
 
 def get_env_vars() -> dict[str, Any]:
@@ -38,7 +59,7 @@ def fetch_game_ids_20152016(engine) -> list[int]:
     """
     Fetch all game IDs for 20152016 season.
 
-    NOTE: Updated to use raw.game (not public.game_plays).
+    NOTE: raw.game is authoritative for game_id lists; legacy schema.* is deprecated.
     """
     game_tbl = fq("raw", "game")
     q = f"""
@@ -59,21 +80,53 @@ def load_data(
     debug_print_head: bool = False,
 ) -> dict[str, pd.DataFrame]:
     """
-    Load core raw tables.
+    Load the core game-level tables into a dict of DataFrames, with season-aware routing.
 
-    If season is provided:
-      - loads raw.game filtered to that season (optionally limit_games)
-      - loads plays/shifts/skater_stats only for those game_ids
+    Sources:
+      - Legacy seasons (and any season not in SEASONS_MODERN):
+          game metadata comes from raw.game
+      - Modern seasons (season in SEASONS_MODERN):
+          game metadata comes from derived.game_{season}_from_raw_pbp
+          (because raw.game is not reliably populated for modern seasons)
 
-    If game_id is provided:
-      - loads that single game across tables
+    Filtering behavior:
+      - If `season` is provided:
+          * Loads the "game" table filtered to that season.
+          * Derives the list of game_ids from that filtered game set (optionally truncated
+            by `limit_games`) and then loads plays/shifts/skater_stats for those game_ids.
+      - If `game_id` is provided:
+          * Loads that single game (and its associated plays/shifts/skater_stats).
+      - If neither is provided:
+          * Loads full tables (use with caution; can be large).
 
-    Returns dict with keys:
-      game, game_plays, game_shifts, game_skater_stats
+    Args:
+        env_vars: Kept for backwards compatibility; ignored (db_utils.get_db_engine loads .env).
+        season: Season identifier, e.g. 20152016 or 20182019.
+        game_id: Single game_id to load.
+        limit_games: If `season` is set, limit the number of games loaded (useful for debugging).
+        debug_print_head: If True, prints row counts and the first few rows per table.
+
+    Returns:
+        A dict of DataFrames with keys:
+          - "game"
+          - "game_plays"
+          - "game_shifts"
+          - "game_skater_stats"
+
     """
     engine = get_db_engine()
 
-    game_tbl = fq("raw", "game")
+    raw_game_tbl = fq("raw", "game")
+
+    # choose the correct "game" source
+    if season is not None and int(season) in SEASONS_MODERN:
+        derived_game_tbl = fq("derived", f"game_{int(season)}_from_raw_pbp")
+
+        # Prefer derived game view/table if it exists; otherwise fall back.
+        game_tbl = derived_game_tbl if _relation_exists(engine, derived_game_tbl) else raw_game_tbl
+    else:
+        game_tbl = raw_game_tbl
+
     plays_tbl = fq("raw", "game_plays")
     shifts_tbl = fq("raw", "game_shifts")
     gss_tbl = fq("raw", "game_skater_stats")
@@ -92,16 +145,6 @@ def load_data(
 
         where_sql = ("WHERE " + " AND ".join(where)) if where else ""
 
-        # df_game = pd.read_sql(
-        #     f"""
-        #     SELECT game_id, season, type, date_time_GMT, away_team_id, home_team_id,
-        #            away_goals, home_goals, outcome
-        #     FROM {game_tbl}
-        #     {where_sql}
-        #     """,
-        #     engine,
-        #     params=params if params else None,
-        # )
         df_game = pd.read_sql(
             f"SELECT * FROM {game_tbl} {where_sql}",
             engine,
@@ -114,14 +157,6 @@ def load_data(
         # Determine game_ids scope for the other tables
         game_ids = df_game["game_id"].astype("int64").tolist() if not df_game.empty else None
 
-        # def _read_by_game_ids(sql_base: str) -> pd.DataFrame:
-        #     if game_ids is None:
-        #         return pd.read_sql(sql_base, engine)
-        #     return pd.read_sql(
-        #         sql_base + " WHERE game_id = ANY(%(game_ids)s)",
-        #         engine,
-        #         params={"game_ids": game_ids},
-        #     )
         def _read_by_game_ids(sql_base: str) -> pd.DataFrame:
             base = sql_base.strip().rstrip(";")
             if game_ids is None:
@@ -132,14 +167,6 @@ def load_data(
                 params={"game_ids": game_ids},
             )
 
-        # df_plays = _read_by_game_ids(
-        #     f"""
-        #     SELECT play_id, game_id, team_id_for, team_id_against, event, "secondaryType",
-        #            x, y, period, "periodType", "periodTime", "periodTimeRemaining",
-        #            "dateTime", goals_away, goals_home, description, st_x, st_y
-        #     FROM {plays_tbl}
-        #     """
-        # )
         df_plays = _read_by_game_ids(f"SELECT * FROM {plays_tbl}")
 
         df_shifts = _read_by_game_ids(
@@ -149,17 +176,6 @@ def load_data(
             """
         )
 
-        # df_gss = _read_by_game_ids(
-        #     f"""
-        #     SELECT game_id, player_id, team_id,
-        #            "timeOnIce", assists, goals, shots, hits,
-        #            "powerPlayGoals", "powerPlayAssists", "penaltyMinutes",
-        #            "faceOffWins", "faceoffTaken", takeaways, giveaways,
-        #            "shortHandedGoals", "shortHandedAssists", blocked, "plusMinus",
-        #            "evenTimeOnIce", "shortHandedTimeOnIce", "powerPlayTimeOnIce"
-        #     FROM {gss_tbl}
-        #     """
-        # )
         df_gss = _read_by_game_ids(f"SELECT * FROM {gss_tbl}")
 
         # Normalize id dtypes for merges
@@ -190,6 +206,10 @@ def load_data(
 
 
 if __name__ == "__main__":
+    raise SystemExit(
+        "DEPRECATED: Do not run load_data.py directly. It exists only for legacy imports.\n"
+        "Prefer modern pipeline scripts and schema-qualified SQL."
+    )
     # Backwards compatible
     _ = get_env_vars()
 

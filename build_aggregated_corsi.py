@@ -1,4 +1,6 @@
 """
+January, 2026.
+
 Build_aggregated_corsi.py.
 
 Aggregates mart.player_game_es_{season} to mart.aggregated_corsi_{season}
@@ -12,7 +14,8 @@ import pathlib
 
 import pandas as pd
 
-from constants import SCHEMA, SEASONS_ALL  # include 20152016..20242025
+# from constants import SCHEMA, SEASONS_ALL  # include 20152016..20242025
+from constants import SEASONS_LEGACY as SEASONS_ALL
 from db_utils import get_db_engine
 from schema_utils import fq
 
@@ -74,9 +77,11 @@ def main() -> None:
         out = out.merge(df_pi, on="player_id", how="left").merge(df_cap, on="player_id", how="left")
         out = out.rename(columns={"team_id_primary": "team_id"})
 
-        table = f"aggregated_corsi_{season}"
-        out.to_sql(table, engine, schema=SCHEMA["mart"], if_exists="replace", index=False)
-        print(f"✅ {season}: wrote {SCHEMA['mart']}.{table} rows={len(out)}")
+        schema = "mart"
+        table = f"aggregated_corsi_{season}_v2"
+
+        out.to_sql(table, engine, schema=schema, if_exists="replace", index=False, method="multi")
+        print(f"✅ {season}: wrote {schema}.{table} rows={len(out)}")
 
     engine.dispose()
 

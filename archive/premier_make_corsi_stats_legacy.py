@@ -269,6 +269,16 @@ def calculate_and_save_corsi_stats(season_game_ids, season):
 
 
 if __name__ == "__main__":
+    raise SystemExit(
+        "DEPRECATED: premier_make_corsi_stats_legacy.py is part of the old legacy Corsi pipeline.\n"
+        "Do NOT use this script for current builds.\n\n"
+        "Use the modern/golden pipeline instead:\n"
+        "  - build_player_game_es.py (ES CF/CA + ES TOI)\n"
+        "  - rebuild_player_game_stats_all_modern.py (writes mart.player_game_stats_{season})\n"
+        "  - build_aggregated_corsi.py (writes mart.aggregated_corsi_{season})\n\n"
+        "This legacy script depends on legacy loaders/assumptions (e.g., load_data.py) and may produce\n"
+        "inconsistent results versus the canonical raw.raw_shifts_resolved + derived.game_plays_* views."
+    )
     env_vars = get_env_vars()
     df_master = load_data(env_vars)
 

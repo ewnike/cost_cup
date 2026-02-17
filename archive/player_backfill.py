@@ -1,7 +1,9 @@
 """
+Deprecated code replaced by golden sql statement.
+
 Resolve missing NHL player IDs from raw shift/boxscore name strings and upsert them into Postgres.
 
-This script reads unresolved player rows from `public.missing_player_work`, attempts to match each
+This script reads unresolved player rows from depr. `missing_player_work`, attempts to match each
 raw player name to an NHL `playerId` using the NHL gamecenter boxscore endpoint (preferred), and
 falls back to the NHL player search endpoint when needed. Successful matches are upserted into
 `dim.player_info`.
@@ -45,6 +47,11 @@ TEAM_MAP = {
     "S.J": "SJS",
     "L.A": "LAK",
 }
+
+raise SystemExit(
+    "DEPRECATED: This script uses legacy Python name normalization. "
+    "Use scripts/backfill_player_info_from_shift_keys.py or the golden SQL pipeline."
+)
 
 
 def norm_name(s) -> str:
@@ -276,7 +283,7 @@ def main() -> None:
     """
     Run the end-to-end resolution job.
 
-    Reads missing player rows from `public.missing_player_work`, resolves player IDs via
+    Reads missing player rows from `missing_player_work`, resolves player IDs via
     boxscore/search endpoints, upserts results into `dim.player_info`, and prints a summary.
     """
     # 1) Pull work items
@@ -285,7 +292,7 @@ def main() -> None:
             text(
                 """
                 SELECT name_key, raw_player, team, season, sample_game_id, n_rows
-                FROM public.missing_player_work
+                FROM missing_player_work
                 ORDER BY n_rows DESC
                 """
             )

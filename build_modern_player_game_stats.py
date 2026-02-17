@@ -159,7 +159,7 @@ def build_player_game_stats_for_season(
     engine = get_db_engine()
 
     plays_view = fq("derived", f"game_plays_{season}_from_raw_pbp")
-    shifts_view = fq("raw", "raw_shifts_resolved_final")
+    shifts_view = fq("raw", "raw_shifts_resolved")
     dim_team_code = fq("dim", "dim_team_code")
 
     logger.info("plays_view=%s", plays_view)
@@ -365,7 +365,7 @@ def build_player_game_stats_for_season(
         )
         merged["cf_percent"] = np.where(
             (merged["cf"] + merged["ca"]) > 0,
-            merged["cf"] / (merged["cf"] + merged["ca"]),
+            100.0 * merged["cf"] / (merged["cf"] + merged["ca"]),
             np.nan,
         )
 
@@ -390,6 +390,7 @@ def build_player_game_stats_for_season(
 
 
 def main() -> None:
+    """Docstring for main."""
     os.makedirs(OUT_DIR, exist_ok=True)
 
     TEST_MODE = True

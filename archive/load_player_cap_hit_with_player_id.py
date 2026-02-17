@@ -11,6 +11,13 @@ Expected CSV columns:
 firstName, lastName, capHit, spotrac_url
 """
 
+raise SystemExit(
+    "DEPRECATED: load_player_cap_hit_with_player_id.py is a legacy loader.\n"
+    "Use the golden cap-hit pipeline (dim.player_cap_hit_{season}) and the standardized\n"
+    "name/player_id resolution workflow instead.\n"
+    "If you need a backfill, use the current scripts or SQL pipeline, not this file."
+)
+
 from __future__ import annotations
 
 import glob

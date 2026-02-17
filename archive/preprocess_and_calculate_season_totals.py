@@ -17,6 +17,14 @@ from load_data import get_env_vars, load_data
 from log_utils import setup_logger
 from strength_utils import build_exclude_timeline_equal_strength, ensure_team_id_on_shifts_legacy
 
+raise SystemExit(
+    "DEPRECATED: preprocess_and_calculate_season_totals.py is legacy/incomplete.\n"
+    "Use the modern pipeline:\n"
+    "  1) build_player_game_es.py\n"
+    "  2) build_modern_player_game_stats.py\n"
+    "  3) build_aggregated_corsi.py\n"
+)
+
 if os.getenv("DEBUG_IMPORTS") == "1":
     print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
 # Set up logging with explicit confirmation of path

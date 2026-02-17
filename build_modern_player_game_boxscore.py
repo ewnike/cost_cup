@@ -78,7 +78,7 @@ def build_game_player_team_map(engine, season: int) -> pd.DataFrame:
     """
     Reliable (game_id, player_id) -> team_id map from shifts.
 
-    Uses derived.raw_shifts_resolved and dim_team_code.
+    Uses raw.raw_shifts_resolved and dim_team_code.
     """
     q = text(
         f"""
@@ -86,7 +86,7 @@ def build_game_player_team_map(engine, season: int) -> pd.DataFrame:
           rs.game_id::bigint AS game_id,
           rs.player_id_resolved::bigint AS player_id,
           dt.team_id::bigint AS team_id
-        FROM "{DERIVED_SCHEMA}"."raw_shifts_resolved" rs
+        FROM "{RAW_SCHEMA}"."raw_shifts_resolved" rs
         JOIN "dim"."dim_team_code" dt
           ON dt.team_code = rs.team
         WHERE rs.season = :season
