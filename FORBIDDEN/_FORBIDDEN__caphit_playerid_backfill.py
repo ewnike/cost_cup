@@ -15,6 +15,8 @@ Notes:
 
 """
 
+raise RuntimeError("FORBIDDEN: NHL API usage disabled. Do not run.")
+
 from __future__ import annotations
 
 import difflib

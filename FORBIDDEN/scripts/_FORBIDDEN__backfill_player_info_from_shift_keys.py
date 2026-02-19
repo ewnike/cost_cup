@@ -8,6 +8,8 @@ Run:
   python scripts/backfill_player_info_from_shift_keys.py
 """
 
+raise RuntimeError("FORBIDDEN: NHL API usage disabled. Do not run.")
+
 from __future__ import annotations
 
 import difflib
@@ -359,4 +361,8 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    SEARCH_URL = None  # Forbidden: NHL API disabled
+    raise RuntimeError(
+        "Forbidden NHL API usage: remove this script or refactor to DB-only sources."
+    )
     main()

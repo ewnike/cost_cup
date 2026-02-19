@@ -27,6 +27,7 @@ logger = setup_logger()
 
 
 def table_exists(conn, schema: str, table: str) -> bool:
+    """Search for table."""
     q = text(
         """
         SELECT EXISTS (
@@ -41,6 +42,14 @@ def table_exists(conn, schema: str, table: str) -> bool:
 
 
 def rebuild_for_season(*, season: int, out_schema: str = "derived") -> None:
+    """
+    Docstring for rebuild_for_season.
+
+    :param season: Description
+    :type season: int
+    :param out_schema: Description
+    :type out_schema: str
+    """
     engine = get_db_engine()
     es_schema = "mart"
     es_table = f"player_game_es_{season}"
@@ -110,6 +119,7 @@ def rebuild_for_season(*, season: int, out_schema: str = "derived") -> None:
 
 
 def main() -> None:
+    """Docstring for main."""
     ap = argparse.ArgumentParser()
     ap.add_argument("--season", type=int, default=None)
     ap.add_argument("--schema", type=str, default="derived")

@@ -34,6 +34,7 @@ logger = setup_logger()
 
 
 def table_exists(conn, schema: str, table: str) -> bool:
+    """Check for table."""
     q = text(
         """
         SELECT EXISTS (
@@ -54,6 +55,14 @@ def table_exists(conn, schema: str, table: str) -> bool:
 
 
 def rebuild_for_season(*, season: int, drop_toi_total: bool) -> None:
+    """
+    Docstring for rebuild_for_season.
+
+    :param season: Description
+    :type season: int
+    :param drop_toi_total: Description
+    :type drop_toi_total: bool
+    """
     engine = get_db_engine()
 
     es_schema = "mart"
@@ -190,6 +199,7 @@ def rebuild_for_season(*, season: int, drop_toi_total: bool) -> None:
 
 
 def main() -> None:
+    """Docstring for main."""
     ap = argparse.ArgumentParser()
     ap.add_argument("--season", type=int, default=None, help="Run one season, e.g. 20192020")
     ap.add_argument(

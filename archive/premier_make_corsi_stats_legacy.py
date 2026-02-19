@@ -22,7 +22,7 @@ import pathlib
 import pandas as pd
 
 from constants import SEASONS_LEGACY, TABLES
-from load_data import get_env_vars, load_data
+from archive.load_data import get_env_vars, load_data
 from log_utils import setup_logger
 from schema_utils import fq
 from strength_utils import (
