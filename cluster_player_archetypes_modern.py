@@ -1,5 +1,4 @@
-import os
-import pathlib
+"""Docstring for cluster_player_archetypes_modern."""
 
 import numpy as np
 import pandas as pd
@@ -10,9 +9,6 @@ from sqlalchemy import text
 
 from db_utils import get_db_engine
 from log_utils import setup_logger
-
-if os.getenv("DEBUG_IMPORTS") == "1":
-    print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
 
 logger = setup_logger()
 
@@ -34,25 +30,21 @@ FEATURES = [
     "cf_percent",
 ]
 
+SRC_SQL = "SELECT * FROM mart.player_season_archetype_features_modern_truth_clean"
+
 
 def main() -> None:
+    """Docstring for main."""
     engine = get_db_engine()
     try:
-        df = pd.read_sql_query(
-            text("SELECT * FROM mart.player_season_archetype_features_modern"),
-            engine,
-        )
+        df = pd.read_sql_query(text(SRC_SQL), engine)
     finally:
         engine.dispose()
-
-    df = pd.read_sql_query(
-        text("SELECT * FROM mart.player_season_archetype_features_modern"), engine
-    )
 
     # Fill faceoff win% for players with no draws
     df["fo_win_pct"] = df["fo_win_pct"].fillna(0.5)
 
-    # Now dropna on remaining features
+    # Drop rows with missing model features
     df_model = df.dropna(subset=FEATURES).copy()
 
     X = df_model[FEATURES].to_numpy(dtype=float)
@@ -73,32 +65,25 @@ def main() -> None:
     km = KMeans(n_clusters=best_k, n_init=50, random_state=42)
     df_model["cluster"] = km.fit_predict(Xs)
 
-    # write clusters
     out_clusters = df_model[
         ["season", "player_id", "team_id", "games_played", "toi_total_sec", "cluster"]
     ].copy()
+
     engine = get_db_engine()
     try:
         out_clusters.to_sql(
-            "player_season_clusters_modern",
+            "player_season_clusters_modern_truth",
             engine,
             schema="mart",
             if_exists="replace",
             index=False,
             method="multi",
         )
-    finally:
-        engine.dispose()
-
-    # cluster centers in original units
-    centers = scaler.inverse_transform(km.cluster_centers_)
-    centers_df = pd.DataFrame(centers, columns=FEATURES)
-    centers_df["cluster"] = np.arange(best_k)
-
-    engine = get_db_engine()
-    try:
+        centers = scaler.inverse_transform(km.cluster_centers_)
+        centers_df = pd.DataFrame(centers, columns=FEATURES)
+        centers_df["cluster"] = np.arange(best_k)
         centers_df.to_sql(
-            "player_cluster_centers_modern",
+            "player_cluster_centers_modern_truth",
             engine,
             schema="mart",
             if_exists="replace",
@@ -108,7 +93,10 @@ def main() -> None:
     finally:
         engine.dispose()
 
-    logger.info("Wrote mart.player_season_clusters_modern and mart.player_cluster_centers_modern")
+    logger.info(
+        "Wrote mart.player_season_clusters_modern_truth and "
+        "mart.player_cluster_centers_modern_truth"
+    )
 
 
 if __name__ == "__main__":

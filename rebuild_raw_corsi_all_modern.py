@@ -84,6 +84,14 @@ def rebuild_for_season(*, season: int, out_schema: str = "derived") -> None:
             conn.execute(
                 text(
                     f"""
+                    CREATE UNIQUE INDEX IF NOT EXISTS raw_corsi_{season}_key_idx
+                    ON "{out_schema}"."{out_table}" (game_id, player_id, team_id);
+                    """
+                )
+            )
+            conn.execute(
+                text(
+                    f"""
                     CREATE INDEX IF NOT EXISTS raw_corsi_{season}_game_idx
                     ON "{out_schema}"."{out_table}" (game_id);
                     """
@@ -94,6 +102,14 @@ def rebuild_for_season(*, season: int, out_schema: str = "derived") -> None:
                     f"""
                     CREATE INDEX IF NOT EXISTS raw_corsi_{season}_player_idx
                     ON "{out_schema}"."{out_table}" (player_id);
+                    """
+                )
+            )
+            conn.execute(
+                text(
+                    f"""
+                    CREATE INDEX IF NOT EXISTS raw_corsi_{season}_team_idx
+                    ON "{out_schema}"."{out_table}" (team_id);
                     """
                 )
             )

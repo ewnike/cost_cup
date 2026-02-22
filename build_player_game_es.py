@@ -144,12 +144,8 @@ def build_player_game_es_for_season(season: int) -> pd.DataFrame:
         dt.team_id,
         rs.position,
         rs.game_period AS period,
-        CASE WHEN rs.game_period IN (1,2,3)
-            THEN (rs.game_period - 1) * 1200 + rs.seconds_start
-            ELSE 3600 + rs.seconds_start END AS shift_start,
-        CASE WHEN rs.game_period IN (1,2,3)
-            THEN (rs.game_period - 1) * 1200 + rs.seconds_end
-            ELSE 3600 + rs.seconds_end END AS shift_end
+        rs.seconds_start AS shift_start,
+        rs.seconds_end   AS shift_end
         FROM {shifts_resolved} rs
         JOIN {dim_team_code} dt
         ON dt.team_code = rs.team
