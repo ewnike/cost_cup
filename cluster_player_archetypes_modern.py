@@ -71,32 +71,41 @@ def main() -> None:
 
     engine = get_db_engine()
     try:
+        # --- clusters ---
+        with engine.begin() as conn:
+            conn.execute(text("TRUNCATE TABLE mart.player_season_clusters_modern_truth;"))
+
         out_clusters.to_sql(
             "player_season_clusters_modern_truth",
             engine,
             schema="mart",
-            if_exists="replace",
+            if_exists="append",  # <-- FIX
             index=False,
             method="multi",
         )
+
+        # --- centers ---
         centers = scaler.inverse_transform(km.cluster_centers_)
         centers_df = pd.DataFrame(centers, columns=FEATURES)
         centers_df["cluster"] = np.arange(best_k)
+
+        with engine.begin() as conn:
+            conn.execute(text("TRUNCATE TABLE mart.player_cluster_centers_modern_truth;"))
+
         centers_df.to_sql(
             "player_cluster_centers_modern_truth",
             engine,
             schema="mart",
-            if_exists="replace",
+            if_exists="append",  # <-- FIX
             index=False,
             method="multi",
         )
     finally:
         engine.dispose()
-
-    logger.info(
-        "Wrote mart.player_season_clusters_modern_truth and "
-        "mart.player_cluster_centers_modern_truth"
-    )
+        logger.info(
+            "Wrote mart.player_season_clusters_modern_truth and "
+            "mart.player_cluster_centers_modern_truth"
+        )
 
 
 if __name__ == "__main__":

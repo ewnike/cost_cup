@@ -30,6 +30,8 @@ Author: Eric Winiecke (standardized build script)
 
 from __future__ import annotations
 
+import argparse
+
 import numpy as np
 import pandas as pd
 from sqlalchemy import text
@@ -79,30 +81,61 @@ def overlap_seconds(
     return out
 
 
+def merge_intervals(starts: np.ndarray, ends: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Merge overlapping [start,end) intervals."""
+    if len(starts) == 0:
+        return starts, ends
+    order = np.argsort(starts)
+    s = starts[order]
+    e = ends[order]
+
+    out_s = [int(s[0])]
+    out_e = [int(e[0])]
+
+    for i in range(1, len(s)):
+        if s[i] <= out_e[-1]:  # overlap/touch
+            out_e[-1] = max(out_e[-1], int(e[i]))
+        else:
+            out_s.append(int(s[i]))
+            out_e.append(int(e[i]))
+
+    return np.array(out_s, dtype=np.int64), np.array(out_e, dtype=np.int64)
+
+
 def build_es_toi_for_game(gs_game: pd.DataFrame) -> pd.DataFrame:
-    """Return toi_sec (ES) per (game_id, player_id, team_id) for one game."""
-    # ✅ drop goalies if we can
+    """
+    Docstring for build_es_toi_for_game.
+
+    :param gs_game: Description
+    :type gs_game: pd.DataFrame
+    :return: Description
+    :rtype: DataFrame
+    """
     gs_game = filter_goalies_modern(gs_game)
 
-    # ✅ shared exclude timeline (same rule as legacy)
     df_ex = build_exclude_timeline_equal_strength(gs_game)
+    ex_s, ex_e = exclude_intervals(df_ex)
 
-    ex_s, ex_e = exclude_intervals(df_ex)  # your existing helper
+    gs_game = gs_game.copy()
+    gs_game["shift_start"] = gs_game["shift_start"].astype(np.int64)
+    gs_game["shift_end"] = gs_game["shift_end"].astype(np.int64)
 
-    gs_game["shift_start"] = gs_game["shift_start"].astype(int)
-    gs_game["shift_end"] = gs_game["shift_end"].astype(int)
+    rows = []
+    for (gid, pid, tid), grp in gs_game.groupby(["game_id", "player_id", "team_id"], sort=False):
+        s = grp["shift_start"].to_numpy(np.int64)
+        e = grp["shift_end"].to_numpy(np.int64)
 
-    s = gs_game["shift_start"].to_numpy(np.int64)
-    e = gs_game["shift_end"].to_numpy(np.int64)
-    dur = np.maximum(0, e - s)
+        # merge overlaps first
+        ms, me = merge_intervals(s, e)
 
-    ov = overlap_seconds(s, e, ex_s, ex_e)
-    es = dur - ov
-    es[es < 0] = 0
+        dur = np.maximum(0, me - ms)
+        ov = overlap_seconds(ms, me, ex_s, ex_e)
+        es = dur - ov
+        es[es < 0] = 0
 
-    tmp = gs_game[["game_id", "player_id", "team_id"]].copy()
-    tmp["toi_sec"] = es
-    return tmp.groupby(["game_id", "player_id", "team_id"], as_index=False)["toi_sec"].sum()
+        rows.append((gid, pid, tid, int(es.sum())))
+
+    return pd.DataFrame(rows, columns=["game_id", "player_id", "team_id", "toi_sec"])
 
 
 def update_corsi_counts(
@@ -136,6 +169,72 @@ def build_player_game_es_for_season(season: int) -> pd.DataFrame:
 
     gp = pd.read_sql(f"SELECT * FROM {plays_view}", engine)
 
+    # ---- PATCH: normalize play time + event columns + team ids ----
+
+    # time column
+    if "time" not in gp.columns:
+        if "game_seconds" in gp.columns:
+            gp = gp.rename(columns={"game_seconds": "time"})
+        else:
+            raise KeyError(f"{plays_view} missing time/game_seconds")
+
+    # event column
+    if "event" not in gp.columns and "event_type" in gp.columns:
+        gp = gp.rename(columns={"event_type": "event"})
+
+    # normalize event labels to match your later logic
+    event_map = {
+        "SHOT": "Shot",
+        "GOAL": "Goal",
+        "MISS": "Missed Shot",
+        "BLOCK": "Blocked Shot",
+    }
+    gp["event"] = gp["event"].map(event_map)
+
+    # keep only corsi events early (prevents weird rows later)
+    gp = gp.dropna(subset=["time", "event"]).copy()
+    print("Corsi events present:", sorted(gp["event"].unique()))
+
+    # map team codes -> team_id using dim_team_code
+    team_map = pd.read_sql("SELECT team_code, team_id FROM dim.dim_team_code", engine)
+
+    gp = gp.merge(
+        team_map.rename(columns={"team_code": "home_team", "team_id": "home_team_id"}),
+        on="home_team",
+        how="left",
+    )
+    gp = gp.merge(
+        team_map.rename(columns={"team_code": "away_team", "team_id": "away_team_id"}),
+        on="away_team",
+        how="left",
+    )
+    gp = gp.merge(
+        team_map.rename(columns={"team_code": "event_team", "team_id": "event_team_id"}),
+        on="event_team",
+        how="left",
+    )
+
+    # derive for/against ids
+    gp["team_id_for"] = gp["event_team_id"]
+    gp["team_id_against"] = np.where(
+        gp["event_team_id"] == gp["home_team_id"],
+        gp["away_team_id"],
+        gp["home_team_id"],
+    )
+
+    print(
+        f"[{season}] missing team ids:",
+        gp["team_id_for"].isna().sum(),
+        gp["team_id_against"].isna().sum(),
+    )
+    # final cleanup: require both team ids
+    gp = gp.dropna(subset=["team_id_for", "team_id_against"]).copy()
+    gp["team_id_for"] = gp["team_id_for"].astype("int64")
+    gp["team_id_against"] = gp["team_id_against"].astype("int64")
+    gp["time"] = pd.to_numeric(gp["time"], errors="coerce").astype("int64")
+
+    # --------------------------------------------------------------
+
     gs = pd.read_sql(
         f"""
         SELECT
@@ -151,6 +250,7 @@ def build_player_game_es_for_season(season: int) -> pd.DataFrame:
         ON dt.team_code = rs.team
         WHERE rs.season = {int(season)}
         AND rs.session = 'R'
+        AND rs.position <> 'G'
         AND rs.seconds_end > rs.seconds_start
         """,
         engine,
@@ -159,6 +259,12 @@ def build_player_game_es_for_season(season: int) -> pd.DataFrame:
     engine.dispose()
 
     out_rows: list[pd.DataFrame] = []
+
+    print(sorted(gp["event"].dropna().unique())[:50])
+
+    n_goalie = (gs["position"] == "G").sum()
+    if n_goalie:
+        logger.warning("Found %s goalie shift rows in gs (should be 0).", int(n_goalie))
 
     for game_id, gp_game in gp.groupby("game_id", sort=False):
         gs_game = gs[gs["game_id"] == game_id]
@@ -182,8 +288,19 @@ def build_player_game_es_for_season(season: int) -> pd.DataFrame:
         gs_game["shift_start"] = gs_game["shift_start"].astype(int)
         gs_game["shift_end"] = gs_game["shift_end"].astype(int)
 
+        # sanity: shifts should be within a single game's clock
+        if gs_game["shift_end"].max() > 3900:
+            logger.warning(
+                "game_id=%s shift_end max looks high: %s",
+                game_id,
+                int(gs_game["shift_end"].max()),
+            )
         # TOI ES
         toi_game = build_es_toi_for_game(gs_game)
+
+        max_toi = int(toi_game["toi_sec"].max()) if not toi_game.empty else 0
+        if max_toi > 3900:
+            logger.warning("game_id=%s max player toi_sec=%s (>3900) after merge", game_id, max_toi)
 
         df_corsi = toi_game[["game_id", "player_id", "team_id"]].drop_duplicates().copy()
         df_corsi["cf"] = 0
@@ -219,9 +336,18 @@ def build_player_game_es_for_season(season: int) -> pd.DataFrame:
 
 def main() -> None:
     """Build mart.player_game_es_{season} for all modern seasons."""
+    """Build mart.player_game_es_{season} for one or all modern seasons."""
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--season", type=int, default=None, help="Run one season, e.g. 20182019")
+    args = ap.parse_args()
+
+    # choose seasons to run
+    seasons = [args.season] if args.season is not None else [int(s) for s in SEASONS_MODERN]
+
     engine = get_db_engine()
 
-    for season in SEASONS_MODERN:
+    # for season in SEASONS_MODERN:
+    for season in seasons:
         df = build_player_game_es_for_season(int(season))
         if df.empty:
             print(f"⚠️ {season}: no rows produced")
@@ -242,15 +368,49 @@ def main() -> None:
         df["ca"] = df["ca"].astype("int64")
         df["toi_sec"] = df["toi_sec"].astype("int64")
 
-        # truncate then append (table must exist; you can create it via db_utils.create_player_game_es_table)
+        # --- HARD GUARDRail: enforce unique key ---
+        keys = ["game_id", "player_id", "team_id"]
+
+        # If duplicates exist, collapse them deterministically (sum counts + sum toi)
+        if df.duplicated(keys).any():
+            dup_n = int(df.duplicated(keys).sum())
+            logger.warning(
+                "Found %s duplicate ES keys in season=%s; collapsing by sum()", dup_n, season
+            )
+
+            df = df.groupby(keys, as_index=False).agg({"cf": "sum", "ca": "sum", "toi_sec": "sum"})
+
+            # recompute rate columns after aggregation
+            df["cf60"] = np.where(df["toi_sec"] > 0, df["cf"] * 3600.0 / df["toi_sec"], np.nan)
+            df["ca60"] = np.where(df["toi_sec"] > 0, df["ca"] * 3600.0 / df["toi_sec"], np.nan)
+            df["cf_percent"] = np.where(
+                (df["cf"] + df["ca"]) > 0,
+                100.0 * df["cf"] / (df["cf"] + df["ca"]),
+                0.0,
+            )
+
+        # Assert uniqueness (fail fast)
+        assert not df.duplicated(keys).any(), f"ES still has dupes for season={season}"
+
+        df["cf60"] = np.where(df["toi_sec"] > 0, df["cf"] * 3600.0 / df["toi_sec"], np.nan)
+        df["ca60"] = np.where(df["toi_sec"] > 0, df["ca"] * 3600.0 / df["toi_sec"], np.nan)
+        df["cf_percent"] = np.where(
+            (df["cf"] + df["ca"]) > 0,
+            100.0 * df["cf"] / (df["cf"] + df["ca"]),
+            0.0,
+        )
+
+        df[["cf", "ca", "toi_sec"]] = df[["cf", "ca", "toi_sec"]].fillna(0)
+
         with engine.begin() as conn:
+            mode = "replace"
             try:
                 conn.execute(text(f'TRUNCATE TABLE "{schema}"."{out_table}"'))
                 mode = "append"
             except ProgrammingError:
-                mode = "replace"
+                pass
 
-        df.to_sql(out_table, engine, schema=schema, if_exists="append", index=False, method="multi")
+        df.to_sql(out_table, engine, schema=schema, if_exists=mode, index=False, method="multi")
 
         print(f"✅ wrote {len(df)} rows -> {schema}.{out_table}")
 

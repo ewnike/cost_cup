@@ -5,6 +5,9 @@ Eric Winiecke
 January 14, 2026
 """
 
+raise SystemExit(
+    "DEPRECATED: use build_aggregated_corsi.py (mart.player_game_es_* source of truth)"
+)
 import os
 
 import pandas as pd
