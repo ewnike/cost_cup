@@ -60,9 +60,44 @@ def rebuild_for_season(*, season: int, out_schema: str = "derived") -> None:
             if not table_exists(conn, es_schema, es_table):
                 logger.warning("⚠️ %s: missing %s.%s; skipping", season, es_schema, es_table)
                 return
+            # --- FAIL FAST: ES must be unique on (game_id, player_id, team_id) ---
+            dupe_keys = conn.execute(
+                text(
+                    f"""
+                    SELECT COUNT(*) FROM (
+                      SELECT game_id, player_id, team_id
+                      FROM "{es_schema}"."{es_table}"
+                      GROUP BY 1,2,3
+                      HAVING COUNT(*) > 1
+                    ) d;
+                    """
+                )
+            ).scalar_one()
+
+            if int(dupe_keys) > 0:
+                raise RuntimeError(
+                    f"{season}: ES has {dupe_keys} duplicate (game_id,player_id,team_id) keys in "
+                    f"{es_schema}.{es_table}. Rebuild ES / fix resolver before raw_corsi."
+                )
+
+            null_keys = conn.execute(
+                text(
+                    f"""
+                    SELECT COUNT(*) 
+                    FROM "{es_schema}"."{es_table}"
+                    WHERE game_id IS NULL OR player_id IS NULL OR team_id IS NULL;
+                    """
+                )
+            ).scalar_one()
+
+            if int(null_keys) > 0:
+                raise RuntimeError(
+                    f"{season}: ES has {null_keys} rows with NULL game_id/player_id/team_id in "
+                    f"{es_schema}.{es_table}. Fix upstream before raw_corsi."
+                )
 
             conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS "{out_schema}";'))
-            conn.execute(text(f'DROP TABLE IF EXISTS "{out_schema}"."{out_table}";'))
+            conn.execute(text(f'DROP TABLE IF EXISTS "{out_schema}"."raw_corsi_{season}" CASCADE;'))
 
             conn.execute(
                 text(

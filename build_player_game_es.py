@@ -146,17 +146,33 @@ def update_corsi_counts(
     team_for = int(event["team_id_for"])
     team_against = int(event["team_id_against"])
 
-    on_ice = game_shifts[(game_shifts["shift_start"] <= time) & (game_shifts["shift_end"] >= time)]
+    on_ice = game_shifts[(game_shifts["shift_start"] <= time) & (game_shifts["shift_end"] > time)]
     players_for = on_ice.loc[on_ice["team_id"] == team_for, "player_id"].to_numpy()
     players_against = on_ice.loc[on_ice["team_id"] == team_against, "player_id"].to_numpy()
 
     ev = event["event"]
     if ev in ("Shot", "Goal", "Missed Shot"):
-        df_corsi.loc[df_corsi["player_id"].isin(players_for), "cf"] += 1
-        df_corsi.loc[df_corsi["player_id"].isin(players_against), "ca"] += 1
+        # CF for the "for" team skaters on ice
+        df_corsi.loc[
+            (df_corsi["team_id"] == team_for) & (df_corsi["player_id"].isin(players_for)),
+            "cf",
+        ] += 1
+        # CA for the "against" team skaters on ice
+        df_corsi.loc[
+            (df_corsi["team_id"] == team_against) & (df_corsi["player_id"].isin(players_against)),
+            "ca",
+        ] += 1
+
     elif ev == "Blocked Shot":
-        df_corsi.loc[df_corsi["player_id"].isin(players_for), "ca"] += 1
-        df_corsi.loc[df_corsi["player_id"].isin(players_against), "cf"] += 1
+        # blocked shot: attribution is reversed vs shot
+        df_corsi.loc[
+            (df_corsi["team_id"] == team_for) & (df_corsi["player_id"].isin(players_for)),
+            "ca",
+        ] += 1
+        df_corsi.loc[
+            (df_corsi["team_id"] == team_against) & (df_corsi["player_id"].isin(players_against)),
+            "cf",
+        ] += 1
 
 
 def build_player_game_es_for_season(season: int) -> pd.DataFrame:
@@ -298,6 +314,12 @@ def build_player_game_es_for_season(season: int) -> pd.DataFrame:
         # TOI ES
         toi_game = build_es_toi_for_game(gs_game)
 
+        keys = ["game_id", "player_id", "team_id"]
+        if toi_game.duplicated(keys).any():
+            bad = toi_game[toi_game.duplicated(keys, keep=False)].sort_values(keys)
+            logger.error("DUPES in toi_game for game_id=%s:\n%s", game_id, bad.head(50))
+            raise RuntimeError(f"TOI dupes in game_id={game_id}")
+
         max_toi = int(toi_game["toi_sec"].max()) if not toi_game.empty else 0
         if max_toi > 3900:
             logger.warning("game_id=%s max player toi_sec=%s (>3900) after merge", game_id, max_toi)
@@ -325,6 +347,11 @@ def build_player_game_es_for_season(season: int) -> pd.DataFrame:
             100.0 * merged["cf"] / (merged["cf"] + merged["ca"]),
             0.0,
         )
+        keys = ["game_id", "player_id", "team_id"]
+        if merged.duplicated(keys).any():
+            bad = merged[merged.duplicated(keys, keep=False)].sort_values(keys)
+            logger.error("DUPES in merged for game_id=%s:\n%s", game_id, bad.head(50))
+            raise RuntimeError(f"ES merged dupes in game_id={game_id}")
 
         out_rows.append(merged)
 
@@ -370,27 +397,21 @@ def main() -> None:
 
         # --- HARD GUARDRail: enforce unique key ---
         keys = ["game_id", "player_id", "team_id"]
-
-        # If duplicates exist, collapse them deterministically (sum counts + sum toi)
         if df.duplicated(keys).any():
-            dup_n = int(df.duplicated(keys).sum())
-            logger.warning(
-                "Found %s duplicate ES keys in season=%s; collapsing by sum()", dup_n, season
-            )
+            bad = df[df.duplicated(keys, keep=False)].sort_values(keys)
+            logger.error("DUPES in ES df for season=%s:\n%s", season, bad.head(50))
+            raise RuntimeError(f"ES df has dupes for season={season}")
 
-            df = df.groupby(keys, as_index=False).agg({"cf": "sum", "ca": "sum", "toi_sec": "sum"})
+        df = df.groupby(keys, as_index=False).agg({"cf": "sum", "ca": "sum", "toi_sec": "sum"})
 
-            # recompute rate columns after aggregation
-            df["cf60"] = np.where(df["toi_sec"] > 0, df["cf"] * 3600.0 / df["toi_sec"], np.nan)
-            df["ca60"] = np.where(df["toi_sec"] > 0, df["ca"] * 3600.0 / df["toi_sec"], np.nan)
-            df["cf_percent"] = np.where(
-                (df["cf"] + df["ca"]) > 0,
-                100.0 * df["cf"] / (df["cf"] + df["ca"]),
-                0.0,
-            )
-
-        # Assert uniqueness (fail fast)
-        assert not df.duplicated(keys).any(), f"ES still has dupes for season={season}"
+        # recompute rate columns after aggregation
+        df["cf60"] = np.where(df["toi_sec"] > 0, df["cf"] * 3600.0 / df["toi_sec"], np.nan)
+        df["ca60"] = np.where(df["toi_sec"] > 0, df["ca"] * 3600.0 / df["toi_sec"], np.nan)
+        df["cf_percent"] = np.where(
+            (df["cf"] + df["ca"]) > 0,
+            100.0 * df["cf"] / (df["cf"] + df["ca"]),
+            0.0,
+        )
 
         df["cf60"] = np.where(df["toi_sec"] > 0, df["cf"] * 3600.0 / df["toi_sec"], np.nan)
         df["ca60"] = np.where(df["toi_sec"] > 0, df["ca"] * 3600.0 / df["toi_sec"], np.nan)
