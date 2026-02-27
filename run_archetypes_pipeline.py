@@ -109,8 +109,8 @@ def main() -> None:
 
     # 4) cluster
     print("\n==================== clustering ====================")
-    run([sys.executable, "-u", "cluster_player_archetypes_modern.py"])
-
+    run([sys.executable, "-u", "cluster_player_archetypes_modern.py", "--position", "F"])
+    run([sys.executable, "-u", "cluster_player_archetypes_modern.py", "--position", "D"])
     print("\n✅ Archetypes pipeline done")
 
 

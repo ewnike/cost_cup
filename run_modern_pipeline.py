@@ -26,6 +26,7 @@ SEASONS_MODERN = [20182019, 20192020, 20202021, 20212022, 20222023, 20232024, 20
 
 REPO = Path(__file__).resolve().parent
 CANON_SQL = REPO / "sql" / "mart" / "canonicalize_ids.sql"
+BOX_ES_SQL = REPO / "sql" / "mart" / "build_player_game_boxscore_es.sql"
 
 
 def run(cmd: list[str]) -> None:
@@ -102,6 +103,9 @@ def main() -> None:
 
         # 3) Rebuild stats/toi_total
         run([sys.executable, "-u", "rebuild_player_game_stats_all_modern.py", "--season", str(s)])
+
+        # 3.5) Build 5v5 ES boxscore keyed to ES
+        run_psql_file(args.dsn, s, BOX_ES_SQL)
 
         # 4) Build truth features
         run_psql(args.dsn, f"CALL mart.build_player_game_features_truth({s});")
