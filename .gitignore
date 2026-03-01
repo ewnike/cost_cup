@@ -10,6 +10,8 @@
 *.backup
 *.dump
 *.sql
+*_schema.sql
+*pg_dump*.sql
 
 # Schema files (project-specific)
 **/hockey_stats_schema.sql
@@ -175,3 +177,14 @@ __pypackages__/
 # Celery
 celerybeat-schedule
 celerybeat.pid
+
+# notebooks
+*.ipynb_checkpoints/
+
+# legacy/export artifacts
+skater_*clusters*.csv
+skater_*cluster_centers*.csv
+
+# local scratch
+scratch*.ipynb
+scratch*.py

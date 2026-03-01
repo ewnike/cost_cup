@@ -1,19 +1,14 @@
-from pathlib import Path
-
 import dash
 import numpy as np
 import pandas as pd
 import plotly.express as px
-from dash import Input, Output, dash_table, dcc, html
+from dash import Input, Output, ctx, dash_table, dcc, html, no_update
 from dash import callback_context as ctx
 from dash.dash_table.Format import Format, Scheme, Sign
 from sqlalchemy import text
 
 from db_utils import get_db_engine  # same import style as your other working pages
 
-MODEL_OUT = Path("model_out")
-F_MODEL_CSV = MODEL_OUT / "transition_probs_F_test_season_20232024.csv"
-D_MODEL_CSV = MODEL_OUT / "transition_probs_D_test_season_20232024.csv"
 
 # ---------------- SQL ----------------
 SQL_SEASONS = """
@@ -99,13 +94,6 @@ FROM mart.cluster_transition_model_probs_d
 WHERE season_t = :season_t;
 """
 
-# MODEL_MAP_CACHE: dict[
-#     int,
-#     tuple[
-#         dict[tuple[int, int], tuple[float, float, float]],
-#         dict[tuple[int, int], tuple[float, float, float]],
-#     ],
-# ] = {}
 MODEL_MAP_CACHE: dict[int, tuple[dict, dict]] = {}
 
 
@@ -140,11 +128,6 @@ def load_model_maps_for_season(season_t: int):
 
 def read_df(sql: str, params: dict | None = None) -> pd.DataFrame:
     return pd.read_sql_query(text(sql), ENGINE, params=params or {})
-    # engine = get_db_engine()
-    # try:
-    #     return pd.read_sql_query(text(sql), engine, params=params or {})
-    # finally:
-    #     engine.dispose()
 
 
 def load_transition_probs(pos_group: str) -> dict[int, dict[int, float]]:
@@ -186,67 +169,6 @@ def _check_trans(T, name):
 
 _check_trans(TRANS_F, "TRANS_F")
 _check_trans(TRANS_D, "TRANS_D")
-
-
-def load_model_probs(csv_path: Path) -> pd.DataFrame:
-    if not csv_path.exists():
-        # empty DF signals “no model probs available”
-        return pd.DataFrame(
-            columns=["player_id", "season_t", "pos_group", "p_to0", "p_to1", "p_to2"]
-        )
-    df = pd.read_csv(csv_path)
-    # keep only what we need, enforce types
-    df = df[["player_id", "season_t", "pos_group", "p_to0", "p_to1", "p_to2"]].copy()
-    df["player_id"] = df["player_id"].astype("int64")
-    df["season_t"] = df["season_t"].astype("int64")
-    df["pos_group"] = df["pos_group"].astype(str)
-    for c in ["p_to0", "p_to1", "p_to2"]:
-        df[c] = pd.to_numeric(df[c], errors="coerce")
-    return df
-
-
-MODEL_PROBS_F = load_model_probs(F_MODEL_CSV)
-MODEL_PROBS_D = load_model_probs(D_MODEL_CSV)
-
-# dtype guardrails (ONLY if load_model_probs doesn't already enforce them)
-for dfp in (MODEL_PROBS_F, MODEL_PROBS_D):
-    if dfp.empty:
-        continue
-    dfp["player_id"] = dfp["player_id"].astype("int64")
-    dfp["season_t"] = dfp["season_t"].astype("int64")
-    for c in ["p_to0", "p_to1", "p_to2"]:
-        dfp[c] = dfp[c].astype("float64")
-
-MODEL_PROBS_F_THIN = (
-    MODEL_PROBS_F[["player_id", "season_t", "p_to0", "p_to1", "p_to2"]].copy()
-    if not MODEL_PROBS_F.empty
-    else MODEL_PROBS_F
-)
-MODEL_PROBS_D_THIN = (
-    MODEL_PROBS_D[["player_id", "season_t", "p_to0", "p_to1", "p_to2"]].copy()
-    if not MODEL_PROBS_D.empty
-    else MODEL_PROBS_D
-)
-
-
-def to_model_prob_map(df_probs: pd.DataFrame) -> dict[tuple[int, int], tuple[float, float, float]]:
-    if df_probs.empty:
-        return {}
-    out: dict[tuple[int, int], tuple[float, float, float]] = {}
-    for r in df_probs.itertuples(index=False):
-        out[(int(r.season_t), int(r.player_id))] = (float(r.p_to0), float(r.p_to1), float(r.p_to2))
-    return out
-
-
-MODEL_MAP_F = to_model_prob_map(MODEL_PROBS_F)
-MODEL_MAP_D = to_model_prob_map(MODEL_PROBS_D)
-
-# optional sanity (I’d keep these during dev)
-assert MODEL_MAP_F, "MODEL_MAP_F is empty"
-assert MODEL_MAP_D, "MODEL_MAP_D is empty"
-
-print("MODEL_MAP_F example key:", next(iter(MODEL_MAP_F.keys())))
-print("MODEL_MAP_D example key:", next(iter(MODEL_MAP_D.keys())))
 
 
 def compute_composition(df: pd.DataFrame, weighting: str) -> pd.DataFrame:
@@ -336,27 +258,43 @@ def compute_expected_composition_model(
         return pd.DataFrame(columns=["pos_group", "cluster", "w", "pct"])
 
     df = df_roster.copy()
-    df["w_player"] = (
-        pd.to_numeric(df["toi_es_sec"], errors="coerce").fillna(0.0) if weighting == "toi" else 1.0
-    )
+
+    # weights per player
+    if weighting == "toi":
+        df["w_player"] = pd.to_numeric(df["toi_es_sec"], errors="coerce").fillna(0.0)
+    else:
+        df["w_player"] = 1.0
 
     used_model = 0
     used_backoff = 0
     missing_pos = 0
+    skipped_bad_cluster = 0
 
-    rows = []
+    rows: list[dict] = []
+
     for r in df.itertuples(index=False):
-        pos = str(r.pos_group).upper()
+        pos = str(getattr(r, "pos_group", "")).upper()
         if pos not in ("F", "D"):
             missing_pos += 1
             continue
 
-        pid = int(r.player_id)
-        from_c = int(r.cluster)
-        w = float(r.w_player)
+        pid = int(getattr(r, "player_id"))
+        w = float(getattr(r, "w_player"))
 
-        # pull model probs if available
-        key = (season_t, pid)
+        # cluster guardrail
+        from_c_raw = getattr(r, "cluster", None)
+        if from_c_raw is None or pd.isna(from_c_raw):
+            skipped_bad_cluster += 1
+            continue
+
+        from_c = int(from_c_raw)
+        if from_c not in (0, 1, 2):
+            skipped_bad_cluster += 1
+            continue
+
+        # model probs lookup + fallback transition row
+        key = (int(season_t), pid)
+
         if pos == "F":
             p = model_map_f.get(key)
             backoff = trans_f[from_c]
@@ -364,11 +302,13 @@ def compute_expected_composition_model(
             p = model_map_d.get(key)
             backoff = trans_d[from_c]
 
+        # choose probs
         use_backoff = True
         if p is not None:
             try:
                 p0, p1, p2 = float(p[0]), float(p[1]), float(p[2])
-                if np.isfinite(p0) and np.isfinite(p1) and np.isfinite(p2) and (p0 + p1 + p2) > 0:
+                s = p0 + p1 + p2
+                if np.isfinite(p0) and np.isfinite(p1) and np.isfinite(p2) and s > 0:
                     use_backoff = False
             except Exception:
                 use_backoff = True
@@ -387,10 +327,14 @@ def compute_expected_composition_model(
 
     print(
         f"[expected_comp] season_t={season_t} used_model={used_model} "
-        f"used_backoff={used_backoff} missing_pos={missing_pos} total_players={len(df)}"
+        f"used_backoff={used_backoff} missing_pos={missing_pos} "
+        f"skipped_bad_cluster={skipped_bad_cluster} total_players={len(df)}"
     )
 
     exp_df = pd.DataFrame(rows)
+    if exp_df.empty:
+        return pd.DataFrame(columns=["pos_group", "cluster", "w", "pct"])
+
     agg = exp_df.groupby(["pos_group", "cluster"], as_index=False)["w"].sum()
     totals = agg.groupby("pos_group", as_index=False)["w"].sum().rename(columns={"w": "w_pos"})
     out = agg.merge(totals, on="pos_group", how="left")
@@ -602,36 +546,44 @@ def compute_expected_net60_model_map(
     if df_roster.empty:
         return 0.0
 
+    df = df_roster.copy()
     if weighting == "toi":
-        wts = pd.to_numeric(df_roster["toi_es_sec"], errors="coerce").fillna(0.0).to_numpy()
+        w = pd.to_numeric(df["toi_es_sec"], errors="coerce").fillna(0.0)
     else:
-        wts = np.ones(len(df_roster), dtype=float)
+        w = pd.Series(1.0, index=df.index)
 
     exp_vals = []
     exp_wts = []
 
-    for r, wi in zip(df_roster.itertuples(index=False), wts):
+    for r, wi in zip(df.itertuples(index=False), w):
         pos = str(r.pos_group).upper()
+        if pos not in ("F", "D"):
+            continue
+
         pid = int(r.player_id)
         from_c = int(r.cluster)
         wi = float(wi)
 
-        if pos == "F":
-            p = model_map_f.get((season_t, pid))
-            backoff = trans_f[from_c]
-            centers = center_net60_f
-        else:
-            p = model_map_d.get((season_t, pid))
-            backoff = trans_d[from_c]
-            centers = center_net60_d
+        probs_matrix = trans_f if pos == "F" else trans_d
+        centers = center_net60_f if pos == "F" else center_net60_d
+        key = (int(season_t), pid)
 
-        if p is None:
-            p0, p1, p2 = float(backoff[0]), float(backoff[1]), float(backoff[2])
+        if pos == "F":
+            p = model_map_f.get(key)
         else:
-            p0, p1, p2 = map(float, p)
+            p = model_map_d.get(key)
+
+        if p is not None:
+            p0, p1, p2 = float(p[0]), float(p[1]), float(p[2])
             s = p0 + p1 + p2
             if s > 0:
                 p0, p1, p2 = p0 / s, p1 / s, p2 / s
+            else:
+                p = None  # fallback
+
+        if p is None:
+            backoff = probs_matrix[from_c]
+            p0, p1, p2 = float(backoff[0]), float(backoff[1]), float(backoff[2])
 
         exp_net = p0 * centers[0] + p1 * centers[1] + p2 * centers[2]
         exp_vals.append(exp_net)
@@ -868,21 +820,13 @@ def refresh_teams(season: int):
 
 
 @app.callback(
-    Output("remove_player", "value"),
-    Output("add_player", "value"),
-    Input("season", "value"),
-    Input("team_code", "value"),
-)
-def reset_moves_on_team_change(season, team_code):
-    return None, None
-
-
-@app.callback(
     Output("comp_graph_before", "figure"),
     Output("comp_graph_after", "figure"),
     Output("roster_table", "data"),
     Output("remove_player", "options"),
+    Output("remove_player", "value"),  # NEW
     Output("add_player", "options"),
+    Output("add_player", "value"),
     Output("whatif_table", "data"),
     Output("kpi_row", "children"),
     Input("season", "value"),
@@ -898,18 +842,19 @@ def refresh(season, team_code, weighting, role_mode, remove_pid, add_pid):
 
     Returns:
       fig_before, fig_after, roster_records, remove_opts, add_opts, whatif_delta_records, kpi_children
+
     """
     from dash import ctx
 
     empty_fig = px.bar(title="")
     if season is None or team_code is None:
-        return empty_fig, empty_fig, [], [], [], [], []
+        return empty_fig, empty_fig, [], [], None, [], None, [], []
 
     season_t = int(season)
 
-    trig = getattr(ctx, "triggered_id", None)
+    trigger = getattr(ctx, "triggered_id", None)
     print(
-        f"[TRIGGERED] {trig} | role_mode={role_mode} season={season_t} team={team_code} w={weighting}"
+        f"[TRIGGERED] {trigger} | role_mode={role_mode} season={season_t} team={team_code} w={weighting}"
     )
     print(f"[VALS] remove={remove_pid} add={add_pid}")
 
@@ -917,7 +862,16 @@ def refresh(season, team_code, weighting, role_mode, remove_pid, add_pid):
     df = read_df(SQL_TEAM_ROSTER_ARCH, {"season": season_t, "team_code": str(team_code)})
     if df.empty:
         no_fig = px.bar(title="No roster rows")
-        return no_fig, no_fig, [], [], [], [], []
+        return no_fig, no_fig, [], [], None, [], None, [], []
+
+    # ✅ dtype guardrails for anything used in projections / joins
+    df = df.copy()
+    df["player_id"] = pd.to_numeric(df["player_id"], errors="coerce").astype("int64")
+    df["cluster"] = pd.to_numeric(df["cluster"], errors="coerce").astype("int64")
+    df["toi_es_sec"] = pd.to_numeric(df["toi_es_sec"], errors="coerce")
+    df["toi_per_game"] = pd.to_numeric(df["toi_per_game"], errors="coerce")
+    df["es_net60"] = pd.to_numeric(df["es_net60"], errors="coerce")
+    df["pos_group"] = df["pos_group"].astype(str)
 
     # ------------------- roster table -------------------
     roster = df.copy()
@@ -955,9 +909,33 @@ def refresh(season, team_code, weighting, role_mode, remove_pid, add_pid):
         for r in add_pool_f.itertuples(index=False)
     ][:400]
 
+    trigger = getattr(ctx, "triggered_id", None)
+
+    # --- reset stale selections on team/season change ---
+    if trigger in ("season", "team_code"):
+        remove_pid_out = None
+        add_pid_out = None
+    else:
+        remove_pid_out = remove_pid
+        add_pid_out = add_pid
+
+    # --- if remove changed, keep add only if still valid ---
+    if trigger == "remove_player":
+        valid_add_ids = {opt["value"] for opt in add_opts}
+        if add_pid not in valid_add_ids:
+            add_pid_out = None
     # ------------------- apply what-if once -------------------
-    df_after = apply_whatif(df, df_add_pool, remove_pid, add_pid)
+    df_after = apply_whatif(df, df_add_pool, remove_pid_out, add_pid_out)
     print(f"[WHATIF] before_n={len(df)} after_n={len(df_after)}")
+
+    # ✅ same guardrails for the modified roster
+    df_after = df_after.copy()
+    df_after["player_id"] = pd.to_numeric(df_after["player_id"], errors="coerce").astype("int64")
+    df_after["cluster"] = pd.to_numeric(df_after["cluster"], errors="coerce").astype("int64")
+    df_after["toi_es_sec"] = pd.to_numeric(df_after["toi_es_sec"], errors="coerce")
+    df_after["toi_per_game"] = pd.to_numeric(df_after["toi_per_game"], errors="coerce")
+    df_after["es_net60"] = pd.to_numeric(df_after["es_net60"], errors="coerce")
+    df_after["pos_group"] = df_after["pos_group"].astype(str)
 
     # ------------------- composition -------------------
     if role_mode == "projected":
@@ -1047,7 +1025,9 @@ def refresh(season, team_code, weighting, role_mode, remove_pid, add_pid):
         fig_after,
         roster_records,
         remove_opts,
+        remove_pid_out,
         add_opts,
+        add_pid_out,
         delta.to_dict("records"),
         kpis,
     )
