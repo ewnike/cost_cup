@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import dash
 import pandas as pd
 import plotly.express as px
@@ -6,6 +8,10 @@ from dash.dash_table.Format import Format, Scheme, Sign
 from sqlalchemy import text
 
 from db_utils import get_db_engine  # same import style as your other working pages
+
+MODEL_OUT = Path("model_out")
+F_MODEL_CSV = MODEL_OUT / "transition_probs_F_test_season_20232024.csv"
+D_MODEL_CSV = MODEL_OUT / "transition_probs_D_test_season_20232024.csv"
 
 # ---------------- SQL ----------------
 SQL_SEASONS = """
@@ -56,6 +62,18 @@ ORDER BY toi_es_sec DESC
 LIMIT 3000;
 """
 
+SQL_TRANS_F = """
+SELECT from_cluster, to_cluster, prob_mean
+FROM mart.cluster_transitions_modern_f
+ORDER BY from_cluster, to_cluster;
+"""
+
+SQL_TRANS_D = """
+SELECT from_cluster, to_cluster, prob_mean
+FROM mart.cluster_transitions_modern_d
+ORDER BY from_cluster, to_cluster;
+"""
+
 
 # ---------------- helpers ----------------
 def read_df(sql: str, params: dict | None = None) -> pd.DataFrame:
@@ -64,6 +82,102 @@ def read_df(sql: str, params: dict | None = None) -> pd.DataFrame:
         return pd.read_sql_query(text(sql), engine, params=params or {})
     finally:
         engine.dispose()
+
+
+def load_transition_probs(pos_group: str) -> dict[int, dict[int, float]]:
+    """
+    Return mapping.
+
+    Returns mappingprobs[from_cluster][to_cluster] = prob_mean
+    pos_group: 'F' or 'D'
+    """
+    pos = pos_group.upper()
+    if pos not in {"F", "D"}:
+        raise ValueError(f"pos_group must be 'F' or 'D', got: {pos_group}")
+
+    sql = SQL_TRANS_F if pos == "F" else SQL_TRANS_D
+    df = read_df(sql)
+
+    probs: dict[int, dict[int, float]] = {0: {}, 1: {}, 2: {}}
+    for r in df.itertuples(index=False):
+        probs[int(r.from_cluster)][int(r.to_cluster)] = float(r.prob_mean)
+
+    # guardrail: ensure full 3x3
+    for fc in (0, 1, 2):
+        for tc in (0, 1, 2):
+            probs.setdefault(fc, {}).setdefault(tc, 0.0)
+
+    return probs
+
+
+# ✅ global cache (loaded once at app startup)
+TRANS_F = load_transition_probs("F")
+TRANS_D = load_transition_probs("D")
+
+
+def _check_trans(T, name):
+    for fc in (0, 1, 2):
+        row_sum = sum(T[fc][tc] for tc in (0, 1, 2))
+        assert abs(row_sum - 1.0) < 1e-6, f"{name} row {fc} sums to {row_sum}"
+
+
+_check_trans(TRANS_F, "TRANS_F")
+_check_trans(TRANS_D, "TRANS_D")
+
+
+def weighted_mean(values: pd.Series, weights: pd.Series) -> float:
+    v = pd.to_numeric(values, errors="coerce")
+    w = pd.to_numeric(weights, errors="coerce")
+    m = v.notna() & w.notna() & (w > 0)
+    if not m.any():
+        return 0.0
+    return float((v[m] * w[m]).sum() / w[m].sum())
+
+
+def load_model_probs(csv_path: Path) -> pd.DataFrame:
+    if not csv_path.exists():
+        # empty DF signals “no model probs available”
+        return pd.DataFrame(
+            columns=["player_id", "season_t", "pos_group", "p_to0", "p_to1", "p_to2"]
+        )
+    df = pd.read_csv(csv_path)
+    # keep only what we need, enforce types
+    df = df[["player_id", "season_t", "pos_group", "p_to0", "p_to1", "p_to2"]].copy()
+    df["player_id"] = df["player_id"].astype("int64")
+    df["season_t"] = df["season_t"].astype("int64")
+    df["pos_group"] = df["pos_group"].astype(str)
+    for c in ["p_to0", "p_to1", "p_to2"]:
+        df[c] = pd.to_numeric(df[c], errors="coerce")
+    return df
+
+
+MODEL_PROBS_F = load_model_probs(F_MODEL_CSV)
+MODEL_PROBS_D = load_model_probs(D_MODEL_CSV)
+# dtype guardrails (ONLY if load_model_probs doesn't already enforce them)
+for dfp in (MODEL_PROBS_F, MODEL_PROBS_D):
+    if dfp.empty:
+        continue
+    dfp["player_id"] = dfp["player_id"].astype("int64")
+    dfp["season_t"] = dfp["season_t"].astype("int64")
+    for c in ["p_to0", "p_to1", "p_to2"]:
+        dfp[c] = dfp[c].astype("float64")
+
+
+def to_model_prob_map(df_probs: pd.DataFrame) -> dict[tuple[int, int], tuple[float, float, float]]:
+    if df_probs.empty:
+        return {}
+    out: dict[tuple[int, int], tuple[float, float, float]] = {}
+    for r in df_probs.itertuples(index=False):
+        out[(int(r.season_t), int(r.player_id))] = (float(r.p_to0), float(r.p_to1), float(r.p_to2))
+    return out
+
+
+MODEL_MAP_F = to_model_prob_map(MODEL_PROBS_F)
+MODEL_MAP_D = to_model_prob_map(MODEL_PROBS_D)
+
+# optional sanity (I’d keep these during dev)
+assert MODEL_MAP_F, "MODEL_MAP_F is empty"
+assert MODEL_MAP_D, "MODEL_MAP_D is empty"
 
 
 def compute_composition(df: pd.DataFrame, weighting: str) -> pd.DataFrame:
@@ -86,33 +200,54 @@ def compute_composition(df: pd.DataFrame, weighting: str) -> pd.DataFrame:
     return out.sort_values(["pos_group", "cluster"])
 
 
-# def weighted_mean(series, weights):
-#     w = weights.astype(float)
-#     s = series.astype(float)
-#     denom = w.sum()
-#     return float((s * w).sum() / denom) if denom else 0.0
+def compute_expected_composition_model(
+    df_roster: pd.DataFrame,
+    weighting: str,
+    season_t: int,
+    trans_f: dict[int, dict[int, float]],
+    trans_d: dict[int, dict[int, float]],
+    model_map_f: dict[tuple[int, int], tuple[float, float, float]],
+    model_map_d: dict[tuple[int, int], tuple[float, float, float]],
+) -> pd.DataFrame:
+    if df_roster.empty:
+        return pd.DataFrame(columns=["pos_group", "cluster", "w", "pct"])
 
+    df = df_roster.copy()
+    df["w_player"] = (
+        pd.to_numeric(df["toi_es_sec"], errors="coerce").fillna(0.0) if weighting == "toi" else 1.0
+    )
 
-def weighted_mean(values: pd.Series, weights: pd.Series) -> float:
-    v = pd.to_numeric(values, errors="coerce")
-    w = pd.to_numeric(weights, errors="coerce")
-    m = v.notna() & w.notna() & (w > 0)
-    if not m.any():
-        return 0.0
-    return float((v[m] * w[m]).sum() / w[m].sum())
+    rows = []
+    for r in df.itertuples(index=False):
+        pos = str(r.pos_group).upper()
+        pid = int(r.player_id)
+        from_c = int(r.cluster)
+        w = float(r.w_player)
 
+        # 1) Try supervised model probs for this player-season_t
+        key = (season_t, pid)
+        if pos == "F":
+            p = model_map_f.get(key)
+            backoff = trans_f[from_c]
+        else:
+            p = model_map_d.get(key)
+            backoff = trans_d[from_c]
 
-# def apply_whatif(df: pd.DataFrame, remove_pid: int | None, add_pid: int | None) -> pd.DataFrame:
-#     out = df.copy()
+        if p is None:
+            p0, p1, p2 = float(backoff[0]), float(backoff[1]), float(backoff[2])
+        else:
+            p0, p1, p2 = p
 
-#     if remove_pid is not None:
-#         out = out[out["player_id"] != remove_pid].copy()
+        rows.append({"pos_group": pos, "cluster": 0, "w": w * p0})
+        rows.append({"pos_group": pos, "cluster": 1, "w": w * p1})
+        rows.append({"pos_group": pos, "cluster": 2, "w": w * p2})
 
-#     # V1 safety: only allow adding a player that exists in the current roster df
-#     if add_pid is not None and add_pid in set(df["player_id"]):
-#         out = pd.concat([out, df[df["player_id"] == add_pid].copy()], ignore_index=True)
-
-#     return out
+    exp_df = pd.DataFrame(rows)
+    agg = exp_df.groupby(["pos_group", "cluster"], as_index=False)["w"].sum()
+    totals = agg.groupby("pos_group", as_index=False)["w"].sum().rename(columns={"w": "w_pos"})
+    out = agg.merge(totals, on="pos_group", how="left")
+    out["pct"] = (100.0 * out["w"] / out["w_pos"]).round(2)
+    return out.sort_values(["pos_group", "cluster"])
 
 
 def kpi_box(label: str, value: float, color: str | None = None) -> html.Div:
@@ -179,6 +314,130 @@ def make_comp_fig(df_comp: pd.DataFrame, title: str):
     return fig
 
 
+def load_center_net60(pos_group: str) -> dict[int, float]:
+    sql = """
+    SELECT cluster, AVG((cf60 - ca60))::float8 AS net60
+    FROM mart.v_player_season_archetypes_modern_regulars
+    WHERE pos_group = :pos_group
+    GROUP BY 1
+    ORDER BY 1;
+    """
+    dfc = read_df(sql, {"pos_group": pos_group})
+    out = {0: 0.0, 1: 0.0, 2: 0.0}
+    for r in dfc.itertuples(index=False):
+        out[int(r.cluster)] = float(r.net60)
+    return out
+
+
+CENTER_NET60_F = load_center_net60("F")
+CENTER_NET60_D = load_center_net60("D")
+
+
+def compute_expected_net60(df_roster: pd.DataFrame, weighting: str, season: int) -> float:
+    if df_roster.empty:
+        return 0.0
+
+    # player weights
+    w = (
+        pd.to_numeric(df_roster["toi_es_sec"], errors="coerce").fillna(0.0)
+        if weighting == "toi"
+        else pd.Series(1.0, index=df_roster.index)
+    )
+
+    exp_vals = []
+    exp_wts = []
+
+    for r, wi in zip(df_roster.itertuples(index=False), w):
+        pos = str(r.pos_group)
+        from_c = int(r.cluster)
+        wi = float(wi)
+
+        # transition probs for that player’s current cluster
+        probs = TRANS_F if pos == "F" else TRANS_D
+
+        # expected next-season ES net60 = sum_k p(k|from_c) * center_net60[pos,k]
+        # so we need centers per pos/cluster (see below)
+        centers = CENTER_NET60_F if pos == "F" else CENTER_NET60_D
+        exp_net = sum(probs[from_c][k] * centers[k] for k in (0, 1, 2))
+
+        exp_vals.append(exp_net)
+        exp_wts.append(wi)
+
+    return weighted_mean(pd.Series(exp_vals), pd.Series(exp_wts))
+
+
+def compute_expected_net60_model(
+    df_roster_with_probs: pd.DataFrame,
+    weighting: str,
+    trans_f: dict[int, dict[int, float]],
+    trans_d: dict[int, dict[int, float]],
+    center_net60_f: dict[int, float],
+    center_net60_d: dict[int, float],
+) -> float:
+    """
+    Calculate expected next-season ES net60 for a roster.
+
+    Uses per-player supervised model probabilities if available:
+      p_to0, p_to1, p_to2  (probabilities of next cluster 0/1/2)
+
+    Fallback:
+      if any p_to* is missing/NaN for a row, use transition matrix
+      based on current cluster (cluster) and pos_group.
+
+    weighting:
+      - "toi": TOI-weighted by toi_es_sec
+      - else: equal-weight per player
+    """
+    if df_roster_with_probs.empty:
+        return 0.0
+
+    df = df_roster_with_probs.copy()
+
+    # weights per player
+    if weighting == "toi":
+        w = pd.to_numeric(df["toi_es_sec"], errors="coerce").fillna(0.0)
+    else:
+        w = pd.Series(1.0, index=df.index)
+
+    # ensure numeric probability columns if present
+    for c in ["p_to0", "p_to1", "p_to2"]:
+        if c in df.columns:
+            df[c] = pd.to_numeric(df[c], errors="coerce")
+        else:
+            # if the caller forgot to join probs, create NaNs so we always fallback
+            df[c] = np.nan
+
+    exp_vals: list[float] = []
+    exp_wts: list[float] = []
+
+    for r, wi in zip(df.itertuples(index=False), w):
+        pos = str(getattr(r, "pos_group"))
+        from_c = int(getattr(r, "cluster"))
+        wi = float(wi)
+
+        # choose per-pos resources
+        probs_matrix = trans_f if pos == "F" else trans_d
+        centers = center_net60_f if pos == "F" else center_net60_d
+
+        # try model probs first
+        p0 = getattr(r, "p_to0")
+        p1 = getattr(r, "p_to1")
+        p2 = getattr(r, "p_to2")
+
+        if pd.notna(p0) and pd.notna(p1) and pd.notna(p2):
+            probs_row = {0: float(p0), 1: float(p1), 2: float(p2)}
+        else:
+            # fallback to Dirichlet-smoothed transition matrix
+            probs_row = probs_matrix[from_c]
+
+        exp_net = probs_row[0] * centers[0] + probs_row[1] * centers[1] + probs_row[2] * centers[2]
+
+        exp_vals.append(float(exp_net))
+        exp_wts.append(wi)
+
+    return weighted_mean(pd.Series(exp_vals), pd.Series(exp_wts))
+
+
 # ---------------- app ----------------
 app = dash.Dash(__name__)
 server = app.server
@@ -196,6 +455,10 @@ weight_options = [
     {"label": "Player-seasons (counts)", "value": "player_season"},
 ]
 
+role_mode_options = [
+    {"label": "Current roles (this season)", "value": "current"},
+    {"label": "Projected roles (next season)", "value": "projected"},
+]
 app.layout = html.Div(
     style={"maxWidth": "1200px", "margin": "0 auto", "padding": "18px"},
     children=[
@@ -240,16 +503,33 @@ app.layout = html.Div(
                         ),
                     ],
                 ),
+                html.Div(
+                    style={"minWidth": "320px"},
+                    children=[
+                        html.Label("Role mode"),
+                        dcc.RadioItems(
+                            id="role_mode",
+                            options=role_mode_options,
+                            value="current",
+                            inline=True,
+                        ),
+                    ],
+                ),
             ],
         ),
         html.Hr(),
-        dcc.Graph(id="comp_graph"),
-        # KPI row (callback will populate children)
+        # BEFORE/AFTER charts (callback updates figures)
         html.Div(
-            id="kpi_row",
-            style={"display": "flex", "gap": "12px", "flexWrap": "wrap", "marginTop": "8px"},
+            style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "14px"},
+            children=[
+                dcc.Graph(id="comp_graph_before"),
+                dcc.Graph(id="comp_graph_after"),
+            ],
         ),
+        # KPI row (callback populates children)
+        html.Div(id="kpi_row", style={"marginTop": "8px"}),
         html.Div(style={"height": "12px"}),
+        # tables row
         html.Div(
             style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "14px"},
             children=[
@@ -318,9 +598,6 @@ app.layout = html.Div(
                             ],
                         ),
                         html.Br(),
-                        # keep your delta table below this (whatif_table)
-                        #     ]
-                        # )
                         dash_table.DataTable(
                             id="whatif_table",
                             columns=[
@@ -389,7 +666,8 @@ def refresh_teams(season: int):
 
 
 @app.callback(
-    Output("comp_graph", "figure"),
+    Output("comp_graph_before", "figure"),
+    Output("comp_graph_after", "figure"),
     Output("roster_table", "data"),
     Output("remove_player", "options"),
     Output("add_player", "options"),
@@ -398,17 +676,26 @@ def refresh_teams(season: int):
     Input("season", "value"),
     Input("team_code", "value"),
     Input("weighting", "value"),
+    Input("role_mode", "value"),
     Input("remove_player", "value"),
     Input("add_player", "value"),
 )
-def refresh(season, team_code, weighting, remove_pid, add_pid):
+def refresh(
+    season: int,
+    team_code: str,
+    weighting: str,
+    role_mode: str,
+    remove_pid: int | None,
+    add_pid: int | None,
+):
     empty_fig = px.bar(title="")
     if season is None or team_code is None:
-        return empty_fig, [], [], [], [], []
+        return empty_fig, empty_fig, [], [], [], [], []
 
     df = read_df(SQL_TEAM_ROSTER_ARCH, {"season": int(season), "team_code": str(team_code)})
     if df.empty:
-        return px.bar(title="No roster rows"), [], [], [], [], []
+        no_fig = px.bar(title="No roster rows")
+        return no_fig, no_fig, [], [], [], [], []
 
     # roster table
     roster = df.copy()
@@ -447,31 +734,77 @@ def refresh(season, team_code, weighting, remove_pid, add_pid):
         for r in add_pool_f.itertuples(index=False)
     ][:400]  # cap list size for UI sanity
 
-    # composition before
-    comp_before = compute_composition(df, weighting)
-    fig = make_comp_fig(
+    # --- apply what-if once ---
+    df_after = apply_whatif(df, df_add_pool, remove_pid, add_pid)
+
+    # --- attach model probs to df and df_after (needed for projected mode) ---
+    season_t = int(season)
+
+    def attach_model_probs(df_in: pd.DataFrame) -> pd.DataFrame:
+        dfj = df_in.copy()
+        dfj["season_t"] = season_t
+
+        dfF = dfj[dfj["pos_group"] == "F"].merge(
+            MODEL_PROBS_F[MODEL_PROBS_F["season_t"] == season_t],
+            on=["player_id", "season_t"],
+            how="left",
+        )
+        dfD = dfj[dfj["pos_group"] == "D"].merge(
+            MODEL_PROBS_D[MODEL_PROBS_D["season_t"] == season_t],
+            on=["player_id", "season_t"],
+            how="left",
+        )
+        return pd.concat([dfF, dfD], ignore_index=True)
+
+    df_with_probs = attach_model_probs(df)
+    df_after_with_probs = attach_model_probs(df_after)
+
+    # --- composition (current vs projected) ---
+    if role_mode == "projected_model":
+        comp_before = compute_expected_composition_model(
+            df_with_probs, weighting, season_t, TRANS_F, TRANS_D, MODEL_MAP_F, MODEL_MAP_D
+        )
+        comp_after = compute_expected_composition_model(
+            df_after_with_probs, weighting, season_t, TRANS_F, TRANS_D, MODEL_MAP_F, MODEL_MAP_D
+        )
+
+    elif role_mode == "projected_matrix":
+        comp_before = compute_expected_composition_model(df, weighting, TRANS_F, TRANS_D)
+        comp_after = compute_expected_composition_model(df_after, weighting, TRANS_F, TRANS_D)
+
+    else:
+        comp_before = compute_composition(df, weighting)
+        comp_after = compute_composition(df_after, weighting)
+
+    fig_before = make_comp_fig(
         comp_before,
-        title=f"{team_code} {season} — archetype mix ({'TOI' if weighting == 'toi' else 'counts'})",
+        title=f"{team_code} {season} — BEFORE ({role_mode}, {'TOI' if weighting == 'toi' else 'counts'})",
     )
 
-    # composition after
-    df_after = apply_whatif(df, df_add_pool, remove_pid, add_pid)
-    if weighting == "toi":
-        before_net = weighted_mean(df["es_net60"], df["toi_es_sec"])
-        after_net = weighted_mean(df_after["es_net60"], df_after["toi_es_sec"])
+    fig_after = make_comp_fig(
+        comp_after,
+        title=f"{team_code} {season} — AFTER ({role_mode}, {'TOI' if weighting == 'toi' else 'counts'})",
+    )
+
+    # --- KPI: ES net60 (current vs projected) ---
+    if role_mode == "projected_matrix":
+        before_net = compute_expected_net60(df, weighting, season)
+        after_net = compute_expected_net60(df_after, weighting, season)
+
+    elif role_mode == "projected_model":
+        before_net = compute_expected_net60_model(df_with_probs, weighting)
+        after_net = compute_expected_net60_model(df_after_with_probs, weighting)
+
     else:
-        before_net = float(pd.to_numeric(df["es_net60"], errors="coerce").mean())
-        after_net = float(pd.to_numeric(df_after["es_net60"], errors="coerce").mean())
+        # current-season KPI (uses actual player season net60)
+        if weighting == "toi":
+            before_net = weighted_mean(df["es_net60"], df["toi_es_sec"])
+            after_net = weighted_mean(df_after["es_net60"], df_after["toi_es_sec"])
+        else:
+            before_net = float(pd.to_numeric(df["es_net60"], errors="coerce").mean())
+            after_net = float(pd.to_numeric(df_after["es_net60"], errors="coerce").mean())
+
     delta_net = round(after_net - before_net, 3)
-
-    comp_after = compute_composition(df_after, weighting)
-
-    key = ["pos_group", "cluster"]
-    wb = comp_before[key + ["pct"]].rename(columns={"pct": "pct_before"})
-    wa = comp_after[key + ["pct"]].rename(columns={"pct": "pct_after"})
-    delta = wb.merge(wa, on=key, how="outer").fillna(0)
-    delta["delta_pct"] = (delta["pct_after"] - delta["pct_before"]).round(2)
-    delta = delta.sort_values(["pos_group", "cluster"])
 
     kpis = [
         kpi_box("ES net60 (before)", before_net),
@@ -483,8 +816,23 @@ def refresh(season, team_code, weighting, remove_pid, add_pid):
         ),
     ]
 
-    return fig, roster_records, remove_opts, add_opts, delta.to_dict("records"), kpis
+    key = ["pos_group", "cluster"]
+    wb = comp_before[key + ["pct"]].rename(columns={"pct": "pct_before"})
+    wa = comp_after[key + ["pct"]].rename(columns={"pct": "pct_after"})
+    delta = wb.merge(wa, on=key, how="outer").fillna(0)
+    delta["delta_pct"] = (delta["pct_after"] - delta["pct_before"]).round(2)
+    delta = delta.sort_values(["pos_group", "cluster"])
+
+    return (
+        fig_before,
+        fig_after,
+        roster_records,
+        remove_opts,
+        add_opts,
+        delta.to_dict("records"),
+        kpis,
+    )
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host="127.0.0.1", port=8050)
+    app.run(debug=True, host="127.0.0.1", port=8050, use_reloader=False)

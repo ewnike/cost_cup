@@ -1,0 +1,37 @@
+{
+  "pos_group": "D",
+  "test_season": 20192020,
+  "n_train": 192,
+  "n_test": 175,
+  "train_class_counts": {
+    "0": 83,
+    "1": 59,
+    "2": 50
+  },
+  "test_class_counts": {
+    "0": 78,
+    "1": 64,
+    "2": 33
+  },
+  "baseline_majority_class": 0,
+  "baseline_accuracy": 0.44571428571428573,
+  "model_accuracy": 0.6171428571428571,
+  "log_loss": 0.8159310132488207,
+  "confusion_matrix_rows_true_cols_pred_0_1_2": [
+    [
+      60,
+      13,
+      5
+    ],
+    [
+      22,
+      30,
+      12
+    ],
+    [
+      5,
+      10,
+      18
+    ]
+  ]
+}

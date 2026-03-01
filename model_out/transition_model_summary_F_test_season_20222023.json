@@ -1,0 +1,37 @@
+{
+  "pos_group": "F",
+  "test_season": 20222023,
+  "n_train": 1460,
+  "n_test": 390,
+  "train_class_counts": {
+    "0": 776,
+    "1": 496,
+    "2": 188
+  },
+  "test_class_counts": {
+    "0": 217,
+    "1": 115,
+    "2": 58
+  },
+  "baseline_majority_class": 0,
+  "baseline_accuracy": 0.5564102564102564,
+  "model_accuracy": 0.7205128205128205,
+  "log_loss": 0.6219914311517748,
+  "confusion_matrix_rows_true_cols_pred_0_1_2": [
+    [
+      184,
+      28,
+      5
+    ],
+    [
+      41,
+      65,
+      9
+    ],
+    [
+      3,
+      23,
+      32
+    ]
+  ]
+}

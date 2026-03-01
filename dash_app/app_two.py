@@ -532,7 +532,7 @@ def refresh_gamelog(
     )
     fig_ps.update_xaxes(dtick=tick)
 
-    return title_net, fig_net, title_ps, fig_ps, records, max_game_n, focus_game_n
+    return title_net, fig_net, title_ps, fig_ps, records, max_game_n, focus
 
 
 if __name__ == "__main__":
