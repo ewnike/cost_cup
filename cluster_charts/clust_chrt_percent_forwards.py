@@ -4,7 +4,6 @@ from sqlalchemy import text
 
 from db_utils import get_db_engine
 
-
 SQL = """
 select season, cluster, count(*) as n
 from mart.player_season_clusters_modern_truth_f
