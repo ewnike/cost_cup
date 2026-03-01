@@ -310,7 +310,9 @@ def main() -> None:
         raise SystemExit("Not enough seasons available to build transitions.")
 
     # test seasons are season_t values that have season_t+1 also present
-    valid_test_seasons = [s for s in seasons if season_next(s) in seasons]
+    valid_test_seasons = [
+        s for s in seasons if season_next(s) in seasons and len([t for t in seasons if t < s]) > 0
+    ]
     if args.test_season is not None:
         valid_test_seasons = [int(args.test_season)]
 
