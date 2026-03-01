@@ -52,7 +52,8 @@ for ax, season in zip(axes, SEASONS):
 
     # Create bin labels for the x-axis
     bin_labels = [
-        f"${edge / 1000:,.0f}k-${(edge + BIN_WIDTH) / 1000:,.0f}k" for edge in bin_edges[:-1]
+        f"${edge / 1000:,.0f}k-${(edge + BIN_WIDTH) / 1000:,.0f}k"
+        for edge in bin_edges[:-1]
     ]
 
     # Plot the histogram

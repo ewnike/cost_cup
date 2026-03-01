@@ -67,7 +67,10 @@ def exclude_intervals(df_exclude: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]
 
 
 def overlap_seconds(
-    interval_start: np.ndarray, interval_end: np.ndarray, ex_start: np.ndarray, ex_end: np.ndarray
+    interval_start: np.ndarray,
+    interval_end: np.ndarray,
+    ex_start: np.ndarray,
+    ex_end: np.ndarray,
 ) -> np.ndarray:
     """Overlap between many [interval_start, interval_end) and exclude intervals."""
     out = np.zeros(len(interval_start), dtype=np.int64)
@@ -81,7 +84,9 @@ def overlap_seconds(
     return out
 
 
-def merge_intervals(starts: np.ndarray, ends: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+def merge_intervals(
+    starts: np.ndarray, ends: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
     """Merge overlapping [start,end) intervals."""
     if len(starts) == 0:
         return starts, ends
@@ -121,7 +126,9 @@ def build_es_toi_for_game(gs_game: pd.DataFrame) -> pd.DataFrame:
     gs_game["shift_end"] = gs_game["shift_end"].astype(np.int64)
 
     rows = []
-    for (gid, pid, tid), grp in gs_game.groupby(["game_id", "player_id", "team_id"], sort=False):
+    for (gid, pid, tid), grp in gs_game.groupby(
+        ["game_id", "player_id", "team_id"], sort=False
+    ):
         s = grp["shift_start"].to_numpy(np.int64)
         e = grp["shift_end"].to_numpy(np.int64)
 
@@ -146,31 +153,39 @@ def update_corsi_counts(
     team_for = int(event["team_id_for"])
     team_against = int(event["team_id_against"])
 
-    on_ice = game_shifts[(game_shifts["shift_start"] <= time) & (game_shifts["shift_end"] > time)]
+    on_ice = game_shifts[
+        (game_shifts["shift_start"] <= time) & (game_shifts["shift_end"] > time)
+    ]
     players_for = on_ice.loc[on_ice["team_id"] == team_for, "player_id"].to_numpy()
-    players_against = on_ice.loc[on_ice["team_id"] == team_against, "player_id"].to_numpy()
+    players_against = on_ice.loc[
+        on_ice["team_id"] == team_against, "player_id"
+    ].to_numpy()
 
     ev = event["event"]
     if ev in ("Shot", "Goal", "Missed Shot"):
         # CF for the "for" team skaters on ice
         df_corsi.loc[
-            (df_corsi["team_id"] == team_for) & (df_corsi["player_id"].isin(players_for)),
+            (df_corsi["team_id"] == team_for)
+            & (df_corsi["player_id"].isin(players_for)),
             "cf",
         ] += 1
         # CA for the "against" team skaters on ice
         df_corsi.loc[
-            (df_corsi["team_id"] == team_against) & (df_corsi["player_id"].isin(players_against)),
+            (df_corsi["team_id"] == team_against)
+            & (df_corsi["player_id"].isin(players_against)),
             "ca",
         ] += 1
 
     elif ev == "Blocked Shot":
         # blocked shot: attribution is reversed vs shot
         df_corsi.loc[
-            (df_corsi["team_id"] == team_for) & (df_corsi["player_id"].isin(players_for)),
+            (df_corsi["team_id"] == team_for)
+            & (df_corsi["player_id"].isin(players_for)),
             "ca",
         ] += 1
         df_corsi.loc[
-            (df_corsi["team_id"] == team_against) & (df_corsi["player_id"].isin(players_against)),
+            (df_corsi["team_id"] == team_against)
+            & (df_corsi["player_id"].isin(players_against)),
             "cf",
         ] += 1
 
@@ -225,7 +240,9 @@ def build_player_game_es_for_season(season: int) -> pd.DataFrame:
         how="left",
     )
     gp = gp.merge(
-        team_map.rename(columns={"team_code": "event_team", "team_id": "event_team_id"}),
+        team_map.rename(
+            columns={"team_code": "event_team", "team_id": "event_team_id"}
+        ),
         on="event_team",
         how="left",
     )
@@ -289,7 +306,9 @@ def build_player_game_es_for_season(season: int) -> pd.DataFrame:
 
         # Ensure plays have numeric time and are corsi-relevant
         gp_game = gp_game.copy()
-        gp_game["time"] = pd.to_numeric(gp_game["time"], errors="coerce").astype("Int64")
+        gp_game["time"] = pd.to_numeric(gp_game["time"], errors="coerce").astype(
+            "Int64"
+        )
         gp_game = gp_game.dropna(subset=["time"])
         gp_game["time"] = gp_game["time"].astype("int64")
         gp_game = gp_game[
@@ -322,9 +341,13 @@ def build_player_game_es_for_season(season: int) -> pd.DataFrame:
 
         max_toi = int(toi_game["toi_sec"].max()) if not toi_game.empty else 0
         if max_toi > 3900:
-            logger.warning("game_id=%s max player toi_sec=%s (>3900) after merge", game_id, max_toi)
+            logger.warning(
+                "game_id=%s max player toi_sec=%s (>3900) after merge", game_id, max_toi
+            )
 
-        df_corsi = toi_game[["game_id", "player_id", "team_id"]].drop_duplicates().copy()
+        df_corsi = (
+            toi_game[["game_id", "player_id", "team_id"]].drop_duplicates().copy()
+        )
         df_corsi["cf"] = 0
         df_corsi["ca"] = 0
 
@@ -334,7 +357,9 @@ def build_player_game_es_for_season(season: int) -> pd.DataFrame:
         for _, ev in gp_game_es.iterrows():
             update_corsi_counts(df_corsi, ev, gs_game)
 
-        merged = df_corsi.merge(toi_game, on=["game_id", "player_id", "team_id"], how="left")
+        merged = df_corsi.merge(
+            toi_game, on=["game_id", "player_id", "team_id"], how="left"
+        )
 
         merged["cf60"] = np.where(
             merged["toi_sec"] > 0, merged["cf"] * 3600.0 / merged["toi_sec"], np.nan
@@ -365,11 +390,15 @@ def main() -> None:
     """Build mart.player_game_es_{season} for all modern seasons."""
     """Build mart.player_game_es_{season} for one or all modern seasons."""
     ap = argparse.ArgumentParser()
-    ap.add_argument("--season", type=int, default=None, help="Run one season, e.g. 20182019")
+    ap.add_argument(
+        "--season", type=int, default=None, help="Run one season, e.g. 20182019"
+    )
     args = ap.parse_args()
 
     # choose seasons to run
-    seasons = [args.season] if args.season is not None else [int(s) for s in SEASONS_MODERN]
+    seasons = (
+        [args.season] if args.season is not None else [int(s) for s in SEASONS_MODERN]
+    )
 
     engine = get_db_engine()
 
@@ -384,7 +413,17 @@ def main() -> None:
         schema = SCHEMA["mart"]
 
         df = df[
-            ["game_id", "player_id", "team_id", "cf", "ca", "toi_sec", "cf60", "ca60", "cf_percent"]
+            [
+                "game_id",
+                "player_id",
+                "team_id",
+                "cf",
+                "ca",
+                "toi_sec",
+                "cf60",
+                "ca60",
+                "cf_percent",
+            ]
         ].copy()
 
         # dtype cleanup (prevents surprises)
@@ -402,19 +441,29 @@ def main() -> None:
             logger.error("DUPES in ES df for season=%s:\n%s", season, bad.head(50))
             raise RuntimeError(f"ES df has dupes for season={season}")
 
-        df = df.groupby(keys, as_index=False).agg({"cf": "sum", "ca": "sum", "toi_sec": "sum"})
+        df = df.groupby(keys, as_index=False).agg(
+            {"cf": "sum", "ca": "sum", "toi_sec": "sum"}
+        )
 
         # recompute rate columns after aggregation
-        df["cf60"] = np.where(df["toi_sec"] > 0, df["cf"] * 3600.0 / df["toi_sec"], np.nan)
-        df["ca60"] = np.where(df["toi_sec"] > 0, df["ca"] * 3600.0 / df["toi_sec"], np.nan)
+        df["cf60"] = np.where(
+            df["toi_sec"] > 0, df["cf"] * 3600.0 / df["toi_sec"], np.nan
+        )
+        df["ca60"] = np.where(
+            df["toi_sec"] > 0, df["ca"] * 3600.0 / df["toi_sec"], np.nan
+        )
         df["cf_percent"] = np.where(
             (df["cf"] + df["ca"]) > 0,
             100.0 * df["cf"] / (df["cf"] + df["ca"]),
             0.0,
         )
 
-        df["cf60"] = np.where(df["toi_sec"] > 0, df["cf"] * 3600.0 / df["toi_sec"], np.nan)
-        df["ca60"] = np.where(df["toi_sec"] > 0, df["ca"] * 3600.0 / df["toi_sec"], np.nan)
+        df["cf60"] = np.where(
+            df["toi_sec"] > 0, df["cf"] * 3600.0 / df["toi_sec"], np.nan
+        )
+        df["ca60"] = np.where(
+            df["toi_sec"] > 0, df["ca"] * 3600.0 / df["toi_sec"], np.nan
+        )
         df["cf_percent"] = np.where(
             (df["cf"] + df["ca"]) > 0,
             100.0 * df["cf"] / (df["cf"] + df["ca"]),
@@ -431,7 +480,14 @@ def main() -> None:
             except ProgrammingError:
                 pass
 
-        df.to_sql(out_table, engine, schema=schema, if_exists=mode, index=False, method="multi")
+        df.to_sql(
+            out_table,
+            engine,
+            schema=schema,
+            if_exists=mode,
+            index=False,
+            method="multi",
+        )
 
         print(f"✅ wrote {len(df)} rows -> {schema}.{out_table}")
 

@@ -65,7 +65,9 @@ def main():
             salary.columns = [c.strip() for c in salary.columns]
 
             # Normalize join keys
-            stats["Abbreviation"] = stats["Abbreviation"].astype(str).str.strip().str.upper()
+            stats["Abbreviation"] = (
+                stats["Abbreviation"].astype(str).str.strip().str.upper()
+            )
             salary["Team"] = salary["Team"].astype(str).str.strip().str.upper()
 
             merged = pd.merge(
@@ -94,7 +96,9 @@ def main():
                 }
             )
 
-            out["total_cap"] = out["total_cap_raw"].apply(parse_cap_to_int).astype("Int64")
+            out["total_cap"] = (
+                out["total_cap_raw"].apply(parse_cap_to_int).astype("Int64")
+            )
 
             table_name = f"team_summary_{season_id}"
             out.to_sql(

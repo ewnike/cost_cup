@@ -24,7 +24,13 @@ REQUIRED = {
         "team_id_for",
         "team_id_against",
     ],
-    ("raw", "game_shifts"): ["game_id", "player_id", "period", "shift_start", "shift_end"],
+    ("raw", "game_shifts"): [
+        "game_id",
+        "player_id",
+        "period",
+        "shift_start",
+        "shift_end",
+    ],
     ("raw", "game_skater_stats"): ["game_id", "player_id", "team_id"],
 }
 
@@ -74,10 +80,14 @@ def main() -> int:
         gss_tbl = fq("raw", "game_skater_stats")
 
         g = pd.read_sql(
-            f"SELECT * FROM {game_tbl} WHERE game_id=%(gid)s", engine, params={"gid": TEST_GAME_ID}
+            f"SELECT * FROM {game_tbl} WHERE game_id=%(gid)s",
+            engine,
+            params={"gid": TEST_GAME_ID},
         )
         p = pd.read_sql(
-            f"SELECT * FROM {plays_tbl} WHERE game_id=%(gid)s", engine, params={"gid": TEST_GAME_ID}
+            f"SELECT * FROM {plays_tbl} WHERE game_id=%(gid)s",
+            engine,
+            params={"gid": TEST_GAME_ID},
         )
         s = pd.read_sql(
             f"SELECT * FROM {shifts_tbl} WHERE game_id=%(gid)s",
@@ -85,7 +95,9 @@ def main() -> int:
             params={"gid": TEST_GAME_ID},
         )
         ss = pd.read_sql(
-            f"SELECT * FROM {gss_tbl} WHERE game_id=%(gid)s", engine, params={"gid": TEST_GAME_ID}
+            f"SELECT * FROM {gss_tbl} WHERE game_id=%(gid)s",
+            engine,
+            params={"gid": TEST_GAME_ID},
         )
 
         print(f"raw.game rows: {len(g)}")

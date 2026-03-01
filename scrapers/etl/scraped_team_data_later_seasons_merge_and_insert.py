@@ -78,14 +78,20 @@ for end_year in end_years:
     )
 
     # --- Sanity checks BEFORE writing ---
-    stats_codes = set(stats["Abbreviation"].dropna().astype(str).str.strip().str.upper())
+    stats_codes = set(
+        stats["Abbreviation"].dropna().astype(str).str.strip().str.upper()
+    )
     salary_codes = set(salary["Team"].dropna().astype(str).str.strip().str.upper())
 
     unmatched_stats = sorted(stats_codes - salary_codes)
     unmatched_salary = sorted(salary_codes - stats_codes)
 
-    print(f"{season_id}: unmatched in stats (Abbreviation not in salary.Team): {unmatched_stats}")
-    print(f"{season_id}: unmatched in salary (Team not in stats.Abbreviation): {unmatched_salary}")
+    print(
+        f"{season_id}: unmatched in stats (Abbreviation not in salary.Team): {unmatched_stats}"
+    )
+    print(
+        f"{season_id}: unmatched in salary (Team not in stats.Abbreviation): {unmatched_salary}"
+    )
 
     # --- Build output schema (mart.team_summary_{season}) ---
     merged["season"] = season_id
@@ -134,7 +140,9 @@ for end_year in end_years:
     table_name = f"team_summary_{season_id}"
 
     try:
-        merged.to_sql(table_name, engine, schema="mart", if_exists="replace", index=False)
+        merged.to_sql(
+            table_name, engine, schema="mart", if_exists="replace", index=False
+        )
         print(f"{season_id}: merged rows={len(merged)} -> mart.{table_name}")
     except Exception as e:
         print(f"{season_id}: FAILED writing mart.{table_name}: {e}")

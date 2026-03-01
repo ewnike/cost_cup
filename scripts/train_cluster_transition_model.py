@@ -4,7 +4,12 @@ import os
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, log_loss
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    confusion_matrix,
+    log_loss,
+)
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sqlalchemy import text
@@ -123,7 +128,9 @@ def fit_one(pos_group: str, test_season: int = 20232024, out_dir: str = "model_o
     for c in FEATURE_COLS:
         df[c] = pd.to_numeric(df[c], errors="coerce")
 
-    df = df.dropna(subset=FEATURE_COLS + ["cluster_next", "season_t"]).reset_index(drop=True)
+    df = df.dropna(subset=FEATURE_COLS + ["cluster_next", "season_t"]).reset_index(
+        drop=True
+    )
     df["season_t"] = df["season_t"].astype(int)
 
     # --- time split: train on seasons < test_season; test = test_season ---
@@ -197,7 +204,9 @@ def fit_one(pos_group: str, test_season: int = 20232024, out_dir: str = "model_o
     ll = log_loss(y_test, proba_test, labels=[0, 1, 2])
     cm = confusion_matrix(y_test, pred_test, labels=[0, 1, 2])
 
-    report = classification_report(y_test, pred_test, labels=[0, 1, 2], output_dict=True)
+    report = classification_report(
+        y_test, pred_test, labels=[0, 1, 2], output_dict=True
+    )
 
     # --- save predictions for dashboard/DB ---
     out_pred = test_df[["player_id", "season_t", "cluster_t", "cluster_next"]].copy()
@@ -207,7 +216,9 @@ def fit_one(pos_group: str, test_season: int = 20232024, out_dir: str = "model_o
     out_pred["p_to2"] = proba_test[:, 2]
 
     # write CSV (safe / no DB write needed)
-    out_csv = os.path.join(out_dir, f"transition_probs_{pos_group}_test_season_{test_season}.csv")
+    out_csv = os.path.join(
+        out_dir, f"transition_probs_{pos_group}_test_season_{test_season}.csv"
+    )
     out_pred.to_csv(out_csv, index=False)
 
     # --- summary JSON ---

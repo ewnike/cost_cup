@@ -71,16 +71,29 @@ def main() -> None:
         out = totals.merge(primary, on="player_id", how="left")
 
         # enrich names + cap hits by player_id
-        df_pi = pd.read_sql(f'SELECT player_id, "firstName", "lastName" FROM {pi}', engine)
-        df_cap = pd.read_sql(f'SELECT player_id, "capHit", spotrac_url FROM {cap}', engine)
+        df_pi = pd.read_sql(
+            f'SELECT player_id, "firstName", "lastName" FROM {pi}', engine
+        )
+        df_cap = pd.read_sql(
+            f'SELECT player_id, "capHit", spotrac_url FROM {cap}', engine
+        )
 
-        out = out.merge(df_pi, on="player_id", how="left").merge(df_cap, on="player_id", how="left")
+        out = out.merge(df_pi, on="player_id", how="left").merge(
+            df_cap, on="player_id", how="left"
+        )
         out = out.rename(columns={"team_id_primary": "team_id"})
 
         schema = "mart"
         table = f"aggregated_corsi_{season}_v2"
 
-        out.to_sql(table, engine, schema=schema, if_exists="replace", index=False, method="multi")
+        out.to_sql(
+            table,
+            engine,
+            schema=schema,
+            if_exists="replace",
+            index=False,
+            method="multi",
+        )
         print(f"✅ {season}: wrote {schema}.{table} rows={len(out)}")
 
     engine.dispose()

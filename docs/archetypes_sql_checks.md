@@ -1,7 +1,7 @@
 # Archetypes SQL Checks (Modern Pipeline)
 
-**Project:** Cost of Cup  
-**Last updated:** 2026-02-02  
+**Project:** Cost of Cup
+**Last updated:** 2026-02-02
 **Purpose:** Reproducible SQL sanity checks for modern player-game → player-season features and clusters.
 
 > Conventions used below:
@@ -143,7 +143,7 @@ ORDER BY c.cluster;
 ```
 
 ## 4) Position distribution inside clusters
-#### Assumes `dim.player_info` has a position field. If it is named differently, change `primaryPosition`. 
+#### Assumes `dim.player_info` has a position field. If it is named differently, change `primaryPosition`.
 #### If you store position elsewhere, replace the join accordingly.
 
 ### Counts by cluster and positiion (F/D only example)
@@ -415,18 +415,3 @@ Key checks I ran most often:
 - Cluster size + per-cluster means
 - Cluster × position distribution
 - player_game_stats ↔ boxscore join match rate
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

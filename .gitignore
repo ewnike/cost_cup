@@ -188,3 +188,6 @@ skater_*cluster_centers*.csv
 # local scratch
 scratch*.ipynb
 scratch*.py
+# Deprecated notebooks (keep local only)
+archive/notebooks_DEPRECATED/*.ipynb
+archive/notebooks_DEPRECATED/.ipynb_checkpoints/

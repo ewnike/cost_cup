@@ -102,7 +102,9 @@ def main():
                 age_vals.append(age_cell)
                 cap_vals.append(cap_cell)
 
-            df = pd.DataFrame({"Team": team_vals, "Avg_Age": age_vals, "Total_Cap": cap_vals})
+            df = pd.DataFrame(
+                {"Team": team_vals, "Avg_Age": age_vals, "Total_Cap": cap_vals}
+            )
             out = os.path.join(OUTPUT_DIR, f"team_salary_{year}.csv")
             df.to_csv(out, index=False)
             print(f"{year}: scraped {len(df)} teams -> {out}")

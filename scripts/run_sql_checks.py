@@ -21,7 +21,6 @@ if str(ROOT) not in sys.path:
 
 from db_utils import get_db_engine  # noqa: E402
 
-
 _BLOCK_COMMENT_RE = re.compile(r"^\s*/\*.*?\*/\s*", re.DOTALL)
 
 
@@ -71,7 +70,9 @@ def _format_cell(v) -> str:
     return s
 
 
-def _print_pretty_table(cols: list[str], rows: list[tuple], *, max_width: int = 48) -> None:
+def _print_pretty_table(
+    cols: list[str], rows: list[tuple], *, max_width: int = 48
+) -> None:
     """Print rows as a simple ASCII table."""
     widths = [min(len(c), max_width) for c in cols]
     for r in rows:
@@ -88,7 +89,9 @@ def _print_pretty_table(cols: list[str], rows: list[tuple], *, max_width: int = 
 
     sep = "+-" + "-+-".join("-" * w for w in widths) + "-+"
     header = (
-        "| " + " | ".join(clip(c, widths[i]).ljust(widths[i]) for i, c in enumerate(cols)) + " |"
+        "| "
+        + " | ".join(clip(c, widths[i]).ljust(widths[i]) for i, c in enumerate(cols))
+        + " |"
     )
 
     print(sep)
@@ -97,7 +100,10 @@ def _print_pretty_table(cols: list[str], rows: list[tuple], *, max_width: int = 
     for r in rows:
         line = (
             "| "
-            + " | ".join(clip(_format_cell(v), widths[i]).ljust(widths[i]) for i, v in enumerate(r))
+            + " | ".join(
+                clip(_format_cell(v), widths[i]).ljust(widths[i])
+                for i, v in enumerate(r)
+            )
             + " |"
         )
         print(line)
@@ -105,7 +111,9 @@ def _print_pretty_table(cols: list[str], rows: list[tuple], *, max_width: int = 
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run SQL sanity checks from a directory.")
+    parser = argparse.ArgumentParser(
+        description="Run SQL sanity checks from a directory."
+    )
     parser.add_argument("--dir", default="sql/sanity")
     parser.add_argument("--print-results", action="store_true")
     parser.add_argument("--print-only", default="")

@@ -64,12 +64,14 @@ def fetch_spotrac_map(session, spotrac_ids: list[int]) -> dict[int, int]:
     if not spotrac_ids:
         return {}
 
-    q = text(f"""
+    q = text(
+        f"""
         SELECT spotrac_id, player_id
         FROM {SCHEMA["dim"]}.spotrac_to_nhl
         WHERE spotrac_id = ANY(:sids)
           AND player_id IS NOT NULL
-    """)
+    """
+    )
     rows = session.execute(q, {"sids": spotrac_ids}).fetchall()
     return {int(sid): int(pid) for (sid, pid) in rows}
 
@@ -145,9 +147,9 @@ def main() -> None:
                 df["spotrac_id"] = df["spotrac_url"].map(spotrac_id_from_url)
 
                 # Build name_key and initialize player_id
-                df["name_key"] = (df["firstName"].fillna("") + " " + df["lastName"].fillna("")).map(
-                    py_norm_name
-                )
+                df["name_key"] = (
+                    df["firstName"].fillna("") + " " + df["lastName"].fillna("")
+                ).map(py_norm_name)
                 df["player_id"] = pd.NA
 
                 # (0) Prefer deterministic mapping via dim.spotrac_to_nhl
@@ -163,10 +165,18 @@ def main() -> None:
                     sid_to_pid = fetch_spotrac_map(session, spotrac_ids_list)
 
                 has_sid = df["spotrac_id"].notna()
-                df.loc[has_sid, "player_id"] = df.loc[has_sid, "spotrac_id"].map(sid_to_pid)
-                print("unresolved rows after spotrac_to_nhl:", int(df["player_id"].isna().sum()))
+                df.loc[has_sid, "player_id"] = df.loc[has_sid, "spotrac_id"].map(
+                    sid_to_pid
+                )
+                print(
+                    "unresolved rows after spotrac_to_nhl:",
+                    int(df["player_id"].isna().sum()),
+                )
                 print("spotrac_to_nhl-mapped rows:", int(df["player_id"].notna().sum()))
-                print("unresolved rows after spotrac_to_nhl:", int(df["player_id"].isna().sum()))
+                print(
+                    "unresolved rows after spotrac_to_nhl:",
+                    int(df["player_id"].isna().sum()),
+                )
 
                 # (1) dim_player_name_unique
                 dim_player_unique = fqs("dim", "dim_player_name_unique")
@@ -174,11 +184,13 @@ def main() -> None:
 
                 name_key_rows = df["name_key"].dropna().unique().tolist()
                 if name_key_rows:
-                    q1 = text(f"""
+                    q1 = text(
+                        f"""
                         SELECT name_key, player_id
                         FROM {dim_player_unique}
                         WHERE name_key = ANY(:keys)
-                    """)
+                    """
+                    )
                     m1 = session.execute(q1, {"keys": name_key_rows}).fetchall()
                     map1 = {r[0]: int(r[1]) for r in m1 if r[1] is not None}
 
@@ -191,7 +203,9 @@ def main() -> None:
                 # (2) fallback: normalize dim.player_info on the fly
                 missing = df["player_id"].isna()
                 if missing.any():
-                    q = text(f'SELECT player_id, "firstName", "lastName" FROM {dim_player_info}')
+                    q = text(
+                        f'SELECT player_id, "firstName", "lastName" FROM {dim_player_info}'
+                    )
                     pi = pd.DataFrame(
                         session.execute(q).fetchall(),
                         columns=["player_id", "firstName", "lastName"],
@@ -205,13 +219,17 @@ def main() -> None:
                     )
 
                     key_to_pid = dict(zip(pi["name_key"], pi["player_id"]))
-                    df.loc[missing, "player_id"] = df.loc[missing, "name_key"].map(key_to_pid)
+                    df.loc[missing, "player_id"] = df.loc[missing, "name_key"].map(
+                        key_to_pid
+                    )
                     print(
                         "unresolved rows after dim_player_info fallback:",
                         int(df["player_id"].isna().sum()),
                     )
                 # Output
-                out = df[["player_id", "firstName", "lastName", "capHit", "spotrac_url"]].copy()
+                out = df[
+                    ["player_id", "firstName", "lastName", "capHit", "spotrac_url"]
+                ].copy()
                 out = out.drop_duplicates(subset=["spotrac_url"], keep="first")
 
                 out.to_sql(

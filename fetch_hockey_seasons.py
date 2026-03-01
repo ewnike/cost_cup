@@ -152,7 +152,9 @@ while True:
         print("Unexpected JSON structure:", js)
         raise SystemExit("Not the PBP data endpoint. Check URL/nonce/cookies.")
 
-    print("recordsTotal:", js["recordsTotal"], "recordsFiltered:", js["recordsFiltered"])
+    print(
+        "recordsTotal:", js["recordsTotal"], "recordsFiltered:", js["recordsFiltered"]
+    )
     rows = js["data"]
     print("  got", len(rows), "rows")
 

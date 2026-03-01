@@ -422,7 +422,9 @@ def raw_shifts_config(season: int):
         column_mapping=COLUMN_MAPPINGS["raw_shifts"],
         engine=get_engine(),
         local_download_path=local_download_path_III,
-        table_definition_function=lambda md: define_raw_shifts_table(md, f"raw_shifts_{season}"),
+        table_definition_function=lambda md: define_raw_shifts_table(
+            md, f"raw_shifts_{season}"
+        ),
     )
 
 

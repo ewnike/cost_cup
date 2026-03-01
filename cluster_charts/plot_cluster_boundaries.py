@@ -116,7 +116,9 @@ def main() -> None:
     try:
         df = pd.read_sql_query(text(SQL_DATA.format(cols=cols, pos=pos)), engine)
         ccols = ", ".join([f"{c}" for c in FEATURES])
-        centers = pd.read_sql_query(text(SQL_CENTERS.format(cols=ccols, pos=pos)), engine)
+        centers = pd.read_sql_query(
+            text(SQL_CENTERS.format(cols=ccols, pos=pos)), engine
+        )
     finally:
         engine.dispose()
 

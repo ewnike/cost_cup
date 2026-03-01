@@ -12,10 +12,13 @@ import pathlib
 
 import pandas as pd
 
-from constants import SEASONS_ACTIVE as SEASONS
 from archive.load_data import get_env_vars, load_data
+from constants import SEASONS_ACTIVE as SEASONS
 from log_utils import setup_logger
-from strength_utils import build_exclude_timeline_equal_strength, ensure_team_id_on_shifts_legacy
+from strength_utils import (
+    build_exclude_timeline_equal_strength,
+    ensure_team_id_on_shifts_legacy,
+)
 
 raise SystemExit(
     "DEPRECATED: preprocess_and_calculate_season_totals.py is legacy/incomplete.\n"
@@ -76,7 +79,9 @@ def organize_data_by_season(df_master, season_game_ids):
                 + (organized_data["game_shifts"]["period"] - 1) * 1200
             )
         else:
-            logger.info("'periodTime' not present in game_shifts. Skipping time calculation.")
+            logger.info(
+                "'periodTime' not present in game_shifts. Skipping time calculation."
+            )
 
     return organized_data
 
@@ -161,7 +166,9 @@ def verify_penalty(game_id, time, game_plays):
 
     # Calculate event_time if it doesn't already exist
     if "event_time" not in game_plays.columns:
-        game_plays["event_time"] = (game_plays["period"] - 1) * 1200 + game_plays["periodTime"]
+        game_plays["event_time"] = (game_plays["period"] - 1) * 1200 + game_plays[
+            "periodTime"
+        ]
         logger.info("Calculated 'event_time' column in game_plays.")
 
     # Filter game plays by game_id
@@ -247,7 +254,9 @@ def assemble_arrays_for_processing(organized_data, exclude_times):
 
         # Filter data for the current game_id
         exclude_time = exclude_times[exclude_times["game_id"] == game_id]
-        plays = organized_data["game_plays"][organized_data["game_plays"]["game_id"] == game_id]
+        plays = organized_data["game_plays"][
+            organized_data["game_plays"]["game_id"] == game_id
+        ]
 
         # Check if either DataFrame is empty
         if exclude_time.empty or plays.empty:
@@ -305,7 +314,9 @@ def process_season_team_event_totals(assembled_data):
 
     # Process each game's data
     for game_id, game_data in assembled_data:
-        even_strength_plays = game_data  # Assuming this is already filtered for even strength
+        even_strength_plays = (
+            game_data  # Assuming this is already filtered for even strength
+        )
         game_totals_for = (
             even_strength_plays.groupby("team_id_for")
             .agg(
@@ -365,7 +376,9 @@ def process_season_team_event_totals(assembled_data):
         + season_totals["total_missed_shots_against"]
         + season_totals["total_blocked_shots_against"]
     )
-    season_totals["CF%"] = season_totals["CF"] / (season_totals["CF"] + season_totals["CA"])
+    season_totals["CF%"] = season_totals["CF"] / (
+        season_totals["CF"] + season_totals["CA"]
+    )
 
     return season_results, season_totals
 
@@ -435,28 +448,40 @@ if __name__ == "__main__":
             # Step 5: Compute penalty exclude times
             exclude_times = preprocess_exclude_times(organized_data, season_game_ids)
             if exclude_times.empty:
-                print(f"No penalty exclude times computed for season {season}. Skipping...")
+                print(
+                    f"No penalty exclude times computed for season {season}. Skipping..."
+                )
                 continue
-            exclude_file = os.path.join(OUTPUT_DIR, f"penalty_exclude_times_{season}.csv")
+            exclude_file = os.path.join(
+                OUTPUT_DIR, f"penalty_exclude_times_{season}.csv"
+            )
             exclude_times.to_csv(exclude_file, index=False)
             print(f"Penalty exclude times saved to {exclude_file}")
 
             # Step 6: Assemble arrays for processing
-            assembled_data = assemble_arrays_for_processing(organized_data, exclude_times)
+            assembled_data = assemble_arrays_for_processing(
+                organized_data, exclude_times
+            )
             if not assembled_data:
                 print(f"No assembled data for season {season}. Skipping...")
                 continue
 
             # Step 7: Process season totals (game-level and season-level)
-            season_results, season_totals = process_season_team_event_totals(assembled_data)
+            season_results, season_totals = process_season_team_event_totals(
+                assembled_data
+            )
 
             # Save game-level results to a CSV file
-            game_results_file = os.path.join(OUTPUT_DIR, f"team_event_totals_games_{season}.csv")
+            game_results_file = os.path.join(
+                OUTPUT_DIR, f"team_event_totals_games_{season}.csv"
+            )
             season_results.to_csv(game_results_file, index=False)
             print(f"Game-level results saved to {game_results_file}")
 
             # Save season-level totals to another CSV file
-            season_totals_file = os.path.join(OUTPUT_DIR, f"team_event_totals_season_{season}.csv")
+            season_totals_file = os.path.join(
+                OUTPUT_DIR, f"team_event_totals_season_{season}.csv"
+            )
             season_totals.to_csv(season_totals_file, index=False)
             print(f"Season-level totals saved to {season_totals_file}")
 

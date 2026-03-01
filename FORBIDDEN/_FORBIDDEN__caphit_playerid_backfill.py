@@ -72,11 +72,13 @@ def lookup_nhl_id_from_spotrac(conn, map_table: str, spotrac_id: int) -> int | N
     :rtype: int | None
     """
     row = conn.execute(
-        text(f"""
+        text(
+            f"""
             SELECT player_id
             FROM {map_table}
             WHERE spotrac_id = :sid
-        """),
+        """
+        ),
         {"sid": int(spotrac_id)},
     ).fetchone()
     return int(row[0]) if row and row[0] is not None else None
@@ -144,12 +146,14 @@ def upsert_spotrac_to_nhl(
     """
     # If this player_id is already mapped to another spotrac_id, skip
     row = conn.execute(
-        text(f"""
+        text(
+            f"""
             SELECT spotrac_id
             FROM {map_table}
             WHERE player_id = :pid
               AND spotrac_id <> :sid
-        """),
+        """
+        ),
         {"pid": int(player_id), "sid": int(spotrac_id)},
     ).fetchone()
 
@@ -164,7 +168,8 @@ def upsert_spotrac_to_nhl(
 
     # Otherwise safe upsert by spotrac_id
     conn.execute(
-        text(f"""
+        text(
+            f"""
             INSERT INTO {map_table} (spotrac_id, player_id, confidence, source, created_at)
             VALUES (:sid, :pid, :conf, :src, NOW())
             ON CONFLICT (spotrac_id)
@@ -172,8 +177,14 @@ def upsert_spotrac_to_nhl(
                 player_id  = EXCLUDED.player_id,
                 confidence = EXCLUDED.confidence,
                 source     = EXCLUDED.source
-        """),
-        {"sid": int(spotrac_id), "pid": int(player_id), "conf": confidence, "src": source},
+        """
+        ),
+        {
+            "sid": int(spotrac_id),
+            "pid": int(player_id),
+            "conf": confidence,
+            "src": source,
+        },
     )
     return True
 
@@ -261,7 +272,9 @@ def _extract_hits(payload: Any):
     if isinstance(payload, list):
         if payload and isinstance(payload[0], dict):
             keys = payload[0].keys()
-            if ("playerId" in keys or "id" in keys) and ("name" in keys or "fullName" in keys):
+            if ("playerId" in keys or "id" in keys) and (
+                "name" in keys or "fullName" in keys
+            ):
                 return payload
         for item in payload:
             hits = _extract_hits(item)
@@ -613,7 +626,10 @@ def nhl_search_player_id(full_name: str) -> int | None:
                 break
 
     if not cands2:
-        print(f"DEBUG no last-name candidates for '{full_name}' (last='{target_last}')", flush=True)
+        print(
+            f"DEBUG no last-name candidates for '{full_name}' (last='{target_last}')",
+            flush=True,
+        )
         return None
 
     # acceptance:
@@ -655,13 +671,15 @@ def nhl_search_player_id(full_name: str) -> int | None:
 def upsert_dim_player_info(conn, player_id: int, first: str, last: str) -> None:
     """Upsert a row into dim.player_info for the given NHL player_id."""
     conn.execute(
-        text(f"""
+        text(
+            f"""
             INSERT INTO {SCHEMA["dim"]}.player_info (player_id, "firstName", "lastName")
             VALUES (:player_id, :firstName, :lastName)
             ON CONFLICT (player_id) DO UPDATE
             SET "firstName" = EXCLUDED."firstName",
                 "lastName"  = EXCLUDED."lastName"
-        """),
+        """
+        ),
         {"player_id": player_id, "firstName": first, "lastName": last},
     )
 
@@ -671,12 +689,14 @@ def discover_cap_hit_seasons() -> list[int]:
     engine = get_db_engine()
     with engine.begin() as conn:
         rows = conn.execute(
-            text(f"""
+            text(
+                f"""
             SELECT table_name
             FROM information_schema.tables
             WHERE table_schema = '{SCHEMA["dim"]}'
               AND table_name LIKE 'player_cap_hit_%'
-        """)
+        """
+            )
         ).fetchall()
     engine.dispose()
 
@@ -705,7 +725,8 @@ def backfill_season(season: int) -> None:
     with engine.begin() as conn:
         # 0) Pull caphit rows that still need player_id
         missing = pd.read_sql(
-            text(f"""
+            text(
+                f"""
                 SELECT
                     player_id,
                     "firstName",
@@ -714,7 +735,8 @@ def backfill_season(season: int) -> None:
                     spotrac_url
                 FROM {cap_table}
                 WHERE player_id IS NULL
-            """),
+            """
+            ),
             conn,
         )
 
@@ -732,7 +754,9 @@ def backfill_season(season: int) -> None:
 
             # must have URL to update deterministically (and you have UNIQUE(spotrac_url))
             if not url:
-                print(f"⚠️ {season}: missing spotrac_url for '{first} {last}'; skipping")
+                print(
+                    f"⚠️ {season}: missing spotrac_url for '{first} {last}'; skipping"
+                )
                 skipped += 1
                 continue
 
@@ -776,12 +800,14 @@ def backfill_season(season: int) -> None:
 
             # 5) Update cap-hit row using unique natural key
             result = conn.execute(
-                text(f"""
+                text(
+                    f"""
                     UPDATE {cap_table}
                     SET player_id = :pid
                     WHERE spotrac_url = :url
                       AND player_id IS NULL
-                """),
+                """
+                ),
                 {"pid": int(pid), "url": url},
             )
 

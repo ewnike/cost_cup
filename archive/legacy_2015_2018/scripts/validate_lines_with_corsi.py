@@ -36,8 +36,12 @@ df_clusters["season"] = df_clusters["season"].astype(str)
 # 2. Add season to game + corsi
 # -----------------------------
 
-df_games["season"] = df_games["game_id"].astype(int).apply(game_id_to_season).astype(str)
-df_corsi["season"] = df_corsi["game_id"].astype(int).apply(game_id_to_season).astype(str)
+df_games["season"] = (
+    df_games["game_id"].astype(int).apply(game_id_to_season).astype(str)
+)
+df_corsi["season"] = (
+    df_corsi["game_id"].astype(int).apply(game_id_to_season).astype(str)
+)
 
 # keep only seasons we clustered (defensive but safe)
 target_seasons = ["20152016", "20162017", "20172018"]

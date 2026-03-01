@@ -71,7 +71,9 @@ def fetch_all_shifts(page_size: int = 100) -> pd.DataFrame:
         resp = session.post(SHIFT_URL, data=payload, timeout=30)
 
         if resp.status_code == 404:
-            logging.error("404 – session/nonce likely expired. Copy a fresh cURL from DevTools.")
+            logging.error(
+                "404 – session/nonce likely expired. Copy a fresh cURL from DevTools."
+            )
             break
 
         resp.raise_for_status()
@@ -118,7 +120,9 @@ if __name__ == "__main__":
 
     out_name = "4_days_raw_shifts_20242025.csv"
     if df.empty:
-        logging.warning(f"No data retrieved. NOT overwriting {out_name} with empty CSV.")
+        logging.warning(
+            f"No data retrieved. NOT overwriting {out_name} with empty CSV."
+        )
     else:
         df.to_csv(out_name, index=False)
         logging.info(f"Saved {out_name}")

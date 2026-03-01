@@ -23,7 +23,7 @@ from typing import List
 
 import numpy as np
 import pandas as pd
-from sqlalchemy import bindparam, text
+from sqlalchemy import text
 
 from constants import SEASONS_MODERN
 from db_utils import get_db_engine
@@ -54,7 +54,9 @@ def build_total_toi_for_game(gs_game: pd.DataFrame) -> pd.DataFrame:
 
     out = gs[["game_id", "player_id", "team_id"]].copy()
     out["toi_total_sec"] = dur.to_numpy(np.int64)
-    return out.groupby(["game_id", "player_id", "team_id"], as_index=False)["toi_total_sec"].sum()
+    return out.groupby(["game_id", "player_id", "team_id"], as_index=False)[
+        "toi_total_sec"
+    ].sum()
 
 
 def exclude_intervals(df_exclude: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
@@ -74,7 +76,10 @@ def exclude_intervals(df_exclude: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]
 
 
 def overlap_seconds(
-    interval_start: np.ndarray, interval_end: np.ndarray, ex_start: np.ndarray, ex_end: np.ndarray
+    interval_start: np.ndarray,
+    interval_end: np.ndarray,
+    ex_start: np.ndarray,
+    ex_end: np.ndarray,
 ) -> np.ndarray:
     """Overlap between many [interval_start, interval_end) and exclude intervals."""
     out = np.zeros(len(interval_start), dtype=np.int64)
@@ -110,13 +115,17 @@ def build_es_toi_for_game(gs_game: pd.DataFrame) -> pd.DataFrame:
 
     out = gs[["game_id", "player_id", "team_id"]].copy()
     out["toi_es_sec"] = es
-    return out.groupby(["game_id", "player_id", "team_id"], as_index=False)["toi_es_sec"].sum()
+    return out.groupby(["game_id", "player_id", "team_id"], as_index=False)[
+        "toi_es_sec"
+    ].sum()
 
 
 # -------------------------
 # ES CF/CA counting (same idea as build_player_game_es)
 # -------------------------
-def update_corsi_counts(df_corsi: pd.DataFrame, event: pd.Series, gs_game: pd.DataFrame) -> None:
+def update_corsi_counts(
+    df_corsi: pd.DataFrame, event: pd.Series, gs_game: pd.DataFrame
+) -> None:
     """Mutates df_corsi cf/ca in-place for one event."""
     t = int(event["time"])
     team_for = int(event["team_id_for"])
@@ -124,7 +133,9 @@ def update_corsi_counts(df_corsi: pd.DataFrame, event: pd.Series, gs_game: pd.Da
 
     on_ice = gs_game[(gs_game["shift_start"] <= t) & (gs_game["shift_end"] >= t)]
     players_for = on_ice.loc[on_ice["team_id"] == team_for, "player_id"].to_numpy()
-    players_against = on_ice.loc[on_ice["team_id"] == team_against, "player_id"].to_numpy()
+    players_against = on_ice.loc[
+        on_ice["team_id"] == team_against, "player_id"
+    ].to_numpy()
 
     ev = event["event"]
     if ev in ("Shot", "Goal", "Missed Shot"):
@@ -213,7 +224,9 @@ def build_player_game_stats_for_season(
 
             unknown = gp.loc[gp["event"].isna(), "event_type"].value_counts().head(10)
             if not unknown.empty:
-                logger.info("%s: unmapped event_type sample: %s", season, unknown.to_dict())
+                logger.info(
+                    "%s: unmapped event_type sample: %s", season, unknown.to_dict()
+                )
 
             # team_id_for
             gp["team_id_for"] = gp["event_team"].map(team_code_to_id)
@@ -232,13 +245,17 @@ def build_player_game_stats_for_season(
             ).copy()
 
             # dtypes
-            gp["game_id"] = pd.to_numeric(gp["game_id"], errors="coerce").astype("int64")
+            gp["game_id"] = pd.to_numeric(gp["game_id"], errors="coerce").astype(
+                "int64"
+            )
             gp["time"] = gp["time"].astype("int64")
             gp["team_id_for"] = gp["team_id_for"].astype("int64")
             gp["team_id_against"] = gp["team_id_against"].astype("int64")
 
             # keep only corsi-relevant events
-            gp = gp[gp["event"].isin(["Shot", "Goal", "Missed Shot", "Blocked Shot"])].copy()
+            gp = gp[
+                gp["event"].isin(["Shot", "Goal", "Missed Shot", "Blocked Shot"])
+            ].copy()
 
             gp = gp.sort_values(["game_id", "time"], ignore_index=True)
 
@@ -277,7 +294,9 @@ def build_player_game_stats_for_season(
         engine.dispose()
 
     if gp.empty or gs.empty:
-        logger.warning("%s: missing plays/shifts data (gp=%s gs=%s)", season, len(gp), len(gs))
+        logger.warning(
+            "%s: missing plays/shifts data (gp=%s gs=%s)", season, len(gp), len(gs)
+        )
         return pd.DataFrame()
 
     # -------------------------
@@ -286,7 +305,9 @@ def build_player_game_stats_for_season(
     gs = gs.copy()
     for col in ["game_id", "player_id", "team_id", "shift_start", "shift_end"]:
         gs[col] = pd.to_numeric(gs[col], errors="coerce")
-    gs = gs.dropna(subset=["game_id", "player_id", "team_id", "shift_start", "shift_end"]).copy()
+    gs = gs.dropna(
+        subset=["game_id", "player_id", "team_id", "shift_start", "shift_end"]
+    ).copy()
 
     gs["game_id"] = gs["game_id"].astype("int64")
     gs["player_id"] = gs["player_id"].astype("int64")
@@ -358,10 +379,14 @@ def build_player_game_stats_for_season(
         ).merge(toi_es, on=["game_id", "player_id", "team_id"], how="left")
 
         merged["cf60"] = np.where(
-            merged["toi_es_sec"] > 0, merged["cf"] * 3600.0 / merged["toi_es_sec"], np.nan
+            merged["toi_es_sec"] > 0,
+            merged["cf"] * 3600.0 / merged["toi_es_sec"],
+            np.nan,
         )
         merged["ca60"] = np.where(
-            merged["toi_es_sec"] > 0, merged["ca"] * 3600.0 / merged["toi_es_sec"], np.nan
+            merged["toi_es_sec"] > 0,
+            merged["ca"] * 3600.0 / merged["toi_es_sec"],
+            np.nan,
         )
         merged["cf_percent"] = np.where(
             (merged["cf"] + merged["ca"]) > 0,
@@ -438,7 +463,9 @@ def main() -> None:
                 game_ids_override=game_ids_override,
             )
         else:
-            df = build_player_game_stats_for_season(season_i, limit_games=TEST_LIMIT_GAMES)
+            df = build_player_game_stats_for_season(
+                season_i, limit_games=TEST_LIMIT_GAMES
+            )
 
         # ---- Season-specific sanity check (only for 20182019) ----
         if season_i == 20182019:
@@ -452,7 +479,9 @@ def main() -> None:
             if not df.empty:
                 logger.info(
                     "20182019 wanted sample:\n%s",
-                    df[df["player_id"].isin(list(wanted_set))].head(10).to_string(index=False),
+                    df[df["player_id"].isin(list(wanted_set))]
+                    .head(10)
+                    .to_string(index=False),
                 )
 
         # ---- Skip write if empty ----

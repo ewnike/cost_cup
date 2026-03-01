@@ -77,7 +77,9 @@ def create_aggregated_table(table_name):
         metadata,
         Column("season", String, primary_key=True),  # e.g. "20152016"
         Column("player_id", BigInteger, primary_key=True),
-        Column("team_id", Integer),  # optional in PK if you keep one row per season/player
+        Column(
+            "team_id", Integer
+        ),  # optional in PK if you keep one row per season/player
         Column("firstName", String),
         Column("lastName", String),
         Column("corsi_for", Float),
@@ -102,13 +104,13 @@ def main():
             df_corsi = df_corsi.drop(columns=["Unnamed: 0"])
 
         # Get game skater stats
-        GSS_TOI_QUERY = 'SELECT game_id, player_id, "timeOnIce", team_id FROM raw.game_skater_stats'
+        GSS_TOI_QUERY = (
+            'SELECT game_id, player_id, "timeOnIce", team_id FROM raw.game_skater_stats'
+        )
         df_gss_toi = get_data_from_db(GSS_TOI_QUERY)
 
         # Get player info
-        PLAYER_INFO_QUERY = (
-            'SELECT player_id, "firstName", "lastName", "primaryPosition" FROM dim.player_info'
-        )
+        PLAYER_INFO_QUERY = 'SELECT player_id, "firstName", "lastName", "primaryPosition" FROM dim.player_info'
         df_player_info = get_data_from_db(PLAYER_INFO_QUERY)
 
         # Drop 'team_id' from df_corsi to avoid duplication
@@ -119,7 +121,9 @@ def main():
         df_all = pd.merge(df_all, df_player_info, on="player_id")
 
         # Verify the columns after merging
-        print(f"Columns in df_all before grouping for season {season}: {df_all.columns}")
+        print(
+            f"Columns in df_all before grouping for season {season}: {df_all.columns}"
+        )
 
         # Group and aggregate player stats
         df_grouped_all = (
@@ -153,7 +157,9 @@ def main():
         )
 
         # Merge aggregated stats with salary info
-        df_grouped_all = pd.merge(df_grouped_all, df_player_salary, on=["firstName", "lastName"])
+        df_grouped_all = pd.merge(
+            df_grouped_all, df_player_salary, on=["firstName", "lastName"]
+        )
 
         # Round all relevant columns to four decimal places
         df_grouped_all["corsi_for"] = df_grouped_all["corsi_for"].round(4)
@@ -187,7 +193,9 @@ def main():
         create_aggregated_table(AGGREGATED_TABLE_NAME)
 
         # Insert aggregated data into the new table
-        df_grouped_all.to_sql(AGGREGATED_TABLE_NAME, con=engine, if_exists="replace", index=False)
+        df_grouped_all.to_sql(
+            AGGREGATED_TABLE_NAME, con=engine, if_exists="replace", index=False
+        )
 
         print(f"Data inserted successfully into {AGGREGATED_TABLE_NAME}")
 

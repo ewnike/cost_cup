@@ -22,7 +22,9 @@ metadata = get_metadata()
 Session = sessionmaker(bind=engine)
 
 # ✅ Create tables if needed
-tables = {season: create_corsi_table(f"raw_corsi_{season}", metadata) for season in SEASONS}
+tables = {
+    season: create_corsi_table(f"raw_corsi_{season}", metadata) for season in SEASONS
+}
 metadata.create_all(engine)
 
 # ✅ Build paths
@@ -39,7 +41,9 @@ with Session() as session:
     for file_path, table_name in csv_files_and_mappings:
         if os.path.exists(file_path):
             df = pd.read_csv(file_path)
-            table = create_corsi_table(table_name, metadata)  # This ensures `table` is defined
+            table = create_corsi_table(
+                table_name, metadata
+            )  # This ensures `table` is defined
             insert_data(df, table, session, column_mapping=COLUMN_MAPPINGS["raw_corsi"])
         else:
             print(f"File not found: {file_path}, skipping...")

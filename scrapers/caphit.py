@@ -21,7 +21,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 # Import the shared scrolling function
-from scraping_utils import scroll_to_bottom
+from .scraping_utils import scroll_to_bottom
 
 if os.getenv("DEBUG_IMPORTS") == "1":
     print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
@@ -133,17 +133,17 @@ for year in years:
         print(f"⚠️ {year}: dupes by name: {dupes_name}")
 
         if VERBOSE:
-            dupe_rows = df[df.duplicated(subset=["firstName", "lastName"], keep=False)].sort_values(
-                ["lastName", "firstName"]
-            )
+            dupe_rows = df[
+                df.duplicated(subset=["firstName", "lastName"], keep=False)
+            ].sort_values(["lastName", "firstName"])
             if not dupe_rows.empty:
                 print(f"⚠️ {year}: duplicate names sample (up to 20 rows):")
                 print(dupe_rows.head(20).to_string(index=False))
 
         # show a small sample of duplicate-name rows (avoid spamming)
-        dupe_rows = df[df.duplicated(subset=["firstName", "lastName"], keep=False)].sort_values(
-            ["lastName", "firstName"]
-        )
+        dupe_rows = df[
+            df.duplicated(subset=["firstName", "lastName"], keep=False)
+        ].sort_values(["lastName", "firstName"])
         if not dupe_rows.empty:
             print(f"⚠️ {year}: duplicate names sample (up to 20 rows):")
             print(dupe_rows.head(20).to_string(index=False))

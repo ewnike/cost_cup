@@ -30,7 +30,9 @@ def game_id_to_season(gid: int) -> str:
     return f"{year_start}{year_start + 1}"
 
 
-df_corsi["season"] = df_corsi["game_id"].astype(int).apply(game_id_to_season).astype(str)
+df_corsi["season"] = (
+    df_corsi["game_id"].astype(int).apply(game_id_to_season).astype(str)
+)
 
 # merge in cluster
 df_pg = df_corsi.merge(

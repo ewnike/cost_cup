@@ -44,7 +44,9 @@ def ensure_table_exists(engine, metadata, table_name, table_definition_function)
         metadata.reflect(bind=engine)  # Refresh metadata
 
 
-def clear_player_cap_hits_dir(csv_dir: str, pattern: str = "player_cap_hits_*.csv") -> None:
+def clear_player_cap_hits_dir(
+    csv_dir: str, pattern: str = "player_cap_hits_*.csv"
+) -> None:
     """Delete cap-hit CSVs after successful DB load."""
     paths = glob.glob(os.path.join(csv_dir, pattern))
     for p in paths:
@@ -72,7 +74,9 @@ def clear_dir_patterns(directory: str, patterns: list[str]) -> None:
                 logger.error("Failed deleting %s: %s", p, e)
 
 
-def clean_data(df: pd.DataFrame, column_mapping: dict[str, str], drop_duplicates: bool = True):
+def clean_data(
+    df: pd.DataFrame, column_mapping: dict[str, str], drop_duplicates: bool = True
+):
     """
     Clean and format a DataFrame using a dtype mapping.
 
@@ -163,7 +167,9 @@ def add_suffix_to_duplicate_play_ids(df):
             play_id_counts[play_id] += 1
             suffix = string.ascii_lowercase[play_id_counts[play_id] - 1]
             df.at[idx, "play_id"] = f"{play_id}{suffix}"
-            logger.debug(f"Updated play_id: {df.at[idx, 'play_id']}")  # Log updated play_id
+            logger.debug(
+                f"Updated play_id: {df.at[idx, 'play_id']}"
+            )  # Log updated play_id
         else:
             # Initialize the count for this play_id
             play_id_counts[play_id] = 1
@@ -256,7 +262,9 @@ def insert_data(df, table, session):
         and col.name not in df.columns
     ]
     if missing_required:
-        logger.error(f"Missing required NOT NULL columns for {table.name}: {missing_required}")
+        logger.error(
+            f"Missing required NOT NULL columns for {table.name}: {missing_required}"
+        )
         return
 
     # Keep only schema columns, in any order
@@ -277,7 +285,9 @@ def insert_data(df, table, session):
         logger.error(f"Error inserting data into {table.name}: {e}", exc_info=True)
     except Exception as e:
         session.rollback()
-        logger.error(f"Unexpected error inserting into {table.name}: {e}", exc_info=True)
+        logger.error(
+            f"Unexpected error inserting into {table.name}: {e}", exc_info=True
+        )
 
 
 def clear_directory(directory):
@@ -302,7 +312,9 @@ def download_zip_from_s3(bucket_name, s3_file_key, local_download_path):
     if directory:  # Only attempt to create the directory if it's not empty
         os.makedirs(directory, exist_ok=True)
     else:
-        logger.error("Derived directory path is empty. Cannot ensure directory existence.")
+        logger.error(
+            "Derived directory path is empty. Cannot ensure directory existence."
+        )
         return
 
     # Proceed with the download if the path checks out
@@ -396,7 +408,9 @@ def process_and_insert_data(config):
     download_path = (
         config["local_zip_path"]
         if config["handle_zip"]
-        else os.path.join(config["local_download_path"], config["expected_csv_filename"])
+        else os.path.join(
+            config["local_download_path"], config["expected_csv_filename"]
+        )
     )
 
     download_zip_from_s3(config["bucket_name"], config["s3_file_key"], download_path)
@@ -417,7 +431,9 @@ def process_and_insert_data(config):
             extracted_files = [
                 str(p.relative_to(extract_dir))
                 for p in extract_dir.rglob("*")
-                if p.is_file() and "__MACOSX" not in p.parts and not p.name.startswith("._")
+                if p.is_file()
+                and "__MACOSX" not in p.parts
+                and not p.name.startswith("._")
             ]
             logger.error(
                 f"Extracted file not found after extraction: {target}. "
@@ -445,7 +461,9 @@ def process_and_insert_data(config):
 
     # ✅ table-specific fixes BEFORE cleaning
     if config["table_name"].startswith("raw_shifts") and "shift_num" in df.columns:
-        df["shift_num"] = pd.to_numeric(df["shift_num"], errors="coerce").fillna(0).astype(int)
+        df["shift_num"] = (
+            pd.to_numeric(df["shift_num"], errors="coerce").fillna(0).astype(int)
+        )
 
     # ✅ Ensure the table exists BEFORE referencing metadata.tables[...]
     ensure_table_exists(
@@ -456,7 +474,9 @@ def process_and_insert_data(config):
     )
 
     # ✅ Clean after table fixes
-    df = clean_and_transform_data(df, config["column_mapping"], table_name=config["table_name"])
+    df = clean_and_transform_data(
+        df, config["column_mapping"], table_name=config["table_name"]
+    )
 
     try:
         logger.info(f"Inserting data into table: {config['table_name']}")
@@ -464,6 +484,8 @@ def process_and_insert_data(config):
         logger.info(f"Data successfully inserted into {config['table_name']}.")
     except Exception as e:
         session.rollback()
-        logger.error(f"Error inserting data into {config['table_name']}: {e}", exc_info=True)
+        logger.error(
+            f"Error inserting data into {config['table_name']}: {e}", exc_info=True
+        )
     finally:
         session.close()

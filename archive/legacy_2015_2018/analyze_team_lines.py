@@ -53,7 +53,9 @@ team_line_mix["toi_share_in_season"] = team_line_mix.groupby("season")[
 
 print("\n=== Team line usage & results by season and archetype mix ===")
 print(
-    team_line_mix.sort_values(["season", "toi_share_in_season"], ascending=[True, False])
+    team_line_mix.sort_values(
+        ["season", "toi_share_in_season"], ascending=[True, False]
+    )
     .round(3)
     .to_string(index=False)
 )

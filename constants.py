@@ -71,8 +71,12 @@ local_extract_path = os.getenv("LOCAL_EXTRACT_PATH", "data/extracted")
 local_download_path_II = os.getenv("LOCAL_DOWNLOAD_PATH_II", "data_pbp_raw/download")
 local_extract_path_II = os.getenv("LOCAL_EXTRACT_PATH_II", "data_pbp_raw/extracted")
 
-local_download_path_III = os.getenv("LOCAL_DOWNLOAD_PATH_III", "data_shifts_raw/download")
-local_extract_path_III = os.getenv("LOCAL_EXTRACT_PATH_III", "data_shifts_raw/extracted")
+local_download_path_III = os.getenv(
+    "LOCAL_DOWNLOAD_PATH_III", "data_shifts_raw/download"
+)
+local_extract_path_III = os.getenv(
+    "LOCAL_EXTRACT_PATH_III", "data_shifts_raw/extracted"
+)
 
 # ✅ S3 bucket name (global)
 S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")

@@ -38,7 +38,9 @@ logging.basicConfig(
 
 # Initialize the S3 client
 s3_client = boto3.client("s3")
-bucket_name = os.getenv("S3_BUCKET_NAME")  # Get the bucket name from environment variables
+bucket_name = os.getenv(
+    "S3_BUCKET_NAME"
+)  # Get the bucket name from environment variables
 
 
 def get_s3_env_vars():
@@ -56,7 +58,9 @@ def get_s3_env_vars():
     }
 
 
-def download_from_s3(bucket: str, key: str, download_path: str, overwrite: bool = False) -> None:
+def download_from_s3(
+    bucket: str, key: str, download_path: str, overwrite: bool = False
+) -> None:
     """
     Download a file from an S3 bucket and save it to a local path.
 
@@ -79,7 +83,9 @@ def download_from_s3(bucket: str, key: str, download_path: str, overwrite: bool 
         - ERROR: If the file is not found or another error occurs.
 
     """
-    logging.debug(f"Initiating download with path: {download_path}")  # Additional debug logging
+    logging.debug(
+        f"Initiating download with path: {download_path}"
+    )  # Additional debug logging
     if not download_path:
         logging.error("Download path is empty. Skipping download.")
         return
@@ -93,12 +99,16 @@ def download_from_s3(bucket: str, key: str, download_path: str, overwrite: bool 
         # Ensure the directory exists before downloading
         os.makedirs(os.path.dirname(download_path), exist_ok=True)
 
-        logging.info(f"Downloading from bucket: {bucket}, key: {key}, to: {download_path}")
+        logging.info(
+            f"Downloading from bucket: {bucket}, key: {key}, to: {download_path}"
+        )
         s3_client.download_file(bucket, key, download_path)
         logging.info(f"Download complete: {download_path}")
 
     except botocore.exceptions.NoCredentialsError:
-        logging.error("AWS credentials not found. Ensure they are set in the environment.")
+        logging.error(
+            "AWS credentials not found. Ensure they are set in the environment."
+        )
         raise
 
     except botocore.exceptions.PartialCredentialsError:
@@ -110,7 +120,9 @@ def download_from_s3(bucket: str, key: str, download_path: str, overwrite: bool 
         if error_code == "404":
             logging.error(f"File not found: {key} in bucket {bucket}.")
         elif error_code == "403":
-            logging.error(f"Access denied to {key} in bucket {bucket}. Check permissions.")
+            logging.error(
+                f"Access denied to {key} in bucket {bucket}. Check permissions."
+            )
         else:
             logging.error(f"Unexpected S3 error: {e}")
         raise
@@ -130,7 +142,9 @@ if __name__ == "__main__":
     local_file_path = os.getenv("LOCAL_FILE_PATH")
 
     if not bucket_name:
-        logging.error("Bucket name not found. Please set the S3_BUCKET_NAME environment variable.")
+        logging.error(
+            "Bucket name not found. Please set the S3_BUCKET_NAME environment variable."
+        )
     elif not S3_FILE_KEY or not local_file_path:
         logging.error(
             "S3_FILE_KEY or LOCAL_FILE_PATH not set. Ensure these are provided in the environment."

@@ -84,8 +84,12 @@ def fail_if_es_dupes(psql_dsn: str, season: int) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--season", type=int, default=None, help="Run one season, e.g. 20242025")
-    ap.add_argument("--dsn", required=True, help="psql DSN string, e.g. postgresql://...")
+    ap.add_argument(
+        "--season", type=int, default=None, help="Run one season, e.g. 20242025"
+    )
+    ap.add_argument(
+        "--dsn", required=True, help="psql DSN string, e.g. postgresql://..."
+    )
     args = ap.parse_args()
 
     seasons = [args.season] if args.season is not None else SEASONS_MODERN
@@ -102,7 +106,15 @@ def main() -> None:
         fail_if_es_dupes(args.dsn, s)  # FAIL FAST if canonicalize introduces dupes
 
         # 3) Rebuild stats/toi_total
-        run([sys.executable, "-u", "rebuild_player_game_stats_all_modern.py", "--season", str(s)])
+        run(
+            [
+                sys.executable,
+                "-u",
+                "rebuild_player_game_stats_all_modern.py",
+                "--season",
+                str(s),
+            ]
+        )
 
         # 3.5) Build 5v5 ES boxscore keyed to ES
         run_psql_file(args.dsn, s, BOX_ES_SQL)

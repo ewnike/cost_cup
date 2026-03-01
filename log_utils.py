@@ -22,7 +22,9 @@ def setup_logger(log_file_path="logs/data_processing.log"):
 
     # add file handler if missing
     if not any(isinstance(h, RotatingFileHandler) for h in logger.handlers):
-        file_handler = RotatingFileHandler(str(log_path), maxBytes=5 * 1024 * 1024, backupCount=3)
+        file_handler = RotatingFileHandler(
+            str(log_path), maxBytes=5 * 1024 * 1024, backupCount=3
+        )
         file_handler.setFormatter(fmt)
         logger.addHandler(file_handler)
 

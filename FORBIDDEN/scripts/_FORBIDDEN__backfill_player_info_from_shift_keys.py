@@ -187,7 +187,9 @@ def _extract_hits(payload: Any):
     if isinstance(payload, list):
         if payload and isinstance(payload[0], dict):
             keys = payload[0].keys()
-            if ("playerId" in keys or "id" in keys) and ("name" in keys or "fullName" in keys):
+            if ("playerId" in keys or "id" in keys) and (
+                "name" in keys or "fullName" in keys
+            ):
                 return payload
         for item in payload:
             hits = _extract_hits(item)
@@ -296,13 +298,15 @@ def nhl_search_player_id(full_name: str) -> int | None:
 
 def upsert_dim_player_info(conn, player_id: int, first: str, last: str) -> None:
     conn.execute(
-        text(f"""
+        text(
+            f"""
             INSERT INTO {SCHEMA["dim"]}.player_info (player_id, "firstName", "lastName")
             VALUES (:player_id, :firstName, :lastName)
             ON CONFLICT (player_id) DO UPDATE
             SET "firstName" = EXCLUDED."firstName",
                 "lastName"  = EXCLUDED."lastName"
-        """),
+        """
+        ),
         {"player_id": player_id, "firstName": first, "lastName": last},
     )
 

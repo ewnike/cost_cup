@@ -32,14 +32,19 @@ if not DATA_DIR.exists():
 
 # ✅ Create tables if needed
 tables = {
-    season: create_team_event_total_games_table(f"team_event_totals_games_{season}", metadata)
+    season: create_team_event_total_games_table(
+        f"team_event_totals_games_{season}", metadata
+    )
     for season in SEASONS
 }
 metadata.create_all(engine)
 
 # ✅ Define CSV files and matching table names
 csv_files_and_mappings = [
-    (DATA_DIR / f"team_event_totals_games_{season}.csv", f"team_event_totals_games_{season}")
+    (
+        DATA_DIR / f"team_event_totals_games_{season}.csv",
+        f"team_event_totals_games_{season}",
+    )
     for season in SEASONS
 ]
 
@@ -50,7 +55,10 @@ with Session() as session:
             df = pd.read_csv(file_path)
             table = create_team_event_total_games_table(table_name, metadata)
             insert_data(
-                df, table, session, column_mapping=COLUMN_MAPPINGS["team_event_totals_games"]
+                df,
+                table,
+                session,
+                column_mapping=COLUMN_MAPPINGS["team_event_totals_games"],
             )
             file_path.unlink()  # Remove the file after successful insertion
             logger.info(f"File {file_path} deleted successfully.")

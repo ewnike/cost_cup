@@ -133,7 +133,9 @@ def run_for_position(pos: str) -> None:
     df_pred = df_model[df_model["season"].isin(PREDICT_SEASONS)].copy()
 
     if df_train.empty:
-        raise RuntimeError(f"Train set is empty for pos={pos}. Check TRAIN_SEASONS and data.")
+        raise RuntimeError(
+            f"Train set is empty for pos={pos}. Check TRAIN_SEASONS and data."
+        )
 
     # ---- fit on train only ----
     scaler = StandardScaler()

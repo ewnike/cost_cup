@@ -108,7 +108,9 @@ server = app.server
 df_seasons = read_df(SQL_SEASONS)
 df_teams = read_df(SQL_TEAMS)
 
-season_options = [{"label": str(s), "value": int(s)} for s in df_seasons["season"].tolist()]
+season_options = [
+    {"label": str(s), "value": int(s)} for s in df_seasons["season"].tolist()
+]
 team_options = [{"label": t, "value": t} for t in df_teams["team_code"].tolist()]
 
 default_season = season_options[-1]["value"] if season_options else 20242025
@@ -200,7 +202,9 @@ def refresh_team_view(season: int, team_code: str):
     df_comp = read_df(SQL_COMPOSITION, params=params)
     df_top = read_df(SQL_TOP_PLAYERS, params=params)
 
-    fig = make_pct_bar(df_comp, title=f"{team_code} {season} — Archetype mix (% ES TOI within F/D)")
+    fig = make_pct_bar(
+        df_comp, title=f"{team_code} {season} — Archetype mix (% ES TOI within F/D)"
+    )
 
     # DataTables want plain dict records
     comp_records = df_comp.to_dict("records")

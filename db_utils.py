@@ -183,7 +183,10 @@ def get_db_engine():
             raise ValueError("Missing required AWS database environment variables.")
 
         logger.info(
-            "Using AWS database config (APP_ENV=aws). host=%s db=%s port=%s", host, dbname, port
+            "Using AWS database config (APP_ENV=aws). host=%s db=%s port=%s",
+            host,
+            dbname,
+            port,
         )
 
     else:
@@ -401,8 +404,12 @@ def define_raw_shifts_table(metadata, table_name: str = "raw_shifts"):
         Column("opponent", String(3), nullable=False),
         Column("is_home", Boolean, nullable=False),
         Column("game_period", SmallInteger, nullable=False),
-        Column("shift_num", Integer, nullable=False),  # it shows as a float but should be int
-        Column("seconds_start", Integer, nullable=False),  # seconds start at 0 go up 3600+ in OT
+        Column(
+            "shift_num", Integer, nullable=False
+        ),  # it shows as a float but should be int
+        Column(
+            "seconds_start", Integer, nullable=False
+        ),  # seconds start at 0 go up 3600+ in OT
         Column("seconds_end", Integer, nullable=False),
         Column("seconds_duration", Integer, nullable=False),
         Column("shift_start", String(5), nullable=True),
@@ -565,7 +572,9 @@ def create_player_game_es_table(table_name: str, metadata: MetaData) -> Table:
         Column("cf60", Float),
         Column("ca60", Float),
         Column("cf_percent", Float),
-        PrimaryKeyConstraint("game_id", "player_id", "team_id", name=f"pk_{table_name}"),
+        PrimaryKeyConstraint(
+            "game_id", "player_id", "team_id", name=f"pk_{table_name}"
+        ),
         extend_existing=True,
     )
 
@@ -585,8 +594,12 @@ def ctas_game_plays_from_raw_pbp(engine, season: int, *, drop: bool = True) -> s
     raw_table = f"raw_pbp_{season}"
 
     # Drop view first (if it exists), then table.
-    sql_drop_view = text(f'DROP VIEW IF EXISTS "{DERIVED_SCHEMA}"."{derived_table}" CASCADE;')
-    sql_drop_table = text(f'DROP TABLE IF EXISTS "{DERIVED_SCHEMA}"."{derived_table}" CASCADE;')
+    sql_drop_view = text(
+        f'DROP VIEW IF EXISTS "{DERIVED_SCHEMA}"."{derived_table}" CASCADE;'
+    )
+    sql_drop_table = text(
+        f'DROP TABLE IF EXISTS "{DERIVED_SCHEMA}"."{derived_table}" CASCADE;'
+    )
 
     sql_ctas = text(
         f"""

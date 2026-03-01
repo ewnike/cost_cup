@@ -19,7 +19,6 @@ import pandas as pd
 from sklearn.cluster import KMeans
 
 # from sklearn.decomposition import PCA
-from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import StandardScaler
 from sqlalchemy import text
 
@@ -42,7 +41,8 @@ engine = get_db_engine()
 try:
     with engine.connect() as conn:
         df_games = pd.read_sql_query(
-            text("""
+            text(
+                """
                 SELECT
                     g.season::text AS season,
                     gss.game_id,
@@ -71,7 +71,8 @@ try:
                 JOIN raw.game g
                 ON g.game_id = gss.game_id
                 WHERE g.season >= 20152016;
-            """),
+            """
+            ),
             conn,
         )
 finally:
@@ -148,7 +149,9 @@ df_season = df_season[df_season["toi_total_min"] > 0].copy()
 # Scoring & shot rates
 df_season["G60"] = df_season["goals"] / df_season["toi_total_min"] * 60.0
 df_season["A60"] = df_season["assists"] / df_season["toi_total_min"] * 60.0
-df_season["P60"] = (df_season["goals"] + df_season["assists"]) / df_season["toi_total_min"] * 60.0
+df_season["P60"] = (
+    (df_season["goals"] + df_season["assists"]) / df_season["toi_total_min"] * 60.0
+)
 df_season["S60"] = df_season["shots"] / df_season["toi_total_min"] * 60.0
 
 # Physical / defensive stats
@@ -197,8 +200,18 @@ df_season["PLUSMINUS60"] = df_season["plus_minus"] / df_season["toi_total_min"] 
 
 # --- CORSI MERGE BLOCK ---
 df_corsi = pd.read_csv("player_season_corsi_all.csv")
-print("df_season season dtype:", df_season["season"].dtype, "sample:", df_season["season"].iloc[0])
-print("df_corsi  season dtype:", df_corsi["season"].dtype, "sample:", df_corsi["season"].iloc[0])
+print(
+    "df_season season dtype:",
+    df_season["season"].dtype,
+    "sample:",
+    df_season["season"].iloc[0],
+)
+print(
+    "df_corsi  season dtype:",
+    df_corsi["season"].dtype,
+    "sample:",
+    df_corsi["season"].iloc[0],
+)
 # make sure season types match
 df_corsi["season"] = df_corsi["season"].astype(str)
 df_season["season"] = df_season["season"].astype(str)
@@ -266,7 +279,10 @@ df_model = before.dropna(subset=features).copy()
 
 print("Dropped by season (due to dropna(features)):")
 print(
-    before.groupby("season").size().sub(df_model.groupby("season").size(), fill_value=0).astype(int)
+    before.groupby("season")
+    .size()
+    .sub(df_model.groupby("season").size(), fill_value=0)
+    .astype(int)
 )
 
 

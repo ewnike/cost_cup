@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import glob
 import os
-import re
 from pathlib import Path
 
 import pandas as pd
@@ -116,7 +115,9 @@ def _read_many(files: list[str], pos_group: str) -> pd.DataFrame:
             print(f"SKIP (missing {sorted(missing)}): {fp}")
             continue
 
-        df = df[["player_id", "season_t", "cluster_t", "p_to0", "p_to1", "p_to2"]].copy()
+        df = df[
+            ["player_id", "season_t", "cluster_t", "p_to0", "p_to1", "p_to2"]
+        ].copy()
         df["pos_group"] = pos_group
         df["source_file"] = os.path.basename(fp)
         dfs.append(df)
@@ -189,8 +190,18 @@ def main():
     if len(d_files) > 5:
         print("  ...")
 
-    print("df_f rows:", len(df_f), "seasons:", df_f["season_t"].nunique() if not df_f.empty else 0)
-    print("df_d rows:", len(df_d), "seasons:", df_d["season_t"].nunique() if not df_d.empty else 0)
+    print(
+        "df_f rows:",
+        len(df_f),
+        "seasons:",
+        df_f["season_t"].nunique() if not df_f.empty else 0,
+    )
+    print(
+        "df_d rows:",
+        len(df_d),
+        "seasons:",
+        df_d["season_t"].nunique() if not df_d.empty else 0,
+    )
 
     engine = get_db_engine()
     try:

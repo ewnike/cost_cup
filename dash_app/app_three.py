@@ -2,13 +2,11 @@ import dash
 import numpy as np
 import pandas as pd
 import plotly.express as px
-from dash import Input, Output, ctx, dash_table, dcc, html, no_update
-from dash import callback_context as ctx
-from dash.dash_table.Format import Format, Scheme, Sign
+from dash import Input, Output, ctx, dash_table, dcc, html
+from dash.dash_table.Format import Format, Scheme
 from sqlalchemy import text
 
 from db_utils import get_db_engine  # same import style as your other working pages
-
 
 # ---------------- SQL ----------------
 SQL_SEASONS = """
@@ -114,11 +112,19 @@ def load_model_maps_for_season(season_t: int):
 
     # build fast lookup dicts
     map_f = {
-        (int(r.season_t), int(r.player_id)): (float(r.p_to0), float(r.p_to1), float(r.p_to2))
+        (int(r.season_t), int(r.player_id)): (
+            float(r.p_to0),
+            float(r.p_to1),
+            float(r.p_to2),
+        )
         for r in df_f.itertuples(index=False)
     }
     map_d = {
-        (int(r.season_t), int(r.player_id)): (float(r.p_to0), float(r.p_to1), float(r.p_to2))
+        (int(r.season_t), int(r.player_id)): (
+            float(r.p_to0),
+            float(r.p_to1),
+            float(r.p_to2),
+        )
         for r in df_d.itertuples(index=False)
     }
 
@@ -185,7 +191,11 @@ def compute_composition(df: pd.DataFrame, weighting: str) -> pd.DataFrame:
             .rename(columns={"size": "w"})
         )
 
-    totals = agg.groupby("pos_group", as_index=False)["w"].sum().rename(columns={"w": "w_pos"})
+    totals = (
+        agg.groupby("pos_group", as_index=False)["w"]
+        .sum()
+        .rename(columns={"w": "w_pos"})
+    )
     out = agg.merge(totals, on="pos_group", how="left")
     out["pct"] = (100.0 * out["w"] / out["w_pos"]).round(2)
     return out.sort_values(["pos_group", "cluster"])
@@ -238,7 +248,11 @@ def compute_expected_composition(
     exp_df = pd.DataFrame(rows)
 
     agg = exp_df.groupby(["pos_group", "cluster"], as_index=False)["w"].sum()
-    totals = agg.groupby("pos_group", as_index=False)["w"].sum().rename(columns={"w": "w_pos"})
+    totals = (
+        agg.groupby("pos_group", as_index=False)["w"]
+        .sum()
+        .rename(columns={"w": "w_pos"})
+    )
     out = agg.merge(totals, on="pos_group", how="left")
     out["pct"] = (100.0 * out["w"] / out["w_pos"]).round(2)
 
@@ -336,7 +350,11 @@ def compute_expected_composition_model(
         return pd.DataFrame(columns=["pos_group", "cluster", "w", "pct"])
 
     agg = exp_df.groupby(["pos_group", "cluster"], as_index=False)["w"].sum()
-    totals = agg.groupby("pos_group", as_index=False)["w"].sum().rename(columns={"w": "w_pos"})
+    totals = (
+        agg.groupby("pos_group", as_index=False)["w"]
+        .sum()
+        .rename(columns={"w": "w_pos"})
+    )
     out = agg.merge(totals, on="pos_group", how="left")
     out["pct"] = (100.0 * out["w"] / out["w_pos"]).round(2)
     return out.sort_values(["pos_group", "cluster"])
@@ -427,7 +445,9 @@ CENTER_NET60_F = load_center_net60("F")
 CENTER_NET60_D = load_center_net60("D")
 
 
-def compute_expected_net60(df_roster: pd.DataFrame, weighting: str, season: int) -> float:
+def compute_expected_net60(
+    df_roster: pd.DataFrame, weighting: str, season: int
+) -> float:
     if df_roster.empty:
         return 0.0
 
@@ -524,7 +544,11 @@ def compute_expected_net60_model(
             # fallback to Dirichlet-smoothed transition matrix
             probs_row = probs_matrix[from_c]
 
-        exp_net = probs_row[0] * centers[0] + probs_row[1] * centers[1] + probs_row[2] * centers[2]
+        exp_net = (
+            probs_row[0] * centers[0]
+            + probs_row[1] * centers[1]
+            + probs_row[2] * centers[2]
+        )
 
         exp_vals.append(float(exp_net))
         exp_wts.append(wi)
@@ -597,7 +621,9 @@ app = dash.Dash(__name__)
 server = app.server
 
 df_seasons = read_df(SQL_SEASONS)
-season_options = [{"label": str(s), "value": int(s)} for s in df_seasons["season"].tolist()]
+season_options = [
+    {"label": str(s), "value": int(s)} for s in df_seasons["season"].tolist()
+]
 default_season = season_options[-1]["value"] if season_options else 20242025
 
 df_teams0 = read_df(SQL_TEAMS_BY_SEASON, {"season": default_season})
@@ -619,7 +645,12 @@ app.layout = html.Div(
         html.H2("Team Archetype Composition + What-if (V1)"),
         # Controls row
         html.Div(
-            style={"display": "flex", "gap": "12px", "flexWrap": "wrap", "alignItems": "end"},
+            style={
+                "display": "flex",
+                "gap": "12px",
+                "flexWrap": "wrap",
+                "alignItems": "end",
+            },
             children=[
                 html.Div(
                     style={"minWidth": "200px"},
@@ -704,7 +735,11 @@ app.layout = html.Div(
                             page_size=15,
                             sort_action="native",
                             style_table={"overflowX": "auto"},
-                            style_cell={"fontFamily": "Arial", "fontSize": 12, "padding": "6px"},
+                            style_cell={
+                                "fontFamily": "Arial",
+                                "fontSize": 12,
+                                "padding": "6px",
+                            },
                         ),
                     ]
                 ),
@@ -713,11 +748,16 @@ app.layout = html.Div(
                     style={"marginTop": "20px", "paddingLeft": "50px"},
                     children=[
                         html.H3(
-                            "What-If Roster Move (Trade Prototype)", style={"margin": "0 0 6px 0"}
+                            "What-If Roster Move (Trade Prototype)",
+                            style={"margin": "0 0 6px 0"},
                         ),
                         html.Div(
                             "Remove one player from this team’s roster and add one league regular (same position group).",
-                            style={"fontSize": "12px", "color": "#666", "margin": "0 0 10px 0"},
+                            style={
+                                "fontSize": "12px",
+                                "color": "#666",
+                                "margin": "0 0 10px 0",
+                            },
                         ),
                         html.Div(
                             style={
@@ -741,7 +781,9 @@ app.layout = html.Div(
                                 html.Div(
                                     style={"minWidth": "380px"},
                                     children=[
-                                        html.Label("Acquire (add from league regulars)"),
+                                        html.Label(
+                                            "Acquire (add from league regulars)"
+                                        ),
                                         dcc.Dropdown(
                                             id="add_player",
                                             clearable=True,
@@ -779,7 +821,11 @@ app.layout = html.Div(
                             page_size=12,
                             sort_action="native",
                             style_table={"overflowX": "auto"},
-                            style_cell={"fontFamily": "Arial", "fontSize": 12, "padding": "6px"},
+                            style_cell={
+                                "fontFamily": "Arial",
+                                "fontSize": 12,
+                                "padding": "6px",
+                            },
                             style_data_conditional=[
                                 {
                                     "if": {
@@ -844,8 +890,6 @@ def refresh(season, team_code, weighting, role_mode, remove_pid, add_pid):
       fig_before, fig_after, roster_records, remove_opts, add_opts, whatif_delta_records, kpi_children
 
     """
-    from dash import ctx
-
     empty_fig = px.bar(title="")
     if season is None or team_code is None:
         return empty_fig, empty_fig, [], [], None, [], None, [], []
@@ -859,7 +903,9 @@ def refresh(season, team_code, weighting, role_mode, remove_pid, add_pid):
     print(f"[VALS] remove={remove_pid} add={add_pid}")
 
     # ------------------- load roster -------------------
-    df = read_df(SQL_TEAM_ROSTER_ARCH, {"season": season_t, "team_code": str(team_code)})
+    df = read_df(
+        SQL_TEAM_ROSTER_ARCH, {"season": season_t, "team_code": str(team_code)}
+    )
     if df.empty:
         no_fig = px.bar(title="No roster rows")
         return no_fig, no_fig, [], [], None, [], None, [], []
@@ -875,7 +921,9 @@ def refresh(season, team_code, weighting, role_mode, remove_pid, add_pid):
 
     # ------------------- roster table -------------------
     roster = df.copy()
-    roster["toi_es_min"] = (pd.to_numeric(roster["toi_es_sec"], errors="coerce") / 60.0).round(1)
+    roster["toi_es_min"] = (
+        pd.to_numeric(roster["toi_es_sec"], errors="coerce") / 60.0
+    ).round(1)
     roster["toi_pg"] = pd.to_numeric(roster["toi_per_game"], errors="coerce").round(2)
     roster["es_net60"] = pd.to_numeric(roster["es_net60"], errors="coerce").round(2)
 
@@ -887,12 +935,16 @@ def refresh(season, team_code, weighting, role_mode, remove_pid, add_pid):
     remove_opts = [{"label": str(pid), "value": int(pid)} for pid in roster_pids]
 
     # ------------------- add candidates pool -------------------
-    df_add_pool = read_df(SQL_ADD_CANDIDATES, {"season": season_t, "exclude_pids": roster_pids})
+    df_add_pool = read_df(
+        SQL_ADD_CANDIDATES, {"season": season_t, "exclude_pids": roster_pids}
+    )
 
     # restrict add list to same pos_group as removed player (optional but good UX)
     pos_filter = None
     if remove_pid is not None and int(remove_pid) in set(roster_pids):
-        pos_filter = roster.loc[roster["player_id"] == int(remove_pid), "pos_group"].iloc[0]
+        pos_filter = roster.loc[
+            roster["player_id"] == int(remove_pid), "pos_group"
+        ].iloc[0]
 
     add_pool_f = df_add_pool
     if pos_filter is not None:
@@ -930,8 +982,12 @@ def refresh(season, team_code, weighting, role_mode, remove_pid, add_pid):
 
     # ✅ same guardrails for the modified roster
     df_after = df_after.copy()
-    df_after["player_id"] = pd.to_numeric(df_after["player_id"], errors="coerce").astype("int64")
-    df_after["cluster"] = pd.to_numeric(df_after["cluster"], errors="coerce").astype("int64")
+    df_after["player_id"] = pd.to_numeric(
+        df_after["player_id"], errors="coerce"
+    ).astype("int64")
+    df_after["cluster"] = pd.to_numeric(df_after["cluster"], errors="coerce").astype(
+        "int64"
+    )
     df_after["toi_es_sec"] = pd.to_numeric(df_after["toi_es_sec"], errors="coerce")
     df_after["toi_per_game"] = pd.to_numeric(df_after["toi_per_game"], errors="coerce")
     df_after["es_net60"] = pd.to_numeric(df_after["es_net60"], errors="coerce")
@@ -941,7 +997,9 @@ def refresh(season, team_code, weighting, role_mode, remove_pid, add_pid):
     if role_mode == "projected":
         # DB-backed maps (cached)
         MODEL_MAP_F, MODEL_MAP_D = load_model_maps_for_season(season_t)
-        print(f"[DB MAP] season_t={season_t} F_keys={len(MODEL_MAP_F)} D_keys={len(MODEL_MAP_D)}")
+        print(
+            f"[DB MAP] season_t={season_t} F_keys={len(MODEL_MAP_F)} D_keys={len(MODEL_MAP_D)}"
+        )
 
         comp_before = compute_expected_composition_model(
             df, weighting, season_t, TRANS_F, TRANS_D, MODEL_MAP_F, MODEL_MAP_D
@@ -984,7 +1042,9 @@ def refresh(season, team_code, weighting, role_mode, remove_pid, add_pid):
             after_net = weighted_mean(df_after["es_net60"], df_after["toi_es_sec"])
         else:
             before_net = float(pd.to_numeric(df["es_net60"], errors="coerce").mean())
-            after_net = float(pd.to_numeric(df_after["es_net60"], errors="coerce").mean())
+            after_net = float(
+                pd.to_numeric(df_after["es_net60"], errors="coerce").mean()
+            )
 
         role_label = f"Current season ({season_t})"
 
@@ -1008,7 +1068,9 @@ def refresh(season, team_code, weighting, role_mode, remove_pid, add_pid):
         kpi_box(
             "Δ ES net60",
             delta_net,
-            color=("#2ca02c" if delta_net > 0 else "#d62728" if delta_net < 0 else None),
+            color=(
+                "#2ca02c" if delta_net > 0 else "#d62728" if delta_net < 0 else None
+            ),
         ),
     ]
 

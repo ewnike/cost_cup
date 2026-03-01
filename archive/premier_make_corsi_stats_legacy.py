@@ -21,8 +21,8 @@ import pathlib
 
 import pandas as pd
 
-from constants import SEASONS_LEGACY, TABLES
 from archive.load_data import get_env_vars, load_data
+from constants import SEASONS_LEGACY, TABLES
 from log_utils import setup_logger
 from schema_utils import fq
 from strength_utils import (
@@ -64,7 +64,9 @@ def get_penalty_exclude_times(
         return pd.DataFrame(columns=["time", "team_1", "team_2", "exclude"])
 
     if game_skater_stats is None or game_skater_stats.empty:
-        raise ValueError("game_skater_stats is required to attach team_id and filter goalies.")
+        raise ValueError(
+            "game_skater_stats is required to attach team_id and filter goalies."
+        )
 
     # skaters-only shifts + team_id
     shifts_skaters = ensure_team_id_on_shifts_legacy(game_shifts, game_skater_stats)
@@ -132,12 +134,20 @@ def update_corsi(
     players_against = players_on_ice[players_on_ice["team_id"] == team_against]
 
     if event["event"] in ["Shot", "Goal", "Missed Shot"]:
-        df_corsi.loc[df_corsi["player_id"].isin(players_for["player_id"]), "corsi_for"] += 1
-        df_corsi.loc[df_corsi["player_id"].isin(players_against["player_id"]), "corsi_against"] += 1
+        df_corsi.loc[
+            df_corsi["player_id"].isin(players_for["player_id"]), "corsi_for"
+        ] += 1
+        df_corsi.loc[
+            df_corsi["player_id"].isin(players_against["player_id"]), "corsi_against"
+        ] += 1
     elif event["event"] == "Blocked Shot":
         # Blocked shot: shooter team gets CA, defending team gets CF
-        df_corsi.loc[df_corsi["player_id"].isin(players_for["player_id"]), "corsi_against"] += 1
-        df_corsi.loc[df_corsi["player_id"].isin(players_against["player_id"]), "corsi_for"] += 1
+        df_corsi.loc[
+            df_corsi["player_id"].isin(players_for["player_id"]), "corsi_against"
+        ] += 1
+        df_corsi.loc[
+            df_corsi["player_id"].isin(players_against["player_id"]), "corsi_for"
+        ] += 1
 
     return df_corsi
 
@@ -171,7 +181,9 @@ def calculate_corsi_for_game(
     before = len(game_shifts)
     game_shifts = ensure_team_id_on_shifts_legacy(game_shifts, gss)
     if game_shifts.empty:
-        logger.warning("game_id %s: no skater shifts after merge/goalie filter", game_id)
+        logger.warning(
+            "game_id %s: no skater shifts after merge/goalie filter", game_id
+        )
         return df_corsi
     logger.info(
         "game_id %s: dropped %s shift rows (goalies/unmatched); remaining=%s",
@@ -246,10 +258,14 @@ def calculate_and_save_corsi_stats(season_game_ids, season):
             or df_game.get("game_plays", pd.DataFrame()).empty
             or df_game.get("game_skater_stats", pd.DataFrame()).empty
         ):
-            logger.warning(f"Skipping game {game_id}: missing shifts/plays/skater_stats.")
+            logger.warning(
+                f"Skipping game {game_id}: missing shifts/plays/skater_stats."
+            )
             continue
 
-        df_corsi = df_game["game_skater_stats"][["game_id", "player_id", "team_id"]].copy()
+        df_corsi = df_game["game_skater_stats"][
+            ["game_id", "player_id", "team_id"]
+        ].copy()
         corsi_stats = create_corsi_stats(df_corsi, df_game)
 
         if corsi_stats is not None and not corsi_stats.empty:
@@ -283,12 +299,16 @@ if __name__ == "__main__":
     df_master = load_data(env_vars)
 
     if "game" not in df_master:
-        logger.error("The 'game' DataFrame is missing from the loaded data. Cannot proceed.")
+        logger.error(
+            "The 'game' DataFrame is missing from the loaded data. Cannot proceed."
+        )
         raise SystemExit(1)
 
     for season in SEASONS_LEGACY:
         season_game_ids = (
-            df_master["game"].loc[df_master["game"]["season"] == season, "game_id"].unique()
+            df_master["game"]
+            .loc[df_master["game"]["season"] == season, "game_id"]
+            .unique()
         )
 
         if len(season_game_ids) > 0:

@@ -1,7 +1,7 @@
 # Player Archetypes Summary (Modern Pipeline)
 
-**Project:** Cost of Cup  
-**Last updated:** 2026-02-02  
+**Project:** Cost of Cup
+**Last updated:** 2026-02-02
 **Scope:** Modern seasons (20182019–20242025) in AWS-hosted PostgreSQL
 
 ---
@@ -60,12 +60,12 @@ The archetypes are intended to:
 - 20182019, 20192020, 20202021, 20212022, 20222023, 20232024, 20242025
 
 ### Core AWS Postgres inputs
-- `raw.raw_pbp_{season}`  
+- `raw.raw_pbp_{season}`
   RTSS-like event stream. Key columns observed:
   `event_type`, `event_team`, `event_player_1/2/3`, `home_team`, `away_team`,
   plus game/time identifiers.
 
-- `derived.game_plays_{season}_from_raw_pbp`  
+- `derived.game_plays_{season}_from_raw_pbp`
   Normalized game_plays-like view including `time`, `team_id_for`, `team_id_against`, etc.
 
 - **Canonical shifts view:** `raw.raw_shifts_resolved` (use this in code)
@@ -155,7 +155,7 @@ The archetypes are intended to:
 - `es_share` (share of total TOI that is even-strength)
 
 ### Possession / play-driving
-- `cf60`, `ca60`, `cf_percent`  
+- `cf60`, `ca60`, `cf_percent`
   (Corsi is computed on even strength by construction)
 
 ---

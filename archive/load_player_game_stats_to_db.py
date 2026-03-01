@@ -77,7 +77,9 @@ def load_one_season(engine, season: int) -> None:
     df["team_id"] = pd.to_numeric(df["team_id"], errors="coerce").astype("Int64")
     df["cf"] = pd.to_numeric(df["cf"], errors="coerce").astype("Int64")
     df["ca"] = pd.to_numeric(df["ca"], errors="coerce").astype("Int64")
-    df["toi_total_sec"] = pd.to_numeric(df["toi_total_sec"], errors="coerce").astype("Int64")
+    df["toi_total_sec"] = pd.to_numeric(df["toi_total_sec"], errors="coerce").astype(
+        "Int64"
+    )
     df["toi_es_sec"] = pd.to_numeric(df["toi_es_sec"], errors="coerce").astype("Int64")
     df["cf60"] = pd.to_numeric(df["cf60"], errors="coerce")
     df["ca60"] = pd.to_numeric(df["ca60"], errors="coerce")
@@ -116,7 +118,9 @@ def load_one_season(engine, season: int) -> None:
     # add useful indexes (optional but recommended)
     with engine.begin() as conn:
         conn.execute(
-            text(f'CREATE INDEX IF NOT EXISTS "{table}_game_idx" ON "{SCHEMA}"."{table}" (game_id)')
+            text(
+                f'CREATE INDEX IF NOT EXISTS "{table}_game_idx" ON "{SCHEMA}"."{table}" (game_id)'
+            )
         )
         conn.execute(
             text(
@@ -124,7 +128,9 @@ def load_one_season(engine, season: int) -> None:
             )
         )
         conn.execute(
-            text(f'CREATE INDEX IF NOT EXISTS "{table}_team_idx" ON "{SCHEMA}"."{table}" (team_id)')
+            text(
+                f'CREATE INDEX IF NOT EXISTS "{table}_team_idx" ON "{SCHEMA}"."{table}" (team_id)'
+            )
         )
 
     logger.info("%s: wrote %s rows -> %s.%s", season, len(df), SCHEMA, table)

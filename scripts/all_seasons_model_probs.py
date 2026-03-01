@@ -12,6 +12,7 @@ Notes:
 - Uses mart.v_player_season_archetypes_modern_regulars as the source of features/cluster labels.
 - Builds (season_t -> season_t+1) training rows using season arithmetic: season_next = season_t + 10001
 - Trains separate models for F and D.
+
 """
 
 from __future__ import annotations
@@ -25,11 +26,15 @@ from typing import Dict, List, Tuple
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, log_loss
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    confusion_matrix,
+    log_loss,
+)
 from sqlalchemy import text
 
 from db_utils import get_db_engine
-
 
 # ----------------------------- SQL -----------------------------
 
@@ -178,7 +183,9 @@ def fit_and_score_multinom(
     # basic guard
     if df_train.empty or df_test.empty:
         # write an empty placeholder and return tiny summary
-        out_csv = out_dir / f"transition_probs_{pos_group}_test_season_{test_season}.csv"
+        out_csv = (
+            out_dir / f"transition_probs_{pos_group}_test_season_{test_season}.csv"
+        )
         df_test.to_csv(out_csv, index=False)
 
         return RunSummary(
@@ -192,7 +199,11 @@ def fit_and_score_multinom(
             baseline_accuracy=0.0,
             model_accuracy=0.0,
             log_loss=float("nan"),
-            confusion_matrix_rows_true_cols_pred_0_1_2=[[0, 0, 0], [0, 0, 0], [0, 0, 0]],
+            confusion_matrix_rows_true_cols_pred_0_1_2=[
+                [0, 0, 0],
+                [0, 0, 0],
+                [0, 0, 0],
+            ],
         )
 
     X_train, y_train = make_feature_matrix(df_train)
@@ -253,7 +264,9 @@ def fit_and_score_multinom(
         confusion_matrix_rows_true_cols_pred_0_1_2=cm,
     )
 
-    out_json = out_dir / f"transition_model_summary_{pos_group}_test_season_{test_season}.json"
+    out_json = (
+        out_dir / f"transition_model_summary_{pos_group}_test_season_{test_season}.json"
+    )
     out_json.write_text(json.dumps(asdict(summary), indent=2))
 
     # optional: console report
@@ -271,9 +284,13 @@ def fit_and_score_multinom(
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser()
     p.add_argument(
-        "--dsn", default=None, help="Optional. If your db_utils reads .env, you can omit."
+        "--dsn",
+        default=None,
+        help="Optional. If your db_utils reads .env, you can omit.",
     )
-    p.add_argument("--out-dir", default="model_out", help="Output directory for CSV/JSON.")
+    p.add_argument(
+        "--out-dir", default="model_out", help="Output directory for CSV/JSON."
+    )
     p.add_argument(
         "--season-min",
         type=int,
@@ -311,7 +328,9 @@ def main() -> None:
 
     # test seasons are season_t values that have season_t+1 also present
     valid_test_seasons = [
-        s for s in seasons if season_next(s) in seasons and len([t for t in seasons if t < s]) > 0
+        s
+        for s in seasons
+        if season_next(s) in seasons and len([t for t in seasons if t < s]) > 0
     ]
     if args.test_season is not None:
         valid_test_seasons = [int(args.test_season)]
@@ -320,7 +339,11 @@ def main() -> None:
         print(f"\n\n=== Building base for pos_group={pos_group} ===")
         df_base = read_df(
             SQL_BASE,
-            params={"pos_group": pos_group, "season_min": min(seasons), "season_max": max(seasons)},
+            params={
+                "pos_group": pos_group,
+                "season_min": min(seasons),
+                "season_max": max(seasons),
+            },
         )
         dupes = df_base.columns[df_base.columns.duplicated()].tolist()
         print("DUPLICATE COL NAMES:", dupes)
@@ -329,7 +352,9 @@ def main() -> None:
         df_pairs = build_pairs(df_base)
 
         print(f"Base rows:  {len(df_base):,}")
-        print(f"Pair rows:  {len(df_pairs):,}  (player-season_t with next season target)")
+        print(
+            f"Pair rows:  {len(df_pairs):,}  (player-season_t with next season target)"
+        )
 
         for test_season in valid_test_seasons:
             fit_and_score_multinom(

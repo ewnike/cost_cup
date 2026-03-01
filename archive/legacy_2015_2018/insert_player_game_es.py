@@ -67,8 +67,12 @@ with Session() as session:
         for c in float_cols:
             df[c] = pd.to_numeric(df[c], errors="coerce")
 
-        df = df.dropna(subset=["game_id", "player_id", "team_id", "cf", "ca", "toi_sec"])
-        df = df.drop_duplicates(subset=["game_id", "player_id", "team_id"]).reset_index(drop=True)
+        df = df.dropna(
+            subset=["game_id", "player_id", "team_id", "cf", "ca", "toi_sec"]
+        )
+        df = df.drop_duplicates(subset=["game_id", "player_id", "team_id"]).reset_index(
+            drop=True
+        )
 
         insert_data(df, table, session)
 

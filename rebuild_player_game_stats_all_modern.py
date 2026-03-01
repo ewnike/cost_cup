@@ -80,7 +80,9 @@ def rebuild_for_season(*, season: int, drop_toi_total: bool) -> None:
     try:
         with engine.begin() as conn:
             if not table_exists(conn, es_schema, es_table):
-                logger.warning("⚠️ %s: missing %s.%s; skipping", season, es_schema, es_table)
+                logger.warning(
+                    "⚠️ %s: missing %s.%s; skipping", season, es_schema, es_table
+                )
                 return
 
             # 1) Total TOI per (game_id, player_id, team_id) from shifts (skaters only)
@@ -191,7 +193,9 @@ def rebuild_for_season(*, season: int, drop_toi_total: bool) -> None:
 
             # 4) Optional cleanup
             if drop_toi_total:
-                conn.execute(text(f'DROP TABLE IF EXISTS "{toi_schema}"."{toi_table}";'))
+                conn.execute(
+                    text(f'DROP TABLE IF EXISTS "{toi_schema}"."{toi_table}";')
+                )
                 logger.info("%s: dropped %s.%s", season, toi_schema, toi_table)
 
     finally:
@@ -201,7 +205,9 @@ def rebuild_for_season(*, season: int, drop_toi_total: bool) -> None:
 def main() -> None:
     """Docstring for main."""
     ap = argparse.ArgumentParser()
-    ap.add_argument("--season", type=int, default=None, help="Run one season, e.g. 20192020")
+    ap.add_argument(
+        "--season", type=int, default=None, help="Run one season, e.g. 20192020"
+    )
     ap.add_argument(
         "--drop-toi-total",
         action="store_true",

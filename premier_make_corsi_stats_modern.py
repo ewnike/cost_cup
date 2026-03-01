@@ -91,7 +91,9 @@ def add_cumulative_time_from_period(gp: pd.DataFrame) -> pd.DataFrame:
     return gp
 
 
-def drop_probable_goalies(game_shifts: pd.DataFrame, *, toi_threshold: int = 2200) -> pd.DataFrame:
+def drop_probable_goalies(
+    game_shifts: pd.DataFrame, *, toi_threshold: int = 2200
+) -> pd.DataFrame:
     """
     Remove goalie rows from shifts using TOI heuristic when no goalie flag exists.
 
@@ -107,7 +109,9 @@ def drop_probable_goalies(game_shifts: pd.DataFrame, *, toi_threshold: int = 220
     required = {"game_id", "team_id", "player_id", "shift_start", "shift_end"}
     missing = required - set(game_shifts.columns)
     if missing:
-        raise KeyError(f"drop_probable_goalies missing required columns: {sorted(missing)}")
+        raise KeyError(
+            f"drop_probable_goalies missing required columns: {sorted(missing)}"
+        )
 
     gs = game_shifts.copy()
     gs["shift_dur"] = (gs["shift_end"] - gs["shift_start"]).clip(lower=0)
@@ -125,7 +129,9 @@ def drop_probable_goalies(game_shifts: pd.DataFrame, *, toi_threshold: int = 220
 
     before = len(gs)
     gs = gs.merge(goalies.assign(_goalie=1), on=["game_id", "player_id"], how="left")
-    gs = gs[gs["_goalie"].isna()].drop(columns=["_goalie", "shift_dur"], errors="ignore")
+    gs = gs[gs["_goalie"].isna()].drop(
+        columns=["_goalie", "shift_dur"], errors="ignore"
+    )
     after = len(gs)
 
     logger.info(f"Dropped probable goalie shift rows: {before - after}")
@@ -155,7 +161,9 @@ def get_exclude_timeline(
 # -------------------------
 # Corsi calculation helpers
 # -------------------------
-def prepare_game_plays(df_game: dict, relevant_events: list[str]) -> pd.DataFrame | None:
+def prepare_game_plays(
+    df_game: dict, relevant_events: list[str]
+) -> pd.DataFrame | None:
     """
     Prepare_game_plays.
 
@@ -223,11 +231,19 @@ def update_corsi(
     players_against = players_on_ice[players_on_ice["team_id"] == team_against]
 
     if event["event"] in ["Shot", "Goal", "Missed Shot"]:
-        df_corsi.loc[df_corsi["player_id"].isin(players_for["player_id"]), "corsi_for"] += 1
-        df_corsi.loc[df_corsi["player_id"].isin(players_against["player_id"]), "corsi_against"] += 1
+        df_corsi.loc[
+            df_corsi["player_id"].isin(players_for["player_id"]), "corsi_for"
+        ] += 1
+        df_corsi.loc[
+            df_corsi["player_id"].isin(players_against["player_id"]), "corsi_against"
+        ] += 1
     elif event["event"] == "Blocked Shot":
-        df_corsi.loc[df_corsi["player_id"].isin(players_for["player_id"]), "corsi_against"] += 1
-        df_corsi.loc[df_corsi["player_id"].isin(players_against["player_id"]), "corsi_for"] += 1
+        df_corsi.loc[
+            df_corsi["player_id"].isin(players_for["player_id"]), "corsi_against"
+        ] += 1
+        df_corsi.loc[
+            df_corsi["player_id"].isin(players_against["player_id"]), "corsi_for"
+        ] += 1
 
     return df_corsi
 
@@ -250,7 +266,9 @@ def calculate_corsi_for_game(df_corsi: pd.DataFrame, df_game: dict) -> pd.DataFr
         return df_corsi
 
     # Ensure ints
-    gs["shift_start"] = pd.to_numeric(gs["shift_start"], errors="coerce").astype("Int64")
+    gs["shift_start"] = pd.to_numeric(gs["shift_start"], errors="coerce").astype(
+        "Int64"
+    )
     gs["shift_end"] = pd.to_numeric(gs["shift_end"], errors="coerce").astype("Int64")
     gs = gs.dropna(subset=["shift_start", "shift_end", "team_id", "player_id"]).copy()
     gs["shift_start"] = gs["shift_start"].astype(int)
@@ -374,11 +392,15 @@ def calculate_and_save_corsi_stats(season: int) -> None:
         return
 
     # Use game_ids present in plays view
-    season_game_ids = sorted(df_master["game_plays"]["game_id"].dropna().astype(int).unique())
+    season_game_ids = sorted(
+        df_master["game_plays"]["game_id"].dropna().astype(int).unique()
+    )
     logger.info(f"{season}: processing {len(season_game_ids)} games")
 
     plays_by_game = dict(tuple(df_master["game_plays"].groupby("game_id", sort=False)))
-    shifts_by_game = dict(tuple(df_master["game_shifts"].groupby("game_id", sort=False)))
+    shifts_by_game = dict(
+        tuple(df_master["game_shifts"].groupby("game_id", sort=False))
+    )
 
     season_out = []
 

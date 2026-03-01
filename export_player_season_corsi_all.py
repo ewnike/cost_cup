@@ -36,7 +36,9 @@ def export_player_season_corsi_all() -> None:
         season_tables = [(s, t) for s, t in season_tables if s is not None]
 
         if not season_tables:
-            raise RuntimeError(f"No tables matched raw_corsi_######## in schema '{RAW_SCHEMA}'.")
+            raise RuntimeError(
+                f"No tables matched raw_corsi_######## in schema '{RAW_SCHEMA}'."
+            )
 
         out_rows: list[pd.DataFrame] = []
 
@@ -44,7 +46,8 @@ def export_player_season_corsi_all() -> None:
             for season, table in season_tables:
                 print(f"Aggregating {RAW_SCHEMA}.{table} -> season {season}")
 
-                q = text(f"""
+                q = text(
+                    f"""
                     SELECT
                         :season AS season,
                         player_id::bigint AS player_id,
@@ -53,7 +56,8 @@ def export_player_season_corsi_all() -> None:
                     FROM {RAW_SCHEMA}.{table}
                     GROUP BY player_id
                     ORDER BY player_id
-                """)
+                """
+                )
 
                 df = pd.read_sql_query(q, conn, params={"season": season})
 
@@ -67,7 +71,9 @@ def export_player_season_corsi_all() -> None:
         all_df = all_df.sort_values(["season", "player_id"], ignore_index=True)
 
         all_df.to_csv(OUT_CSV, index=False)
-        print(f"Wrote {OUT_CSV} rows={len(all_df)} seasons={all_df['season'].nunique()}")
+        print(
+            f"Wrote {OUT_CSV} rows={len(all_df)} seasons={all_df['season'].nunique()}"
+        )
 
     finally:
         engine.dispose()

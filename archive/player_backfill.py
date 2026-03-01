@@ -193,7 +193,9 @@ def fallback_search_player_id(name_key: str):
     target = name_key
     target_parts = target.split()
     target_last = target_parts[-1] if target_parts else ""
-    target_first_initial = target_parts[0][0] if target_parts and target_parts[0] else ""
+    target_first_initial = (
+        target_parts[0][0] if target_parts and target_parts[0] else ""
+    )
 
     # 1) exact normalized match
     for h in hits:
@@ -248,13 +250,15 @@ def upsert_player_info(conn, player_id: int, full_name: str):
     last = full_name.strip()
 
     conn.execute(
-        text("""
+        text(
+            """
         INSERT INTO dim.player_info (player_id, "firstName", "lastName")
         VALUES (:player_id, :firstName, :lastName)
         ON CONFLICT (player_id) DO UPDATE
         SET "firstName" = EXCLUDED."firstName",
             "lastName"  = EXCLUDED."lastName";
-    """),
+    """
+        ),
         {"player_id": player_id, "firstName": first, "lastName": last},
     )
 
@@ -310,7 +314,9 @@ def main() -> None:
             try:
                 candidates = get_roster_candidates_from_boxscore(int(game_id))
             except Exception as e:
-                unresolved.append((raw_player, team, season, game_id, f"boxscore_error: {e}"))
+                unresolved.append(
+                    (raw_player, team, season, game_id, f"boxscore_error: {e}")
+                )
                 continue
 
             # Prefer full-name match; then initial+last match (boxscore often uses "J. Moser")
@@ -321,7 +327,9 @@ def main() -> None:
             # Last-chance heuristic (rarely needed, but can help with spacing quirks)
             if not match:
                 match = [
-                    c for c in candidates if target_init_key in c[1] or c[1] in target_init_key
+                    c
+                    for c in candidates
+                    if target_init_key in c[1] or c[1] in target_init_key
                 ]
 
             if len(match) == 1:

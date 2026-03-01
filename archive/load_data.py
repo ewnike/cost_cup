@@ -23,7 +23,6 @@ from typing import Any
 
 import pandas as pd
 from sqlalchemy import text
-from sqlalchemy.exc import ProgrammingError
 
 from constants import SEASONS_MODERN
 from db_utils import get_db_engine, load_environment_variables
@@ -52,7 +51,9 @@ def get_env_vars() -> dict[str, Any]:
     Your db_utils.get_db_engine() already loads env vars from .env.
     """
     load_environment_variables()
-    return {}  # legacy scripts can still call get_env_vars(), but it isn't needed anymore
+    return (
+        {}
+    )  # legacy scripts can still call get_env_vars(), but it isn't needed anymore
 
 
 def fetch_game_ids_20152016(engine) -> list[int]:
@@ -123,7 +124,11 @@ def load_data(
         derived_game_tbl = fq("derived", f"game_{int(season)}_from_raw_pbp")
 
         # Prefer derived game view/table if it exists; otherwise fall back.
-        game_tbl = derived_game_tbl if _relation_exists(engine, derived_game_tbl) else raw_game_tbl
+        game_tbl = (
+            derived_game_tbl
+            if _relation_exists(engine, derived_game_tbl)
+            else raw_game_tbl
+        )
     else:
         game_tbl = raw_game_tbl
 
@@ -155,7 +160,9 @@ def load_data(
             df_game = df_game.head(int(limit_games)).copy()
 
         # Determine game_ids scope for the other tables
-        game_ids = df_game["game_id"].astype("int64").tolist() if not df_game.empty else None
+        game_ids = (
+            df_game["game_id"].astype("int64").tolist() if not df_game.empty else None
+        )
 
         def _read_by_game_ids(sql_base: str) -> pd.DataFrame:
             base = sql_base.strip().rstrip(";")

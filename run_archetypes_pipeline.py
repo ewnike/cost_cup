@@ -74,9 +74,13 @@ def fail_if_clean_missing(psql_dsn: str) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--season", type=int, default=None, help="Run one season, e.g. 20242025")
     ap.add_argument(
-        "--dsn", required=True, help="psql DSN string, e.g. host=... dbname=... user=..."
+        "--season", type=int, default=None, help="Run one season, e.g. 20242025"
+    )
+    ap.add_argument(
+        "--dsn",
+        required=True,
+        help="psql DSN string, e.g. host=... dbname=... user=...",
     )
     ap.add_argument(
         "--skip-game-features",
@@ -90,7 +94,9 @@ def main() -> None:
     # 0) OPTIONAL: refresh player_game_features_{season} views/tables via proc
     if not args.skip_game_features:
         for s in seasons:
-            print(f"\n==================== refresh game features {s} ====================")
+            print(
+                f"\n==================== refresh game features {s} ===================="
+            )
             run_psql(args.dsn, f"CALL mart.build_player_game_features_truth({s});")
 
     # 1) player_season_features_modern_truth (per-season write into mart append table)
@@ -109,8 +115,12 @@ def main() -> None:
 
     # 4) cluster
     print("\n==================== clustering ====================")
-    run([sys.executable, "-u", "cluster_player_archetypes_modern.py", "--position", "F"])
-    run([sys.executable, "-u", "cluster_player_archetypes_modern.py", "--position", "D"])
+    run(
+        [sys.executable, "-u", "cluster_player_archetypes_modern.py", "--position", "F"]
+    )
+    run(
+        [sys.executable, "-u", "cluster_player_archetypes_modern.py", "--position", "D"]
+    )
     print("\n✅ Archetypes pipeline done")
 
 

@@ -58,7 +58,9 @@ def rebuild_for_season(*, season: int, out_schema: str = "derived") -> None:
     try:
         with engine.begin() as conn:
             if not table_exists(conn, es_schema, es_table):
-                logger.warning("⚠️ %s: missing %s.%s; skipping", season, es_schema, es_table)
+                logger.warning(
+                    "⚠️ %s: missing %s.%s; skipping", season, es_schema, es_table
+                )
                 return
             # --- FAIL FAST: ES must be unique on (game_id, player_id, team_id) ---
             dupe_keys = conn.execute(
@@ -83,7 +85,7 @@ def rebuild_for_season(*, season: int, out_schema: str = "derived") -> None:
             null_keys = conn.execute(
                 text(
                     f"""
-                    SELECT COUNT(*) 
+                    SELECT COUNT(*)
                     FROM "{es_schema}"."{es_table}"
                     WHERE game_id IS NULL OR player_id IS NULL OR team_id IS NULL;
                     """
@@ -97,7 +99,11 @@ def rebuild_for_season(*, season: int, out_schema: str = "derived") -> None:
                 )
 
             conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS "{out_schema}";'))
-            conn.execute(text(f'DROP TABLE IF EXISTS "{out_schema}"."raw_corsi_{season}" CASCADE;'))
+            conn.execute(
+                text(
+                    f'DROP TABLE IF EXISTS "{out_schema}"."raw_corsi_{season}" CASCADE;'
+                )
+            )
 
             conn.execute(
                 text(
@@ -162,7 +168,11 @@ def rebuild_for_season(*, season: int, out_schema: str = "derived") -> None:
                 )
 
             logger.info(
-                "✅ %s: rebuilt %s.%s rows=%s (matches ES)", season, out_schema, out_table, out_rows
+                "✅ %s: rebuilt %s.%s rows=%s (matches ES)",
+                season,
+                out_schema,
+                out_table,
+                out_rows,
             )
 
     finally:

@@ -75,7 +75,9 @@ def rebuild_one_season(*, season: int, schema_out: str = "derived") -> None:
 
             n = conn.execute(text(f"SELECT COUNT(*) FROM {out_table};")).scalar_one()
 
-        logger.info("✅ %s: rebuilt %s rows -> %s.raw_corsi_%s", season, n, schema_out, season)
+        logger.info(
+            "✅ %s: rebuilt %s rows -> %s.raw_corsi_%s", season, n, schema_out, season
+        )
 
     finally:
         engine.dispose()

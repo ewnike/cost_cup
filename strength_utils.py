@@ -50,7 +50,9 @@ def get_num_players(shift_df: pd.DataFrame) -> pd.DataFrame:
     )
 
     # shift_start => +1, shift_end => -1
-    shifts_melted["change"] = 2 * (shifts_melted["variable"] == "shift_start").astype(int) - 1
+    shifts_melted["change"] = (
+        2 * (shifts_melted["variable"] == "shift_start").astype(int) - 1
+    )
     shifts_melted["num_players"] = shifts_melted["change"].cumsum()
 
     df_num_players = shifts_melted.groupby("value")["num_players"].last().reset_index()
@@ -109,7 +111,9 @@ def filter_goalies_modern(game_shifts: pd.DataFrame) -> pd.DataFrame:
     return game_shifts
 
 
-def build_exclude_timeline_equal_strength(game_shifts_skaters: pd.DataFrame) -> pd.DataFrame:
+def build_exclude_timeline_equal_strength(
+    game_shifts_skaters: pd.DataFrame,
+) -> pd.DataFrame:
     """
     Build an exclude timeline from SKATER shifts (team_id present, goalies removed).
 
@@ -129,7 +133,9 @@ def build_exclude_timeline_equal_strength(game_shifts_skaters: pd.DataFrame) -> 
     # Ensure numeric timepoints
     if "shift_start" in game_shifts_skaters.columns:
         game_shifts_skaters = game_shifts_skaters.copy()
-        game_shifts_skaters["shift_start"] = game_shifts_skaters["shift_start"].astype(int)
+        game_shifts_skaters["shift_start"] = game_shifts_skaters["shift_start"].astype(
+            int
+        )
         game_shifts_skaters["shift_end"] = game_shifts_skaters["shift_end"].astype(int)
 
     team_ids = sorted(game_shifts_skaters["team_id"].dropna().unique())
@@ -152,13 +158,17 @@ def build_exclude_timeline_equal_strength(game_shifts_skaters: pd.DataFrame) -> 
     df_ex = df_ex[df_ex["time"].shift(-1) != df_ex["time"]].reset_index(drop=True)
 
     df_ex["exclude"] = (
-        (df_ex["team_1"] != df_ex["team_2"]) & (df_ex["team_1"] <= 6) & (df_ex["team_2"] <= 6)
+        (df_ex["team_1"] != df_ex["team_2"])
+        & (df_ex["team_1"] <= 6)
+        & (df_ex["team_2"] <= 6)
     )
 
     return df_ex
 
 
-def apply_exclude_to_plays(plays: pd.DataFrame, exclude_timeline: pd.DataFrame) -> pd.DataFrame:
+def apply_exclude_to_plays(
+    plays: pd.DataFrame, exclude_timeline: pd.DataFrame
+) -> pd.DataFrame:
     """
     Filter plays using exclude timeline (expects plays has 'time' as int seconds).
 

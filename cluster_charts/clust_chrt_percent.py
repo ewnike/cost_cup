@@ -22,7 +22,9 @@ def fetch_counts(table: str) -> pd.DataFrame:
 
 
 def plot_stacked(df: pd.DataFrame, title: str, as_pct: bool) -> None:
-    pivot = df.pivot(index="season", columns="cluster", values="n").fillna(0).sort_index()
+    pivot = (
+        df.pivot(index="season", columns="cluster", values="n").fillna(0).sort_index()
+    )
 
     if as_pct:
         pivot = pivot.div(pivot.sum(axis=1), axis=0) * 100
@@ -41,7 +43,9 @@ def plot_stacked(df: pd.DataFrame, title: str, as_pct: bool) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--pos", choices=["F", "D", "both"], default="F")
-    ap.add_argument("--pct", action="store_true", help="Plot percentages instead of counts")
+    ap.add_argument(
+        "--pct", action="store_true", help="Plot percentages instead of counts"
+    )
     args = ap.parse_args()
 
     targets = []

@@ -38,11 +38,23 @@ with Session() as session:
         df = df.dropna(subset=["firstName", "lastName", "capHit"])
 
         # ✅ De-dupe by spotrac_url (best unique key you have)
-        df = df.drop_duplicates(subset=["spotrac_url"], keep="first").reset_index(drop=True)
+        df = df.drop_duplicates(subset=["spotrac_url"], keep="first").reset_index(
+            drop=True
+        )
 
         # enforce schema columns only
         df = df[
-            ["game_id", "player_id", "team_id", "cf", "ca", "toi_sec", "cf60", "ca60", "cf_percent"]
+            [
+                "game_id",
+                "player_id",
+                "team_id",
+                "cf",
+                "ca",
+                "toi_sec",
+                "cf60",
+                "ca60",
+                "cf_percent",
+            ]
         ].copy()
 
         insert_data(df, table, session)

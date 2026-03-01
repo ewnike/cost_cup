@@ -1,5 +1,3 @@
-import os
-
 import dash
 import pandas as pd
 import plotly.express as px
@@ -19,7 +17,10 @@ GLOSSARY = [
         "definition": "Rolling mean over the last N games INCLUDING the current game (historical smoothing). For prediction, you’d shift by 1 to exclude the current game.",
     },
     {"term": "cf60", "definition": "Corsi For per 60 at 5v5 while player is on ice."},
-    {"term": "ca60", "definition": "Corsi Against per 60 at 5v5 while player is on ice."},
+    {
+        "term": "ca60",
+        "definition": "Corsi Against per 60 at 5v5 while player is on ice.",
+    },
     {"term": "cf_percent", "definition": "Corsi For % at 5v5 = cf / (cf + ca)."},
 ]
 
@@ -124,7 +125,9 @@ def season_truth_table(season: int) -> str:
 def load_gamelog(season: int, team_code: str, player_id: int) -> pd.DataFrame:
     tbl = season_truth_table(season)
     sql = SQL_PLAYER_GAMELOG.replace("mart.player_game_features_20242025_truth", tbl)
-    return read_df(sql, params={"season": season, "team_code": team_code, "player_id": player_id})
+    return read_df(
+        sql, params={"season": season, "team_code": team_code, "player_id": player_id}
+    )
 
 
 def add_centered_rolling(df: pd.DataFrame, window: int = 5) -> pd.DataFrame:
@@ -133,9 +136,15 @@ def add_centered_rolling(df: pd.DataFrame, window: int = 5) -> pd.DataFrame:
     out = df.copy()
 
     # centered rolling window (uses past+future around each point)
-    out["es_net60_roll"] = out["es_net60"].rolling(window=window, min_periods=1, center=True).mean()
-    out["points_roll"] = out["points"].rolling(window=window, min_periods=1, center=True).mean()
-    out["shots_roll"] = out["shots"].rolling(window=window, min_periods=1, center=True).mean()
+    out["es_net60_roll"] = (
+        out["es_net60"].rolling(window=window, min_periods=1, center=True).mean()
+    )
+    out["points_roll"] = (
+        out["points"].rolling(window=window, min_periods=1, center=True).mean()
+    )
+    out["shots_roll"] = (
+        out["shots"].rolling(window=window, min_periods=1, center=True).mean()
+    )
     return out
 
 
@@ -144,7 +153,9 @@ app = dash.Dash(__name__)
 server = app.server
 
 df_seasons = read_df(SQL_SEASONS)
-season_options = [{"label": str(s), "value": int(s)} for s in df_seasons["season"].tolist()]
+season_options = [
+    {"label": str(s), "value": int(s)} for s in df_seasons["season"].tolist()
+]
 default_season = season_options[-1]["value"] if season_options else 20242025
 
 # initialize teams + players based on default season
@@ -153,7 +164,8 @@ team_options0 = [{"label": t, "value": t} for t in df_teams0["team_code"].tolist
 default_team = team_options0[0]["value"] if team_options0 else "VAN"
 
 df_players0 = read_df(
-    SQL_PLAYERS_BY_TEAM_SEASON, params={"season": default_season, "team_code": default_team}
+    SQL_PLAYERS_BY_TEAM_SEASON,
+    params={"season": default_season, "team_code": default_team},
 )
 player_options0 = [
     {"label": str(pid), "value": int(pid)} for pid in df_players0["player_id"].tolist()
@@ -282,7 +294,9 @@ app.layout = html.Div(
                         html.Label("Rolling window (games)"),
                         dcc.Dropdown(
                             id="roll_window",
-                            options=[{"label": str(x), "value": x} for x in [3, 5, 10, 15]],
+                            options=[
+                                {"label": str(x), "value": x} for x in [3, 5, 10, 15]
+                            ],
                             value=5,
                             clearable=False,
                         ),
@@ -311,13 +325,19 @@ app.layout = html.Div(
             children=[
                 html.Div(
                     children=[
-                        html.H4(id="net_title", style={"margin": "0 0 2px 0", "lineHeight": "1.1"}),
+                        html.H4(
+                            id="net_title",
+                            style={"margin": "0 0 2px 0", "lineHeight": "1.1"},
+                        ),
                         dcc.Graph(id="net_graph"),
                     ]
                 ),
                 html.Div(
                     children=[
-                        html.H4(id="ps_title", style={"margin": "0 0 2px 0", "lineHeight": "1.1"}),
+                        html.H4(
+                            id="ps_title",
+                            style={"margin": "0 0 2px 0", "lineHeight": "1.1"},
+                        ),
                         dcc.Graph(id="ps_graph"),
                     ]
                 ),
@@ -402,7 +422,9 @@ def filter_glossary(q):
     if not q:
         return GLOSSARY
     q = q.lower().strip()
-    return [r for r in GLOSSARY if q in r["term"].lower() or q in r["definition"].lower()]
+    return [
+        r for r in GLOSSARY if q in r["term"].lower() or q in r["definition"].lower()
+    ]
 
 
 @app.callback(
@@ -427,7 +449,8 @@ def refresh_players(season: int, team_code: str):
     if season is None or team_code is None:
         return [], None
     df = read_df(
-        SQL_PLAYERS_BY_TEAM_SEASON, params={"season": int(season), "team_code": str(team_code)}
+        SQL_PLAYERS_BY_TEAM_SEASON,
+        params={"season": int(season), "team_code": str(team_code)},
     )
     opts = [{"label": str(pid), "value": int(pid)} for pid in df["player_id"].tolist()]
     val = opts[0]["value"] if opts else None
@@ -460,7 +483,15 @@ def refresh_gamelog(
 
     df = load_gamelog(int(season), str(team_code), int(player_id))
     if df.empty:
-        return ("No rows for selection", empty_fig, "No rows for selection", empty_fig, [], 1, 1)
+        return (
+            "No rows for selection",
+            empty_fig,
+            "No rows for selection",
+            empty_fig,
+            [],
+            1,
+            1,
+        )
 
     sort_cols = [c for c in ["game_date", "game_id"] if c in df.columns]
     df = df.sort_values(sort_cols).reset_index(drop=True)
@@ -481,16 +512,16 @@ def refresh_gamelog(
     hi = min(max_game_n, focus + half)
     df_plot = df[(df["game_n"] >= lo) & (df["game_n"] <= hi)].copy()
 
-    title_net = (
-        f"{team_code} {season} — player {player_id}: ES net60 per game (rolling={roll_window})"
-    )
-    title_ps = (
-        f"{team_code} {season} — player {player_id}: points/shots per game (rolling={roll_window})"
-    )
+    title_net = f"{team_code} {season} — player {player_id}: ES net60 per game (rolling={roll_window})"
+    title_ps = f"{team_code} {season} — player {player_id}: points/shots per game (rolling={roll_window})"
 
-    df_net = df_plot[["game_n", "game_id", "game_date", "es_net60", "es_net60_roll"]].copy()
+    df_net = df_plot[
+        ["game_n", "game_id", "game_date", "es_net60", "es_net60_roll"]
+    ].copy()
     df_net_melt = df_net.melt(
-        id_vars=["game_n", "game_id", "game_date"], var_name="series", value_name="value"
+        id_vars=["game_n", "game_id", "game_date"],
+        var_name="series",
+        value_name="value",
     )
     fig_net = px.line(
         df_net_melt,
@@ -511,10 +542,20 @@ def refresh_gamelog(
     fig_net.update_xaxes(dtick=tick)
 
     df_ps = df_plot[
-        ["game_n", "game_id", "game_date", "points", "points_roll", "shots", "shots_roll"]
+        [
+            "game_n",
+            "game_id",
+            "game_date",
+            "points",
+            "points_roll",
+            "shots",
+            "shots_roll",
+        ]
     ].copy()
     df_ps_melt = df_ps.melt(
-        id_vars=["game_n", "game_id", "game_date"], var_name="series", value_name="value"
+        id_vars=["game_n", "game_id", "game_date"],
+        var_name="series",
+        value_name="value",
     )
     fig_ps = px.line(
         df_ps_melt,
@@ -528,7 +569,10 @@ def refresh_gamelog(
     records = df_plot.to_dict("records")
 
     fig_ps.update_layout(
-        title=None, xaxis_title="Game #", yaxis_title="count", margin=dict(l=40, r=20, t=10, b=40)
+        title=None,
+        xaxis_title="Game #",
+        yaxis_title="count",
+        margin=dict(l=40, r=20, t=10, b=40),
     )
     fig_ps.update_xaxes(dtick=tick)
 

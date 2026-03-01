@@ -4,7 +4,7 @@ import os
 import pathlib
 import re
 import unicodedata
-from typing import Dict, Tuple
+from typing import Dict
 
 import pandas as pd
 from sqlalchemy import text
@@ -53,7 +53,9 @@ def normalize_name(s: str) -> str:
 def build_player_lookup(engine) -> Dict[str, int]:
     """Map normalized 'first last' and 'f last' to player_id."""
     df = pd.read_sql_query(
-        text('SELECT player_id, "firstName" AS first, "lastName" AS last FROM dim.player_info'),
+        text(
+            'SELECT player_id, "firstName" AS first, "lastName" AS last FROM dim.player_info'
+        ),
         engine,
     )
 
@@ -104,7 +106,9 @@ def build_game_player_team_map(engine, season: int) -> pd.DataFrame:
     return out
 
 
-def build_team_id_for_against(df: pd.DataFrame, team_code_to_id: Dict[str, int]) -> pd.DataFrame:
+def build_team_id_for_against(
+    df: pd.DataFrame, team_code_to_id: Dict[str, int]
+) -> pd.DataFrame:
     """
     Convert raw PBP team codes into team_id_for/team_id_against using home/away codes.
 
@@ -114,7 +118,9 @@ def build_team_id_for_against(df: pd.DataFrame, team_code_to_id: Dict[str, int])
     df["team_id_for"] = df["event_team"].map(team_code_to_id)
     # opponent code
     opp = df.apply(
-        lambda r: r["away_team"] if r["event_team"] == r["home_team"] else r["home_team"],
+        lambda r: r["away_team"]
+        if r["event_team"] == r["home_team"]
+        else r["home_team"],
         axis=1,
     )
     df["team_id_against"] = opp.map(team_code_to_id)
@@ -122,7 +128,9 @@ def build_team_id_for_against(df: pd.DataFrame, team_code_to_id: Dict[str, int])
 
 
 def build_team_code_lookup(engine) -> Dict[str, int]:
-    df = pd.read_sql_query(text("SELECT team_code, team_id FROM dim.dim_team_code"), engine)
+    df = pd.read_sql_query(
+        text("SELECT team_code, team_id FROM dim.dim_team_code"), engine
+    )
     return {str(r["team_code"]): int(r["team_id"]) for _, r in df.iterrows()}
 
 
@@ -178,7 +186,10 @@ def build_player_game_boxscore_for_season(season: int) -> None:
             ].copy()
             tmp = tmp.rename(columns={role_col: "player_raw"})
             tmp["role"] = role
-            tmp = tmp[tmp["player_raw"].notna() & (tmp["player_raw"].astype(str).str.strip() != "")]
+            tmp = tmp[
+                tmp["player_raw"].notna()
+                & (tmp["player_raw"].astype(str).str.strip() != "")
+            ]
             long_rows.append(tmp)
 
         evp = pd.concat(long_rows, ignore_index=True)
@@ -194,7 +205,9 @@ def build_player_game_boxscore_for_season(season: int) -> None:
 
         logger.info("%s: evp rows after player_id resolve=%s", season, len(evp))
         logger.info(
-            "%s: evp event_type counts:\n%s", season, evp["event_type"].value_counts().to_string()
+            "%s: evp event_type counts:\n%s",
+            season,
+            evp["event_type"].value_counts().to_string(),
         )
         logger.info(
             "%s: FAC role counts:\n%s",
@@ -210,18 +223,27 @@ def build_player_game_boxscore_for_season(season: int) -> None:
         # Save event-player table (useful for forecasting / auditing)
         out_evp = f"pbp_event_players_{season}"
         evp.to_sql(
-            out_evp, engine, schema=DERIVED_SCHEMA, if_exists="replace", index=False, method="multi"
+            out_evp,
+            engine,
+            schema=DERIVED_SCHEMA,
+            if_exists="replace",
+            index=False,
+            method="multi",
         )
-        logger.info("%s: wrote %s rows -> %s.%s", season, len(evp), DERIVED_SCHEMA, out_evp)
+        logger.info(
+            "%s: wrote %s rows -> %s.%s", season, len(evp), DERIVED_SCHEMA, out_evp
+        )
 
         # Build boxscore counts
-        evp["goals"] = ((evp["event_type"] == "GOAL") & (evp["role"] == "p1")).astype(int)
-        evp["assists"] = ((evp["event_type"] == "GOAL") & (evp["role"].isin(["p2", "p3"]))).astype(
+        evp["goals"] = ((evp["event_type"] == "GOAL") & (evp["role"] == "p1")).astype(
             int
         )
-        evp["shots"] = ((evp["event_type"].isin(["SHOT", "GOAL"])) & (evp["role"] == "p1")).astype(
-            int
-        )
+        evp["assists"] = (
+            (evp["event_type"] == "GOAL") & (evp["role"].isin(["p2", "p3"]))
+        ).astype(int)
+        evp["shots"] = (
+            (evp["event_type"].isin(["SHOT", "GOAL"])) & (evp["role"] == "p1")
+        ).astype(int)
         evp["hits"] = ((evp["event_type"] == "HIT") & (evp["role"] == "p1")).astype(int)
 
         ev = evp["event_type"]
@@ -262,9 +284,16 @@ def build_player_game_boxscore_for_season(season: int) -> None:
 
         out_box = f"player_game_boxscore_{season}"
         box.to_sql(
-            out_box, engine, schema=MART_SCHEMA, if_exists="replace", index=False, method="multi"
+            out_box,
+            engine,
+            schema=MART_SCHEMA,
+            if_exists="replace",
+            index=False,
+            method="multi",
         )
-        logger.info("%s: wrote %s rows -> %s.%s", season, len(box), MART_SCHEMA, out_box)
+        logger.info(
+            "%s: wrote %s rows -> %s.%s", season, len(box), MART_SCHEMA, out_box
+        )
 
     finally:
         engine.dispose()
