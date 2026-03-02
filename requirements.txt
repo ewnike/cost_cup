@@ -169,3 +169,7 @@ wheel==0.45.1
 widgetsnbextension==4.0.13
 wsproto==1.2.0
 xyzservices==2025.1.0
+
+# --- Elastic Beanstalk runtime ---
+dash>=2.15
+gunicorn>=21
