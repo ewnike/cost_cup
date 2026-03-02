@@ -20,3 +20,7 @@ app.layout = html.Div(
 
 # This is what gunicorn serves
 server = app.server
+if __name__ == "__main__":
+    # Dash dev server (local only)
+    port = int(__import__("os").environ.get("PORT", "8050"))
+    app.run_server(host="0.0.0.0", port=port, debug=True)
