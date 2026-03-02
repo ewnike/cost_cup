@@ -191,3 +191,8 @@ scratch*.py
 # Deprecated notebooks (keep local only)
 archive/notebooks_DEPRECATED/*.ipynb
 archive/notebooks_DEPRECATED/.ipynb_checkpoints/
+
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml
