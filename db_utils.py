@@ -7,6 +7,8 @@ Author: Eric Winiecke
 Date: February 2025
 """
 
+from __future__ import annotations
+
 import logging
 import os
 import pathlib
@@ -36,97 +38,30 @@ from sqlalchemy.schema import Identity
 
 from log_utils import setup_logger
 
+# ---- logging ----
+setup_logger()
+logger = logging.getLogger(__name__)
+
+# ---- globals ----
+_ENV_LOADED = False
+_LOGGED_DB_CONFIG = False
+
 if os.getenv("DEBUG_IMPORTS") == "1":
     print(f"[IMPORT] {__name__} -> {pathlib.Path(__file__).resolve()}")
 
-DERIVED_SCHEMA = "derived"  # you already have this constant
+DERIVED_SCHEMA = "derived"
 RAW_SCHEMA = "raw"
-
-setup_logger()
-logger = logging.getLogger(__name__)  # ✅ define logger
-
-
-# 🔹 **Step 1: Load Environment Variables**
-# def load_environment_variables():
-#     """Load environment variables from the .env next to this file."""
-#     env_path = Path(__file__).resolve().parent / ".env"
-#     load_dotenv(dotenv_path=env_path, override=False)
-#     logger.info("Environment variables loaded.")
 
 
 def load_environment_variables():
-    """Load environment variables from the .env next to this file."""
+    """Load environment variables from the .env next to this file (once per process)."""
+    global _ENV_LOADED
+    if _ENV_LOADED:
+        return
+
     env_path = Path(__file__).resolve().parent / ".env"
-    print("Loading .env from:", env_path)  # TEMP
     load_dotenv(dotenv_path=env_path, override=False)
-
-
-# 🔹 **Step 2: Get Database Engine**
-# def get_db_engine():
-#     """
-#     Create and return a SQLAlchemy database engine.
-
-#     - Uses `DATABASE_URL` if available.
-#     - Otherwise, constructs a connection string from individual environment variables.
-
-#     Returns
-#     -------
-#         sqlalchemy.engine.Engine: A SQLAlchemy database engine instance.
-
-#     Raises
-#     ------
-#         ValueError: If `DATABASE_URL` is missing and required variables are not set.
-
-#     Environment Variables:
-#         - DATABASE_URL (optional, takes priority if set)
-#         - DATABASE_TYPE
-#         - DBAPI
-#         - ENDPOINT
-#         - USER
-#         - PASSWORD
-#         - PORT (default: 5432)
-#         - DATABASE
-
-#     """
-#     load_environment_variables()  # Ensure variables are loaded
-
-#     # Check if DATABASE_URL is set
-#     # pylint: disable=invalid-name
-#     DATABASE_URL = os.getenv("DATABASE_URL")
-
-#     if DATABASE_URL:
-#         logger.info("Using DATABASE_URL from environment.")
-#         return create_engine(DATABASE_URL)
-
-#     # Otherwise, construct from individual variables
-
-#     DATABASE_TYPE = os.getenv("DATABASE_TYPE")
-#     DBAPI = os.getenv("DBAPI")
-#     ENDPOINT = os.getenv("ENDPOINT")
-#     USER = os.getenv("DB_USER")
-#     PASSWORD = os.getenv("DB_PASSWORD")
-#     PORT = os.getenv("PORT", "5432")  # Default PostgreSQL port
-#     DATABASE = os.getenv("DATABASE")
-
-#     # pylint: enable=invalid-name
-#     # Ensure all required variables are available
-#     missing_vars = [
-#         var
-#         for var in ["DATABASE_TYPE", "DBAPI", "ENDPOINT", "DB_USER", "DB_PASSWORD", "DATABASE"]
-#         if not os.getenv(var)
-#     ]
-#     if missing_vars:
-#         logger.error(f"Missing required environment variables: {', '.join(missing_vars)}")
-#         raise ValueError("ERROR: One or more required environment variables are missing.")
-
-#     # URL encode the password in case it contains special characters
-#     encoded_password = quote_plus(PASSWORD)
-
-#     # Create the connection string
-#     connection_string = (
-#         f"{DATABASE_TYPE}+{DBAPI}://{USER}:{encoded_password}@{ENDPOINT}:{PORT}/{DATABASE}"
-#     )
-#     logger.info("Database connection string created.")
+    _ENV_LOADED = True
 
 
 #     return create_engine(connection_string)
@@ -145,11 +80,14 @@ def get_db_engine():
     AWS env vars:
       AWS_DB_HOST, AWS_DB_PORT, AWS_DB_NAME, AWS_DB_USER, AWS_DB_PASSWORD, AWS_DB_SSLMODE(optional)
     """
+    global _LOGGED_DB_CONFIG
     load_environment_variables()
 
     database_url = os.getenv("DATABASE_URL")
     if database_url:
-        logger.info("Using DATABASE_URL from environment.")
+        if not _LOGGED_DB_CONFIG:
+            logger.info("Using DATABASE_URL from environment.")
+            _LOGGED_DB_CONFIG = True
         return create_engine(database_url, pool_pre_ping=True)
 
     database_type = os.getenv("DATABASE_TYPE")
@@ -182,12 +120,14 @@ def get_db_engine():
             logger.error("Missing required AWS env vars: %s", ", ".join(missing))
             raise ValueError("Missing required AWS database environment variables.")
 
-        logger.info(
-            "Using AWS database config (APP_ENV=aws). host=%s db=%s port=%s",
-            host,
-            dbname,
-            port,
-        )
+        if not _LOGGED_DB_CONFIG:
+            logger.info(
+                "Using AWS database config (APP_ENV=aws). host=%s db=%s port=%s",
+                host,
+                dbname,
+                port,
+            )
+            _LOGGED_DB_CONFIG = True
 
     else:
         host = os.getenv("ENDPOINT")
@@ -212,13 +152,15 @@ def get_db_engine():
             logger.error("Missing required local env vars: %s", ", ".join(missing))
             raise ValueError("Missing required local database environment variables.")
 
-        logger.info(
-            "Using local database config (APP_ENV=%s). host=%s db=%s port=%s",
-            app_env,
-            host,
-            dbname,
-            port,
-        )
+        if not _LOGGED_DB_CONFIG:
+            logger.info(
+                "Using local database config (APP_ENV=%s). host=%s db=%s port=%s",
+                app_env,
+                host,
+                dbname,
+                port,
+            )
+            _LOGGED_DB_CONFIG = True
 
     encoded_password = quote_plus(password)
     connection_string = (
@@ -404,12 +346,8 @@ def define_raw_shifts_table(metadata, table_name: str = "raw_shifts"):
         Column("opponent", String(3), nullable=False),
         Column("is_home", Boolean, nullable=False),
         Column("game_period", SmallInteger, nullable=False),
-        Column(
-            "shift_num", Integer, nullable=False
-        ),  # it shows as a float but should be int
-        Column(
-            "seconds_start", Integer, nullable=False
-        ),  # seconds start at 0 go up 3600+ in OT
+        Column("shift_num", Integer, nullable=False),  # it shows as a float but should be int
+        Column("seconds_start", Integer, nullable=False),  # seconds start at 0 go up 3600+ in OT
         Column("seconds_end", Integer, nullable=False),
         Column("seconds_duration", Integer, nullable=False),
         Column("shift_start", String(5), nullable=True),
@@ -572,9 +510,7 @@ def create_player_game_es_table(table_name: str, metadata: MetaData) -> Table:
         Column("cf60", Float),
         Column("ca60", Float),
         Column("cf_percent", Float),
-        PrimaryKeyConstraint(
-            "game_id", "player_id", "team_id", name=f"pk_{table_name}"
-        ),
+        PrimaryKeyConstraint("game_id", "player_id", "team_id", name=f"pk_{table_name}"),
         extend_existing=True,
     )
 
@@ -594,12 +530,8 @@ def ctas_game_plays_from_raw_pbp(engine, season: int, *, drop: bool = True) -> s
     raw_table = f"raw_pbp_{season}"
 
     # Drop view first (if it exists), then table.
-    sql_drop_view = text(
-        f'DROP VIEW IF EXISTS "{DERIVED_SCHEMA}"."{derived_table}" CASCADE;'
-    )
-    sql_drop_table = text(
-        f'DROP TABLE IF EXISTS "{DERIVED_SCHEMA}"."{derived_table}" CASCADE;'
-    )
+    sql_drop_view = text(f'DROP VIEW IF EXISTS "{DERIVED_SCHEMA}"."{derived_table}" CASCADE;')
+    sql_drop_table = text(f'DROP TABLE IF EXISTS "{DERIVED_SCHEMA}"."{derived_table}" CASCADE;')
 
     sql_ctas = text(
         f"""
