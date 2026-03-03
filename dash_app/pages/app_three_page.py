@@ -182,29 +182,6 @@ def read_df(sql: str, params: dict | None = None) -> pd.DataFrame:
     return pd.read_sql_query(text(sql), eng, params=params or {})
 
 
-def layout():
-    controls_row = html.Div(
-        children=[
-            dcc.Dropdown(
-                id="tab3-season", options=season_options, value=default_season, clearable=False
-            ),
-            dcc.Dropdown(
-                id="tab3-team_code", options=team_options0, value=default_team, clearable=False
-            ),
-            # ...
-        ]
-    )
-
-    return html.Div(
-        style={"maxWidth": "1200px", "margin": "0 auto", "padding": "18px"},
-        children=[
-            html.H2("Team Archetype Composition + What-if (V1)"),
-            controls_row,
-            # ... rest of layout ...
-        ],
-    )
-
-
 def season_next(season: int) -> int:
     """NHL season encoding: 20182019 -> 20192020 (add 10001)."""
     return int(season) + 10001
@@ -741,320 +718,336 @@ role_mode_options = [
 
 
 def layout():
-    # DB work happens here (NOT at import time)
-    df_seasons = read_df(SQL_SEASONS)
-    season_vals = [int(s) for s in df_seasons["season"].tolist()]
-    season_options = [{"label": season_label(s), "value": s} for s in season_vals]
-    default_season = season_vals[-1] if season_vals else 20242025
+    try:
+        # ---------- DB work happens here (NOT at import time) ----------
+        df_seasons = read_df(SQL_SEASONS)
+        season_vals = [int(s) for s in df_seasons["season"].tolist()]
+        season_options = [{"label": season_label(s), "value": s} for s in season_vals]
+        default_season = season_vals[-1] if season_vals else 20242025
 
-    df_teams0 = read_df(SQL_TEAMS_BY_SEASON, {"season": default_season})
-    team_vals = df_teams0["team_code"].tolist()
-    team_options0 = [{"label": t, "value": t} for t in team_vals]
-    default_team = team_vals[0] if team_vals else None
+        df_teams0 = read_df(SQL_TEAMS_BY_SEASON, {"season": default_season})
+        team_vals = df_teams0["team_code"].tolist()
+        team_options0 = [{"label": t, "value": t} for t in team_vals]
+        default_team = team_vals[0] if team_vals else None
 
-    controls_row = html.Div(
-        style={
-            "display": "grid",
-            "gridTemplateColumns": "1fr 1.2fr auto",
-            "gap": "12px",
-            "alignItems": "center",
-            "marginTop": "8px",
-        },
-        children=[
-            # left: season + team
-            html.Div(
-                style={"display": "flex", "gap": "12px", "flexWrap": "wrap"},
-                children=[
-                    html.Div(
-                        style={"minWidth": "200px"},
-                        children=[
-                            html.Label("Season"),
-                            dcc.Dropdown(
-                                id="tab3-season",
-                                options=season_options,
-                                value=default_season,
-                                clearable=False,
-                            ),
-                        ],
-                    ),
-                    html.Div(
-                        style={"minWidth": "200px"},
-                        children=[
-                            html.Label("Team"),
-                            dcc.Dropdown(
-                                id="tab3-team_code",
-                                options=team_options0,
-                                value=default_team,
-                                clearable=False,
-                            ),
-                        ],
-                    ),
-                ],
-            ),
-            # middle: radios
-            html.Div(
-                style={"display": "flex", "flexDirection": "column", "gap": "8px"},
-                children=[
-                    html.Div(
-                        children=[
-                            html.Label("Weighting"),
-                            dcc.RadioItems(
-                                id="weighting",
-                                options=weight_options,
-                                value="toi",
-                                inline=True,
-                            ),
-                        ]
-                    ),
-                    html.Div(
-                        children=[
-                            html.Label("Role mode"),
-                            dcc.RadioItems(
-                                id="role_mode",
-                                options=role_mode_options,
-                                value="current",
-                                inline=True,
-                            ),
-                        ]
-                    ),
-                ],
-            ),
-            # right: glossary button
-            html.Div(
-                style={"display": "flex", "justifyContent": "flex-end"},
-                children=[
-                    html.Button(
-                        "Glossary / Definitions",
-                        id="tab3-open_glossary",
-                        n_clicks=0,
-                        style={
-                            "padding": "8px 12px",
-                            "border": "1px solid #bbb",
-                            "borderRadius": "10px",
-                            "background": "#f8f8f8",
-                            "cursor": "pointer",
-                            "whiteSpace": "nowrap",
-                        },
-                    )
-                ],
-            ),
-        ],
-    )
+        # ---------- controls row ----------
+        controls_row = html.Div(
+            style={
+                "display": "grid",
+                "gridTemplateColumns": "1fr 1.2fr auto",
+                "gap": "12px",
+                "alignItems": "center",
+                "marginTop": "8px",
+            },
+            children=[
+                # left: season + team
+                html.Div(
+                    style={"display": "flex", "gap": "12px", "flexWrap": "wrap"},
+                    children=[
+                        html.Div(
+                            style={"minWidth": "200px"},
+                            children=[
+                                html.Label("Season"),
+                                dcc.Dropdown(
+                                    id="tab3-season",
+                                    options=season_options,
+                                    value=default_season,
+                                    clearable=False,
+                                ),
+                            ],
+                        ),
+                        html.Div(
+                            style={"minWidth": "200px"},
+                            children=[
+                                html.Label("Team"),
+                                dcc.Dropdown(
+                                    id="tab3-team_code",
+                                    options=team_options0,
+                                    value=default_team,
+                                    clearable=False,
+                                ),
+                            ],
+                        ),
+                    ],
+                ),
+                # middle: radios
+                html.Div(
+                    style={"display": "flex", "flexDirection": "column", "gap": "8px"},
+                    children=[
+                        html.Div(
+                            children=[
+                                html.Label("Weighting"),
+                                dcc.RadioItems(
+                                    id="weighting",
+                                    options=weight_options,
+                                    value="toi",
+                                    inline=True,
+                                ),
+                            ]
+                        ),
+                        html.Div(
+                            children=[
+                                html.Label("Role mode"),
+                                dcc.RadioItems(
+                                    id="role_mode",
+                                    options=role_mode_options,
+                                    value="current",
+                                    inline=True,
+                                ),
+                            ]
+                        ),
+                    ],
+                ),
+                # right: glossary button
+                html.Div(
+                    style={"display": "flex", "justifyContent": "flex-end"},
+                    children=[
+                        html.Button(
+                            "Glossary / Definitions",
+                            id="tab3-open_glossary",
+                            n_clicks=0,
+                            style={
+                                "padding": "8px 12px",
+                                "border": "1px solid #bbb",
+                                "borderRadius": "10px",
+                                "background": "#f8f8f8",
+                                "cursor": "pointer",
+                                "whiteSpace": "nowrap",
+                            },
+                        )
+                    ],
+                ),
+            ],
+        )
 
-    return html.Div(
-        style={"maxWidth": "1200px", "margin": "0 auto", "padding": "18px"},
-        children=[
-            html.H2("Team Archetype Composition + What-if (V1)"),
-            controls_row,
-            # --- glossary modal ---
-            html.Div(
-                id="tab3-glossary_modal",
-                style={
-                    "display": "none",
-                    "position": "fixed",
-                    "top": 0,
-                    "left": 0,
-                    "width": "100%",
-                    "height": "100%",
-                    "backgroundColor": "rgba(0,0,0,0.45)",
-                    "zIndex": 9999,
-                    "padding": "60px 20px",
-                },
-                children=[
-                    html.Div(
-                        style={
-                            "maxWidth": "900px",
-                            "margin": "0 auto",
-                            "backgroundColor": "white",
-                            "borderRadius": "10px",
-                            "padding": "16px 16px",
-                            "boxShadow": "0 6px 24px rgba(0,0,0,0.2)",
-                        },
-                        children=[
-                            html.Div(
-                                style={
-                                    "display": "flex",
-                                    "justifyContent": "space-between",
-                                    "alignItems": "center",
-                                },
-                                children=[
-                                    html.H3("Quick Definitions", style={"margin": 0}),
-                                    html.Button("Close", id="tab3-close_glossary", n_clicks=0),
-                                ],
-                            ),
-                            html.Hr(),
-                            dcc.Input(
-                                id="tab3-glossary_search",
-                                type="text",
-                                placeholder="Search definitions…",
-                                style={"width": "360px", "padding": "6px"},
-                            ),
-                            html.Div(style={"height": "10px"}),
-                            dash_table.DataTable(
-                                id="tab3-glossary_table",
-                                columns=[
-                                    {"name": "term", "id": "term"},
-                                    {"name": "definition", "id": "definition"},
-                                ],
-                                data=TAB3_GLOSSARY,
-                                page_size=10,
-                                style_cell={
-                                    "whiteSpace": "normal",
-                                    "height": "auto",
-                                    "fontSize": 13,
-                                    "padding": "8px",
-                                },
-                                style_table={"overflowX": "auto"},
-                            ),
-                        ],
-                    )
-                ],
-            ),
-            html.Hr(),
-            # BEFORE/AFTER charts (callback updates figures)
-            html.Div(
-                style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "14px"},
-                children=[
-                    dcc.Graph(id="comp_graph_before"),
-                    dcc.Graph(id="comp_graph_after"),
-                ],
-            ),
-            # KPI row (callback populates children)
-            html.Div(id="kpi_row", style={"marginTop": "8px"}),
-            html.Div(style={"height": "12px"}),
-            # tables row
-            html.Div(
-                style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "14px"},
-                children=[
-                    # Left: roster
-                    html.Div(
-                        children=[
-                            html.H3("Roster (regulars)"),
-                            dash_table.DataTable(
-                                id="roster_table",
-                                columns=[
-                                    {"name": "pos_group", "id": "pos_group"},
-                                    {"name": "cluster", "id": "cluster"},
-                                    {"name": "player_id", "id": "player_id"},
-                                    {"name": "toi_es_min", "id": "toi_es_min"},
-                                    {"name": "toi_pg", "id": "toi_pg"},
-                                    {"name": "es_net60", "id": "es_net60"},
-                                ],
-                                page_size=15,
-                                sort_action="native",
-                                style_table={"overflowX": "auto"},
-                                style_cell={
-                                    "fontFamily": "Arial",
-                                    "fontSize": 12,
-                                    "padding": "6px",
-                                },
-                            ),
-                        ]
-                    ),
-                    # Right: what-if + delta table
-                    html.Div(
-                        style={"marginTop": "20px", "paddingLeft": "50px"},
-                        children=[
-                            html.H3(
-                                "What-If Roster Move (Trade Prototype)",
-                                style={"margin": "0 0 6px 0"},
-                            ),
-                            html.Div(
-                                "Remove one player from this team’s roster and add one league regular (same position group).",
-                                style={
-                                    "fontSize": "12px",
-                                    "color": "#666",
-                                    "margin": "0 0 10px 0",
-                                },
-                            ),
-                            html.Div(
-                                style={
-                                    "display": "flex",
-                                    "gap": "10px",
-                                    "flexWrap": "wrap",
-                                    "alignItems": "end",
-                                },
-                                children=[
-                                    html.Div(
-                                        style={"minWidth": "260px"},
-                                        children=[
-                                            html.Label("Send away (remove from this team)"),
-                                            dcc.Dropdown(
-                                                id="remove_player",
-                                                clearable=True,
-                                                placeholder="Select a player to remove…",
-                                            ),
-                                        ],
-                                    ),
-                                    html.Div(
-                                        style={"minWidth": "380px"},
-                                        children=[
-                                            html.Label("Acquire (add from league regulars)"),
-                                            dcc.Dropdown(
-                                                id="add_player",
-                                                clearable=True,
-                                                placeholder="Select a player to add…",
-                                            ),
-                                        ],
-                                    ),
-                                ],
-                            ),
-                            html.Br(),
-                            dash_table.DataTable(
-                                id="whatif_table",
-                                columns=[
-                                    {"name": "pos_group", "id": "pos_group"},
-                                    {"name": "cluster", "id": "cluster"},
-                                    {
-                                        "name": "pct_before",
-                                        "id": "pct_before",
-                                        "type": "numeric",
-                                        "format": Format(precision=2, scheme=Scheme.fixed),
+        # ---------- page layout ----------
+        return html.Div(
+            style={"maxWidth": "1200px", "margin": "0 auto", "padding": "18px"},
+            children=[
+                html.H2("Team Archetype Composition + What-if (V1)"),
+                controls_row,
+                # --- glossary modal ---
+                html.Div(
+                    id="tab3-glossary_modal",
+                    style={
+                        "display": "none",
+                        "position": "fixed",
+                        "top": 0,
+                        "left": 0,
+                        "width": "100%",
+                        "height": "100%",
+                        "backgroundColor": "rgba(0,0,0,0.45)",
+                        "zIndex": 9999,
+                        "padding": "60px 20px",
+                    },
+                    children=[
+                        html.Div(
+                            style={
+                                "maxWidth": "900px",
+                                "margin": "0 auto",
+                                "backgroundColor": "white",
+                                "borderRadius": "10px",
+                                "padding": "16px 16px",
+                                "boxShadow": "0 6px 24px rgba(0,0,0,0.2)",
+                            },
+                            children=[
+                                html.Div(
+                                    style={
+                                        "display": "flex",
+                                        "justifyContent": "space-between",
+                                        "alignItems": "center",
                                     },
-                                    {
-                                        "name": "pct_after",
-                                        "id": "pct_after",
-                                        "type": "numeric",
-                                        "format": Format(precision=2, scheme=Scheme.fixed),
+                                    children=[
+                                        html.H3("Quick Definitions", style={"margin": 0}),
+                                        html.Button(
+                                            "Close",
+                                            id="tab3-close_glossary",
+                                            n_clicks=0,
+                                        ),
+                                    ],
+                                ),
+                                html.Hr(),
+                                dcc.Input(
+                                    id="tab3-glossary_search",
+                                    type="text",
+                                    placeholder="Search definitions…",
+                                    style={"width": "360px", "padding": "6px"},
+                                ),
+                                html.Div(style={"height": "10px"}),
+                                dash_table.DataTable(
+                                    id="tab3-glossary_table",
+                                    columns=[
+                                        {"name": "term", "id": "term"},
+                                        {"name": "definition", "id": "definition"},
+                                    ],
+                                    data=TAB3_GLOSSARY,
+                                    page_size=10,
+                                    style_cell={
+                                        "whiteSpace": "normal",
+                                        "height": "auto",
+                                        "fontSize": 13,
+                                        "padding": "8px",
                                     },
-                                    {
-                                        "name": "delta_pct",
-                                        "id": "delta_pct",
-                                        "type": "numeric",
-                                        "format": Format(precision=2, scheme=Scheme.fixed),
+                                    style_table={"overflowX": "auto"},
+                                ),
+                            ],
+                        )
+                    ],
+                ),
+                html.Hr(),
+                # BEFORE/AFTER charts
+                html.Div(
+                    style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "14px"},
+                    children=[
+                        dcc.Graph(id="comp_graph_before"),
+                        dcc.Graph(id="comp_graph_after"),
+                    ],
+                ),
+                # KPI row
+                html.Div(id="kpi_row", style={"marginTop": "8px"}),
+                html.Div(style={"height": "12px"}),
+                # tables row
+                html.Div(
+                    style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "14px"},
+                    children=[
+                        # Left: roster
+                        html.Div(
+                            children=[
+                                html.H3("Roster (regulars)"),
+                                dash_table.DataTable(
+                                    id="roster_table",
+                                    columns=[
+                                        {"name": "pos_group", "id": "pos_group"},
+                                        {"name": "cluster", "id": "cluster"},
+                                        {"name": "player_id", "id": "player_id"},
+                                        {"name": "toi_es_min", "id": "toi_es_min"},
+                                        {"name": "toi_pg", "id": "toi_pg"},
+                                        {"name": "es_net60", "id": "es_net60"},
+                                    ],
+                                    page_size=15,
+                                    sort_action="native",
+                                    style_table={"overflowX": "auto"},
+                                    style_cell={
+                                        "fontFamily": "Arial",
+                                        "fontSize": 12,
+                                        "padding": "6px",
                                     },
-                                ],
-                                page_size=12,
-                                sort_action="native",
-                                style_table={"overflowX": "auto"},
-                                style_cell={
-                                    "fontFamily": "Arial",
-                                    "fontSize": 12,
-                                    "padding": "6px",
-                                },
-                                style_data_conditional=[
-                                    {
-                                        "if": {
-                                            "filter_query": "{delta_pct} > 0",
-                                            "column_id": "delta_pct",
+                                ),
+                            ]
+                        ),
+                        # Right: what-if + delta table
+                        html.Div(
+                            style={"marginTop": "20px", "paddingLeft": "50px"},
+                            children=[
+                                html.H3(
+                                    "What-If Roster Move (Trade Prototype)",
+                                    style={"margin": "0 0 6px 0"},
+                                ),
+                                html.Div(
+                                    "Remove one player from this team’s roster and add one league regular (same position group).",
+                                    style={
+                                        "fontSize": "12px",
+                                        "color": "#666",
+                                        "margin": "0 0 10px 0",
+                                    },
+                                ),
+                                html.Div(
+                                    style={
+                                        "display": "flex",
+                                        "gap": "10px",
+                                        "flexWrap": "wrap",
+                                        "alignItems": "end",
+                                    },
+                                    children=[
+                                        html.Div(
+                                            style={"minWidth": "260px"},
+                                            children=[
+                                                html.Label("Send away (remove from this team)"),
+                                                dcc.Dropdown(
+                                                    id="remove_player",
+                                                    clearable=True,
+                                                    placeholder="Select a player to remove…",
+                                                ),
+                                            ],
+                                        ),
+                                        html.Div(
+                                            style={"minWidth": "380px"},
+                                            children=[
+                                                html.Label("Acquire (add from league regulars)"),
+                                                dcc.Dropdown(
+                                                    id="add_player",
+                                                    clearable=True,
+                                                    placeholder="Select a player to add…",
+                                                ),
+                                            ],
+                                        ),
+                                    ],
+                                ),
+                                html.Br(),
+                                dash_table.DataTable(
+                                    id="whatif_table",
+                                    columns=[
+                                        {"name": "pos_group", "id": "pos_group"},
+                                        {"name": "cluster", "id": "cluster"},
+                                        {
+                                            "name": "pct_before",
+                                            "id": "pct_before",
+                                            "type": "numeric",
+                                            "format": Format(precision=2, scheme=Scheme.fixed),
                                         },
-                                        "fontWeight": "bold",
-                                    },
-                                    {
-                                        "if": {
-                                            "filter_query": "{delta_pct} < 0",
-                                            "column_id": "delta_pct",
+                                        {
+                                            "name": "pct_after",
+                                            "id": "pct_after",
+                                            "type": "numeric",
+                                            "format": Format(precision=2, scheme=Scheme.fixed),
                                         },
-                                        "fontWeight": "bold",
+                                        {
+                                            "name": "delta_pct",
+                                            "id": "delta_pct",
+                                            "type": "numeric",
+                                            "format": Format(precision=2, scheme=Scheme.fixed),
+                                        },
+                                    ],
+                                    page_size=12,
+                                    sort_action="native",
+                                    style_table={"overflowX": "auto"},
+                                    style_cell={
+                                        "fontFamily": "Arial",
+                                        "fontSize": 12,
+                                        "padding": "6px",
                                     },
-                                ],
-                            ),
-                        ],
-                    ),
-                ],
-            ),
-        ],
-    )
+                                    style_data_conditional=[
+                                        {
+                                            "if": {
+                                                "filter_query": "{delta_pct} > 0",
+                                                "column_id": "delta_pct",
+                                            },
+                                            "fontWeight": "bold",
+                                        },
+                                        {
+                                            "if": {
+                                                "filter_query": "{delta_pct} < 0",
+                                                "column_id": "delta_pct",
+                                            },
+                                            "fontWeight": "bold",
+                                        },
+                                    ],
+                                ),
+                            ],
+                        ),
+                    ],
+                ),
+            ],
+        )
+
+    except Exception as e:
+        return html.Div(
+            style={"padding": "18px"},
+            children=[
+                html.H3("Tab 3 failed to load"),
+                html.Pre(str(e)),
+            ],
+        )
 
 
 @dash.callback(

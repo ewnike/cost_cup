@@ -146,52 +146,6 @@ def _player_options_for_team_season(season: int, team_code: str | None):
     return options, default
 
 
-def layout():
-    # DB work happens here (NOT at import time)
-    df_seasons = read_df(SQL_SEASONS)
-    season_vals = [int(s) for s in df_seasons["season"].tolist()]
-    season_options = [{"label": season_label(s), "value": s} for s in season_vals]
-    default_season = season_vals[-1] if season_vals else 20242025
-
-    df_teams0 = read_df(SQL_TEAMS_BY_SEASON, {"season": default_season})
-    team_vals = df_teams0["team_code"].tolist()
-    team_options0 = [{"label": t, "value": t} for t in team_vals]
-    default_team = team_vals[0] if team_vals else None
-
-    df_players0 = read_df(
-        SQL_PLAYERS_BY_TEAM_SEASON,
-        {"season": default_season, "team_code": default_team},
-    )
-    player_vals = [int(pid) for pid in df_players0["player_id"].tolist()]
-    player_options0 = [{"label": str(pid), "value": pid} for pid in player_vals]
-    default_player = player_vals[0] if player_vals else None
-
-    return html.Div(
-        [
-            # your existing layout, but plug these in:
-            dcc.Dropdown(
-                id="tab2-season",
-                options=season_options,
-                value=default_season,
-                clearable=False,
-            ),
-            dcc.Dropdown(
-                id="tab2-team_code",
-                options=team_options0,
-                value=default_team,
-                clearable=False,
-            ),
-            dcc.Dropdown(
-                id="tab2-player_id",
-                options=player_options0,
-                value=default_player,
-                clearable=False,
-            ),
-            # ... the rest of your existing page layout ...
-        ]
-    )
-
-
 def season_label(season: int) -> str:
     s = int(season)
     y1 = s // 10000
