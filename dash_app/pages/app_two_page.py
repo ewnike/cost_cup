@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from functools import lru_cache
+
 import dash
 import pandas as pd
 import plotly.express as px
@@ -110,6 +112,101 @@ ORDER BY gc.game_date NULLS LAST, f.game_id;
 
 
 # ---------- helpers ----------
+@lru_cache(maxsize=1)
+def _engine():
+    return get_db_engine()
+
+
+def read_df(sql: str, params: dict | None = None) -> pd.DataFrame:
+    return pd.read_sql_query(text(sql), _engine(), params=params or {})
+
+
+@lru_cache(maxsize=1)
+def _seasons_df() -> pd.DataFrame:
+    return read_df(SQL_SEASONS)
+
+
+def _team_options_for_season(season: int):
+    df_teams = read_df(SQL_TEAMS_BY_SEASON, {"season": int(season)})
+    team_vals = df_teams["team_code"].tolist()
+    options = [{"label": t, "value": t} for t in team_vals]
+    default = team_vals[0] if team_vals else None
+    return options, default
+
+
+def _player_options_for_team_season(season: int, team_code: str | None):
+    if not team_code:
+        return [], None
+    df_players = read_df(
+        SQL_PLAYERS_BY_TEAM_SEASON, {"season": int(season), "team_code": str(team_code)}
+    )
+    pids = [int(x) for x in df_players["player_id"].tolist()]
+    options = [{"label": str(pid), "value": pid} for pid in pids]
+    default = pids[0] if pids else None
+    return options, default
+
+
+def layout():
+    # --- DB happens here, not at import time ---
+    df_seasons = _seasons_df()
+    season_vals = [int(s) for s in df_seasons["season"].tolist()]
+    season_options = [{"label": season_label(s), "value": s} for s in season_vals]
+    default_season = season_vals[-1] if season_vals else 20242025
+
+    team_options0, default_team = _team_options_for_season(default_season)
+    player_options0, default_player = _player_options_for_team_season(default_season, default_team)
+
+    return html.Div(
+        style={"maxWidth": "1200px", "margin": "0 auto", "padding": "18px"},
+        children=[
+            html.H2("Player Gamelog"),
+            html.Div(
+                style={"display": "flex", "gap": "12px", "flexWrap": "wrap"},
+                children=[
+                    html.Div(
+                        style={"minWidth": "200px"},
+                        children=[
+                            html.Label("Season"),
+                            dcc.Dropdown(
+                                id="tab2-season",
+                                options=season_options,
+                                value=default_season,
+                                clearable=False,
+                            ),
+                        ],
+                    ),
+                    html.Div(
+                        style={"minWidth": "200px"},
+                        children=[
+                            html.Label("Team"),
+                            dcc.Dropdown(
+                                id="tab2-team",
+                                options=team_options0,
+                                value=default_team,
+                                clearable=False,
+                            ),
+                        ],
+                    ),
+                    html.Div(
+                        style={"minWidth": "220px"},
+                        children=[
+                            html.Label("Player"),
+                            dcc.Dropdown(
+                                id="tab2-player",
+                                options=player_options0,
+                                value=default_player,
+                                clearable=False,
+                            ),
+                        ],
+                    ),
+                ],
+            ),
+            html.Hr(),
+            # graphs/tables...
+        ],
+    )
+
+
 def season_label(season: int) -> str:
     s = int(season)
     y1 = s // 10000
@@ -119,14 +216,6 @@ def season_label(season: int) -> str:
 
 def season_next(season: int) -> int:
     return int(season) + 10001
-
-
-def read_df(sql: str, params: dict | None = None) -> pd.DataFrame:
-    engine = get_db_engine()
-    try:
-        return pd.read_sql_query(text(sql), engine, params=params or {})
-    finally:
-        engine.dispose()
 
 
 def season_truth_table(season: int) -> str:
