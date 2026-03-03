@@ -168,6 +168,39 @@ TAB3_GLOSSARY = [
             "we fall back to the Dirichlet-smoothed transition matrix for that pos_group and from_cluster."
         ),
     },
+    {
+        "term": "Cluster (0/1/2)",
+        "definition": (
+            "A 3-bucket archetype label from the clustering model. "
+            "0/1/2 are just IDs (not ranks). Each cluster represents a different player role/style "
+            "based on the features used in the model."
+        ),
+    },
+    {
+        "term": "Cluster meaning (recommended labels)",
+        "definition": (
+            "Use labels in the UI so users don’t have to remember numbers. Example mapping:\n"
+            "Cluster 0 = Defensive / low-event\n"
+            "Cluster 1 = Balanced / two-way\n"
+            "Cluster 2 = Offensive / high-event\n"
+            "(Confirm these labels match how your model clusters behave.)"
+        ),
+    },
+    {
+        "term": "Ranking / sorting",
+        "definition": (
+            "Tables are sorted to show the most relevant rows first. "
+            "Roster table is sorted by pos_group then ES TOI (toi_es_sec) descending, "
+            "so the biggest even-strength contributors appear at the top."
+        ),
+    },
+    {
+        "term": "Transition matrix (from_cluster → to_cluster)",
+        "definition": (
+            "Probabilities for how players historically move between clusters from one season to the next. "
+            "Rows sum to ~1. Used as a fallback when model probabilities aren’t available."
+        ),
+    },
 ]
 
 

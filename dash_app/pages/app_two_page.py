@@ -28,7 +28,39 @@ TAB2_GLOSSARY = [
         "definition": "Corsi Against per 60 at 5v5 while player is on ice.",
     },
     {"term": "cf_percent", "definition": "Corsi For % at 5v5 = cf / (cf + ca)."},
+    {
+        "term": "Cluster (0/1/2)",
+        "definition": (
+            "A 3-bucket archetype label from the clustering model. "
+            "0/1/2 are IDs (not ranks). They represent different player styles/roles."
+        ),
+    },
+    {
+        "term": "Cluster labels (recommended)",
+        "definition": (
+            "Optional UI mapping to make clusters readable:\n"
+            "0 = Defensive / low-event\n"
+            "1 = Balanced / two-way\n"
+            "2 = Offensive / high-event\n"
+            "(Make sure these match your cluster profiles.)"
+        ),
+    },
+    {
+        "term": "Ranking / sorting in Tab 2",
+        "definition": (
+            "The gamelog table is ordered by game_date then game_id. "
+            "Charts show a window around the Focus game #; this is not a performance rank."
+        ),
+    },
+    {
+        "term": "Focus game #",
+        "definition": (
+            "Index (1..N) used on the x-axis so game_id doesn’t become huge scientific notation. "
+            "The slider selects the center of the displayed window."
+        ),
+    },
 ]
+
 
 # ---------- SQL ----------
 SQL_SEASONS = """
@@ -178,13 +210,6 @@ def load_gamelog(season: int, team_code: str, player_id: int) -> pd.DataFrame:
     return read_df(sql, params={"season": season, "team_code": team_code, "player_id": player_id})
 
 
-# --- need sql function ---
-# def load_gamelog(season: int, team_code: str, player_id: int) -> pd.DataFrame:
-#     tbl = season_truth_table(season)
-#     sql = SQL_PLAYER_GAMELOG.format(tbl=tbl)
-#     return read_df(sql, params={"season": int(season), "team_code": str(team_code), "player_id": int(player_id)})
-
-
 def add_centered_rolling(df: pd.DataFrame, window: int = 5) -> pd.DataFrame:
     if df.empty:
         return df
@@ -207,258 +232,6 @@ default_team = None
 default_player = None
 
 
-# def layout():
-#     try:
-#         # --- DB calls happen here ---
-#         df_seasons = read_df(SQL_SEASONS)
-#         season_vals = [int(s) for s in df_seasons["season"].tolist()]
-#         season_options = [{"label": season_label(s), "value": s} for s in season_vals]
-#         default_season = season_vals[-1] if season_vals else 20242025
-
-#         # Start empty for clean UX (team/player chosen by user)
-#         team_options0 = []
-#         player_options0 = []
-
-#         return html.Div(
-#             style={"maxWidth": "1200px", "margin": "0 auto", "padding": "18px"},
-#             children=[
-#                 html.H2("Tab 2 — Player Gamelog"),
-#                 html.Div(
-#                     style={
-#                         "display": "flex",
-#                         "gap": "12px",
-#                         "alignItems": "center",
-#                         "flexWrap": "wrap",
-#                         "marginTop": "10px",
-#                     },
-#                     # --- glossary button (put inside your controls row children list) ---
-#                     html.Button(
-#                         "Glossary / Definitions",
-#                         id="tab2-open_glossary",
-#                         n_clicks=0,
-#                         style={
-#                             "padding": "8px 12px",
-#                             "border": "1px solid #bbb",
-#                             "borderRadius": "10px",
-#                             "background": "#f8f8f8",
-#                             "cursor": "pointer",
-#                             "whiteSpace": "nowrap",
-#                         },
-#                     ),
-#                     # --- glossary modal (place BELOW the controls row, ABOVE html.Hr()) ---
-#                     html.Div(
-#                         id="tab2-glossary_modal",
-#                         style={
-#                             "display": "none",
-#                             "position": "fixed",
-#                             "top": 0,
-#                             "left": 0,
-#                             "width": "100%",
-#                             "height": "100%",
-#                             "backgroundColor": "rgba(0,0,0,0.45)",
-#                             "zIndex": 9999,
-#                             "padding": "60px 20px",
-#                         },
-#                         children=[
-#                             html.Div(
-#                                 style={
-#                                     "maxWidth": "900px",
-#                                     "margin": "0 auto",
-#                                     "backgroundColor": "white",
-#                                     "borderRadius": "10px",
-#                                     "padding": "16px",
-#                                     "boxShadow": "0 6px 24px rgba(0,0,0,0.2)",
-#                                 },
-#                                 children=[
-#                                     html.Div(
-#                                         style={
-#                                             "display": "flex",
-#                                             "justifyContent": "space-between",
-#                                             "alignItems": "center",
-#                                         },
-#                                         children=[
-#                                             html.H3("Quick Definitions", style={"margin": 0}),
-#                                             html.Button("Close", id="tab2-close_glossary", n_clicks=0),
-#                                         ],
-#                                     ),
-#                                     html.Hr(),
-#                                     dcc.Input(
-#                                         id="tab2-glossary_search",
-#                                         type="text",
-#                                         placeholder="Search definitions…",
-#                                         style={"width": "360px", "padding": "6px"},
-#                                     ),
-#                                     html.Div(style={"height": "10px"}),
-#                                     dash_table.DataTable(
-#                                         id="tab2-glossary_table",
-#                                         columns=[
-#                                             {"name": "term", "id": "term"},
-#                                             {"name": "definition", "id": "definition"},
-#                                         ],
-#                                         data=TAB2_GLOSSARY,
-#                                         page_size=10,
-#                                         style_cell={
-#                                             "whiteSpace": "normal",
-#                                             "height": "auto",
-#                                             "fontSize": 13,
-#                                             "padding": "8px",
-#                                         },
-#                                         style_table={"overflowX": "auto"},
-#                                     ),
-#                                 ],
-#                             )
-#                         ],
-#                     ),
-#                     children=[
-#                         html.Div(
-#                             style={"minWidth": "180px"},
-#                             children=[
-#                                 html.Label("Season"),
-#                                 dcc.Dropdown(
-#                                     id="tab2-season",
-#                                     options=season_options,
-#                                     value=default_season,
-#                                     clearable=False,
-#                                 ),
-#                             ],
-#                         ),
-#                         html.Div(
-#                             style={"minWidth": "180px"},
-#                             children=[
-#                                 html.Label("Team"),
-#                                 dcc.Dropdown(
-#                                     id="tab2-team_code",
-#                                     options=[],
-#                                     value=None,
-#                                     clearable=True,
-#                                     placeholder="Select a team...",
-#                                 ),
-#                             ],
-#                         ),
-#                         html.Div(
-#                             style={"minWidth": "220px"},
-#                             children=[
-#                                 html.Label("Player ID"),
-#                                 dcc.Dropdown(
-#                                     id="tab2-player_id",
-#                                     options=player_options0,
-#                                     value=None,
-#                                     clearable=True,
-#                                     placeholder="Select a player...",
-#                                 ),
-#                             ],
-#                         ),
-#                         html.Div(
-#                             style={"minWidth": "160px"},
-#                             children=[
-#                                 html.Label("Rolling window (games)"),
-#                                 dcc.Dropdown(
-#                                     id="roll_window",
-#                                     options=[{"label": str(x), "value": x} for x in [3, 5, 10, 15]],
-#                                     value=5,
-#                                     clearable=False,
-#                                 ),
-#                             ],
-#                         ),
-#                         html.Div(
-#                             style={"minWidth": "260px"},
-#                             children=[
-#                                 html.Label("Focus game # (center of window)"),
-#                                 dcc.Slider(
-#                                     id="focus_game_n",
-#                                     min=1,
-#                                     max=82,
-#                                     step=1,
-#                                     value=1,
-#                                     tooltip={"placement": "bottom", "always_visible": False},
-#                                 ),
-#                             ],
-#                         ),
-#                     ],
-#                 ),
-#                 html.Hr(),
-#                 html.Div(
-#                     style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "18px"},
-#                     children=[
-#                         html.Div(
-#                             children=[
-#                                 html.H4(
-#                                     id="net_title",
-#                                     style={"margin": "0 0 2px 0", "lineHeight": "1.1"},
-#                                 ),
-#                                 dcc.Graph(id="net_graph"),
-#                             ]
-#                         ),
-#                         html.Div(
-#                             children=[
-#                                 html.H4(
-#                                     id="ps_title",
-#                                     style={"margin": "0 0 2px 0", "lineHeight": "1.1"},
-#                                 ),
-#                                 dcc.Graph(id="ps_graph"),
-#                             ]
-#                         ),
-#                     ],
-#                 ),
-#                 html.H3("Game-by-game table"),
-#                 dash_table.DataTable(
-#                     id="gamelog_table",
-#                     columns=[
-#                         {"name": "game_date", "id": "game_date"},
-#                         {"name": "game_id", "id": "game_id"},
-#                         {"name": "toi_es_min", "id": "toi_es_min"},
-#                         {"name": "cf", "id": "cf"},
-#                         {"name": "ca", "id": "ca"},
-#                         {
-#                             "name": "cf60",
-#                             "id": "cf60",
-#                             "type": "numeric",
-#                             "format": Format(precision=4, scheme=Scheme.fixed),
-#                         },
-#                         {
-#                             "name": "ca60",
-#                             "id": "ca60",
-#                             "type": "numeric",
-#                             "format": Format(precision=4, scheme=Scheme.fixed),
-#                         },
-#                         {
-#                             "name": "cf_percent",
-#                             "id": "cf_percent",
-#                             "type": "numeric",
-#                             "format": Format(precision=4, scheme=Scheme.fixed),
-#                         },
-#                         {
-#                             "name": "es_net60",
-#                             "id": "es_net60",
-#                             "type": "numeric",
-#                             "format": Format(precision=4, scheme=Scheme.fixed),
-#                         },
-#                         {"name": "goals", "id": "goals"},
-#                         {"name": "assists", "id": "assists"},
-#                         {"name": "points", "id": "points"},
-#                         {"name": "shots", "id": "shots"},
-#                         {"name": "hits", "id": "hits"},
-#                         {"name": "blocked", "id": "blocked"},
-#                         {"name": "faceoff_wins", "id": "faceoff_wins"},
-#                         {"name": "faceoff_taken", "id": "faceoff_taken"},
-#                     ],
-#                     page_size=20,
-#                     sort_action="native",
-#                     style_table={"overflowX": "auto"},
-#                     style_cell={"fontFamily": "Arial", "fontSize": 12, "padding": "6px"},
-#                 ),
-#             ],
-#         )
-
-
-#     except Exception as e:
-#         return html.Div(
-#             style={"padding": "18px"},
-#             children=[
-#                 html.H3("Tab 2 failed to load"),
-#                 html.Pre(str(e)),
-#             ],
-#         )
 def layout():
     try:
         # --- DB calls happen here ---
@@ -721,23 +494,6 @@ def layout():
 
 
 @dash.callback(
-    Output("tab2-player_id", "value"),
-    Input("tab2-team_code", "value"),
-)
-def clear_player_when_team_changes(team_code):
-    return None
-
-
-@dash.callback(
-    Output("tab2-team_code", "value"),
-    Output("tab2-player_id", "value"),
-    Input("tab2-season", "value"),
-)
-def clear_team_and_player_when_season_changes(season):
-    return None, None
-
-
-@dash.callback(
     Output("tab2-glossary_modal", "style"),
     Input("tab2-open_glossary", "n_clicks"),
     Input("tab2-close_glossary", "n_clicks"),
@@ -775,8 +531,8 @@ def filter_glossary(q):
     Input("tab2-team_code", "value"),
     State("tab2-player_id", "value"),
 )
-def refresh_players(season: int, team_code: str, player_id):
-    if season is None or team_code is None:
+def refresh_players(season: int, team_code: str | None, player_id):
+    if season is None or not team_code:
         return [], None
 
     df = read_df(
@@ -789,9 +545,15 @@ def refresh_players(season: int, team_code: str, player_id):
     opts = [{"label": str(int(pid)), "value": int(pid)} for pid in df["player_id"].tolist()]
     valid = {o["value"] for o in opts}
 
-    pid = int(player_id) if player_id is not None else None
-    val = pid if pid in valid else None  # <-- this is the reset behavior
+    # If the TEAM dropdown triggered this callback, force-clear the player
+    try:
+        if getattr(ctx, "triggered_id", None) == "tab2-team_code":
+            return opts, None
+    except Exception:
+        pass
 
+    pid = int(player_id) if player_id is not None else None
+    val = pid if pid in valid else None
     return opts, val
 
 
@@ -801,15 +563,16 @@ def refresh_players(season: int, team_code: str, player_id):
     Input("tab2-season", "value"),
     State("tab2-team_code", "value"),
 )
-def refresh_teams(season, current_team):
+def refresh_teams(season: int, current_team: str | None):
     if season is None:
         return [], None
 
     df = read_df(SQL_TEAMS_BY_SEASON, {"season": int(season)})
+    if df.empty:
+        return [], None
+
     teams = [str(t) for t in df["team_code"].tolist()]
     opts = [{"label": t, "value": t} for t in teams]
-
-    # keep current selection if still valid; otherwise reset to None
     val = current_team if current_team in set(teams) else None
     return opts, val
 
