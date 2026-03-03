@@ -101,87 +101,101 @@ def make_pct_bar(df_comp: pd.DataFrame, title: str):
 
 # ---------------- page layout ----------------
 def layout():
-    # DB calls happen here, not at import time
-    df_seasons = read_df(SQL_SEASONS)
-    season_vals = [int(s) for s in df_seasons["season"].tolist()]
-    season_options = [{"label": season_label(s), "value": s} for s in season_vals]
-    default_season = season_vals[-1] if season_vals else 20242025
+    try:
+        # DB calls happen here, not at import time
+        df_seasons = read_df(SQL_SEASONS)
+        season_vals = [int(s) for s in df_seasons["season"].tolist()]
+        season_options = [{"label": season_label(s), "value": s} for s in season_vals]
+        default_season = season_vals[-1] if season_vals else 20242025
 
-    df_teams = read_df(SQL_TEAMS)
-    team_vals = df_teams["team_code"].tolist()
-    team_options = [{"label": t, "value": t} for t in team_vals]
-    default_team = team_vals[0] if team_vals else None
+        df_teams = read_df(SQL_TEAMS)
+        team_vals = df_teams["team_code"].tolist()
+        team_options = [{"label": t, "value": t} for t in team_vals]
+        default_team = team_vals[0] if team_vals else None
 
-    return html.Div(
-        style={"maxWidth": "1100px", "margin": "0 auto", "padding": "18px"},
-        children=[
-            html.H2("Team Archetype Composition (ES TOI-weighted)"),
-            html.Div(
-                style={"display": "flex", "gap": "12px", "alignItems": "center"},
-                children=[
-                    html.Div(
-                        style={"minWidth": "200px"},
-                        children=[
-                            html.Label("Season"),
-                            dcc.Dropdown(
-                                id="tab1-season",
-                                options=season_options,
-                                value=default_season,
-                                clearable=False,
-                            ),
-                        ],
-                    ),
-                    html.Div(
-                        style={"minWidth": "200px"},
-                        children=[
-                            html.Label("Team"),
-                            dcc.Dropdown(
-                                id="tab1-team_code",
-                                options=team_options,
-                                value=default_team,
-                                clearable=False,
-                            ),
-                        ],
-                    ),
-                ],
-            ),
-            html.Hr(),
-            dcc.Graph(id="composition_graph"),
-            html.H3("Composition table (within F/D, % of ES TOI)"),
-            dash_table.DataTable(
-                id="composition_table",
-                columns=[
-                    {"name": "pos_group", "id": "pos_group"},
-                    {"name": "cluster", "id": "cluster"},
-                    {"name": "toi_es_sec", "id": "toi_es_sec"},
-                    {"name": "pct_pos_toi", "id": "pct_pos_toi"},
-                ],
-                page_size=20,
-                style_table={"overflowX": "auto"},
-                style_cell={"fontFamily": "Arial", "fontSize": 13, "padding": "6px"},
-            ),
-            html.Hr(),
-            html.H3("Top players by ES TOI (context)"),
-            dash_table.DataTable(
-                id="top_players_table",
-                columns=[
-                    {"name": "pos_group", "id": "pos_group"},
-                    {"name": "cluster", "id": "cluster"},
-                    {"name": "player_id", "id": "player_id"},
-                    {"name": "toi_es_min", "id": "toi_es_min"},
-                    {"name": "toi_pg", "id": "toi_pg"},
-                    {"name": "es_net60", "id": "es_net60"},
-                    {"name": "cf60", "id": "cf60"},
-                    {"name": "ca60", "id": "ca60"},
-                    {"name": "cf_pct", "id": "cf_pct"},
-                ],
-                page_size=15,
-                sort_action="native",
-                style_table={"overflowX": "auto"},
-                style_cell={"fontFamily": "Arial", "fontSize": 13, "padding": "6px"},
-            ),
-        ],
-    )
+        return html.Div(
+            style={"maxWidth": "1100px", "margin": "0 auto", "padding": "18px"},
+            children=[
+                html.H2("Team Archetype Composition (ES TOI-weighted)"),
+                html.Div(
+                    style={"display": "flex", "gap": "12px", "alignItems": "center"},
+                    children=[
+                        html.Div(
+                            style={"minWidth": "200px"},
+                            children=[
+                                html.Label("Season"),
+                                dcc.Dropdown(
+                                    id="tab1-season",
+                                    options=season_options,
+                                    value=default_season,
+                                    clearable=False,
+                                ),
+                            ],
+                        ),
+                        html.Div(
+                            style={"minWidth": "200px"},
+                            children=[
+                                html.Label("Team"),
+                                dcc.Dropdown(
+                                    id="tab1-team_code",
+                                    options=team_options,
+                                    value=default_team,
+                                    clearable=False,
+                                ),
+                            ],
+                        ),
+                    ],
+                ),
+                html.Hr(),
+                dcc.Graph(id="composition_graph"),
+                html.H3("Composition table (within F/D, % of ES TOI)"),
+                dash_table.DataTable(
+                    id="composition_table",
+                    columns=[
+                        {"name": "pos_group", "id": "pos_group"},
+                        {"name": "cluster", "id": "cluster"},
+                        {"name": "toi_es_sec", "id": "toi_es_sec"},
+                        {"name": "pct_pos_toi", "id": "pct_pos_toi"},
+                    ],
+                    page_size=20,
+                    style_table={"overflowX": "auto"},
+                    style_cell={"fontFamily": "Arial", "fontSize": 13, "padding": "6px"},
+                ),
+                html.Hr(),
+                html.H3("Top players by ES TOI (context)"),
+                dash_table.DataTable(
+                    id="top_players_table",
+                    columns=[
+                        {"name": "pos_group", "id": "pos_group"},
+                        {"name": "cluster", "id": "cluster"},
+                        {"name": "player_id", "id": "player_id"},
+                        {"name": "toi_es_min", "id": "toi_es_min"},
+                        {"name": "toi_pg", "id": "toi_pg"},
+                        {"name": "es_net60", "id": "es_net60"},
+                        {"name": "cf60", "id": "cf60"},
+                        {"name": "ca60", "id": "ca60"},
+                        {"name": "cf_pct", "id": "cf_pct"},
+                    ],
+                    page_size=15,
+                    sort_action="native",
+                    style_table={"overflowX": "auto"},
+                    style_cell={"fontFamily": "Arial", "fontSize": 13, "padding": "6px"},
+                ),
+            ],
+        )
+
+    except Exception as e:
+        return html.Div(
+            style={"maxWidth": "1100px", "margin": "0 auto", "padding": "18px"},
+            children=[
+                html.H2("Tab 1 — Archetype Lookup"),
+                html.H3("Tab 1 failed to load"),
+                html.P(
+                    "The page hit an exception while loading dropdown options from the database."
+                ),
+                html.Pre(str(e), style={"whiteSpace": "pre-wrap", "color": "crimson"}),
+            ],
+        )
 
 
 @dash.callback(
