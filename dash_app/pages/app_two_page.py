@@ -238,225 +238,175 @@ player_options0: list[dict] = []
 default_team = None
 default_player = None
 
-layout = html.Div(
-    style={"maxWidth": "1200px", "margin": "0 auto", "padding": "18px"},
-    children=[
-        html.H2("Player Game Log (5v5 ES) — CF/CA + Boxscore"),
-        # --- glossary tabs ---
-        html.Button("Glossary / Definitions", id="tab2-open_glossary", n_clicks=0),
-        html.Div(
-            id="tab2-glossary_modal",
-            style={
-                "display": "none",  # start hidden
-                "position": "fixed",
-                "top": 0,
-                "left": 0,
-                "width": "100%",
-                "height": "100%",
-                "backgroundColor": "rgba(0,0,0,0.45)",
-                "zIndex": 9999,
-                "padding": "60px 20px",
-            },
+
+def layout():
+    try:
+        # ... you must define these before using them:
+        # season_options, default_season, team_options0, player_options0
+        # (from DB reads)
+
+        return html.Div(
+            style={"maxWidth": "1200px", "margin": "0 auto", "padding": "18px"},
             children=[
+                # --- controls row ---
                 html.Div(
                     style={
-                        "maxWidth": "900px",
-                        "margin": "0 auto",
-                        "backgroundColor": "white",
-                        "borderRadius": "10px",
-                        "padding": "16px 16px",
-                        "boxShadow": "0 6px 24px rgba(0,0,0,0.2)",
+                        "display": "flex",
+                        "gap": "12px",
+                        "alignItems": "center",
+                        "flexWrap": "wrap",
+                        "marginTop": "10px",
                     },
                     children=[
                         html.Div(
-                            style={
-                                "display": "flex",
-                                "justifyContent": "space-between",
-                                "alignItems": "center",
-                            },
+                            style={"minWidth": "180px"},
                             children=[
-                                html.H3("Quick Definitions", style={"margin": 0}),
-                                html.Button("Close", id="tab2-close_glossary", n_clicks=0),
+                                html.Label("Season"),
+                                dcc.Dropdown(
+                                    id="tab2-season",
+                                    options=season_options,
+                                    value=default_season,
+                                    clearable=False,
+                                ),
                             ],
                         ),
-                        html.Hr(),
-                        dcc.Input(
-                            id="tab2-glossary_search",
-                            type="text",
-                            placeholder="Search definitions…",
-                            style={"width": "360px", "padding": "6px"},
-                        ),
-                        html.Div(style={"height": "10px"}),
-                        dash_table.DataTable(
-                            id="tab2-glossary_table",
-                            columns=[
-                                {"name": "term", "id": "term"},
-                                {"name": "definition", "id": "definition"},
+                        html.Div(
+                            style={"minWidth": "180px"},
+                            children=[
+                                html.Label("Team"),
+                                dcc.Dropdown(
+                                    id="tab2-team_code",
+                                    options=team_options0,
+                                    value=None,
+                                    clearable=True,
+                                    placeholder="Select a team...",
+                                ),
                             ],
-                            data=TAB2_GLOSSARY,
-                            page_size=10,
-                            style_cell={
-                                "whiteSpace": "normal",
-                                "height": "auto",
-                                "fontSize": 13,
-                                "padding": "8px",
-                            },
-                            style_table={"overflowX": "auto"},
+                        ),
+                        html.Div(
+                            style={"minWidth": "220px"},
+                            children=[
+                                html.Label("Player ID"),
+                                dcc.Dropdown(
+                                    id="tab2-player_id",
+                                    options=player_options0,
+                                    value=None,
+                                    clearable=True,
+                                    placeholder="Select a player...",
+                                ),
+                            ],
+                        ),
+                        html.Div(
+                            style={"minWidth": "160px"},
+                            children=[
+                                html.Label("Rolling window (games)"),
+                                dcc.Dropdown(
+                                    id="roll_window",
+                                    options=[{"label": str(x), "value": x} for x in [3, 5, 10, 15]],
+                                    value=5,
+                                    clearable=False,
+                                ),
+                            ],
+                        ),
+                        html.Div(
+                            style={"minWidth": "260px"},
+                            children=[
+                                html.Label("Focus game # (center of window)"),
+                                dcc.Slider(
+                                    id="focus_game_n",
+                                    min=1,
+                                    max=82,  # updated dynamically in callback
+                                    step=1,
+                                    value=1,
+                                    tooltip={"placement": "bottom", "always_visible": False},
+                                ),
+                            ],
                         ),
                     ],
-                )
+                ),
+                html.Hr(),
+                # --- charts row ---
+                html.Div(
+                    style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "18px"},
+                    children=[
+                        html.Div(
+                            children=[
+                                html.H4(
+                                    id="net_title",
+                                    style={"margin": "0 0 2px 0", "lineHeight": "1.1"},
+                                ),
+                                dcc.Graph(id="net_graph"),
+                            ]
+                        ),
+                        html.Div(
+                            children=[
+                                html.H4(
+                                    id="ps_title",
+                                    style={"margin": "0 0 2px 0", "lineHeight": "1.1"},
+                                ),
+                                dcc.Graph(id="ps_graph"),
+                            ]
+                        ),
+                    ],
+                ),
+                html.H3("Game-by-game table"),
+                dash_table.DataTable(
+                    id="gamelog_table",
+                    columns=[
+                        {"name": "game_date", "id": "game_date"},
+                        {"name": "game_id", "id": "game_id"},
+                        {"name": "toi_es_min", "id": "toi_es_min"},
+                        {"name": "cf", "id": "cf"},
+                        {"name": "ca", "id": "ca"},
+                        {
+                            "name": "cf60",
+                            "id": "cf60",
+                            "type": "numeric",
+                            "format": Format(precision=4, scheme=Scheme.fixed),
+                        },
+                        {
+                            "name": "ca60",
+                            "id": "ca60",
+                            "type": "numeric",
+                            "format": Format(precision=4, scheme=Scheme.fixed),
+                        },
+                        {
+                            "name": "cf_percent",
+                            "id": "cf_percent",
+                            "type": "numeric",
+                            "format": Format(precision=4, scheme=Scheme.fixed),
+                        },
+                        {
+                            "name": "es_net60",
+                            "id": "es_net60",
+                            "type": "numeric",
+                            "format": Format(precision=4, scheme=Scheme.fixed),
+                        },
+                        {"name": "goals", "id": "goals"},
+                        {"name": "assists", "id": "assists"},
+                        {"name": "points", "id": "points"},
+                        {"name": "shots", "id": "shots"},
+                        {"name": "hits", "id": "hits"},
+                        {"name": "blocked", "id": "blocked"},
+                        {"name": "faceoff_wins", "id": "faceoff_wins"},
+                        {"name": "faceoff_taken", "id": "faceoff_taken"},
+                    ],
+                    page_size=20,
+                    sort_action="native",
+                    style_table={"overflowX": "auto"},
+                    style_cell={"fontFamily": "Arial", "fontSize": 12, "padding": "6px"},
+                ),
             ],
-        ),
-        # --- controls row ---
-        html.Div(
-            style={
-                "display": "flex",
-                "gap": "12px",
-                "alignItems": "center",
-                "flexWrap": "wrap",
-                "marginTop": "10px",
-            },
+        )
+
+    except Exception as e:
+        return html.Div(
+            style={"padding": "18px"},
             children=[
-                html.Div(
-                    style={"minWidth": "180px"},
-                    children=[
-                        html.Label("Season"),
-                        dcc.Dropdown(
-                            id="tab2-season",
-                            options=season_options,
-                            value=default_season,
-                            clearable=False,
-                        ),
-                    ],
-                ),
-                html.Div(
-                    style={"minWidth": "180px"},
-                    children=[
-                        html.Label("Team"),
-                        dcc.Dropdown(
-                            id="tab2-team_code",
-                            options=team_options0,
-                            value=None,
-                            clearable=True,
-                            placeholder="Select a team...",
-                        ),
-                    ],
-                ),
-                html.Div(
-                    style={"minWidth": "220px"},
-                    children=[
-                        html.Label("Player ID"),
-                        dcc.Dropdown(
-                            id="tab2-player_id",
-                            options=player_options0,
-                            value=None,
-                            clearable=True,
-                            placeholder="Select a player...",
-                        ),
-                    ],
-                ),
-                html.Div(
-                    style={"minWidth": "160px"},
-                    children=[
-                        html.Label("Rolling window (games)"),
-                        dcc.Dropdown(
-                            id="roll_window",
-                            options=[{"label": str(x), "value": x} for x in [3, 5, 10, 15]],
-                            value=5,
-                            clearable=False,
-                        ),
-                    ],
-                ),
-                html.Div(
-                    style={"minWidth": "260px"},
-                    children=[
-                        html.Label("Focus game # (center of window)"),
-                        dcc.Slider(
-                            id="focus_game_n",
-                            min=1,
-                            max=82,  # updated dynamically in callback (we’ll handle)
-                            step=1,
-                            value=1,
-                            tooltip={"placement": "bottom", "always_visible": False},
-                        ),
-                    ],
-                ),
+                html.H3("Tab 2 failed to load"),
+                html.Pre(str(e)),
             ],
-        ),
-        html.Hr(),
-        # --- charts row ---
-        html.Div(
-            style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "18px"},
-            children=[
-                html.Div(
-                    children=[
-                        html.H4(
-                            id="net_title",
-                            style={"margin": "0 0 2px 0", "lineHeight": "1.1"},
-                        ),
-                        dcc.Graph(id="net_graph"),
-                    ]
-                ),
-                html.Div(
-                    children=[
-                        html.H4(
-                            id="ps_title",
-                            style={"margin": "0 0 2px 0", "lineHeight": "1.1"},
-                        ),
-                        dcc.Graph(id="ps_graph"),
-                    ]
-                ),
-            ],
-        ),
-        html.H3("Game-by-game table"),
-        dash_table.DataTable(
-            id="gamelog_table",
-            columns=[
-                {"name": "game_date", "id": "game_date"},
-                {"name": "game_id", "id": "game_id"},
-                {"name": "toi_es_min", "id": "toi_es_min"},
-                {"name": "cf", "id": "cf"},
-                {"name": "ca", "id": "ca"},
-                {
-                    "name": "cf60",
-                    "id": "cf60",
-                    "type": "numeric",
-                    "format": Format(precision=4, scheme=Scheme.fixed),
-                },
-                {
-                    "name": "ca60",
-                    "id": "ca60",
-                    "type": "numeric",
-                    "format": Format(precision=4, scheme=Scheme.fixed),
-                },
-                {
-                    "name": "cf_percent",
-                    "id": "cf_percent",
-                    "type": "numeric",
-                    "format": Format(precision=4, scheme=Scheme.fixed),
-                },
-                {
-                    "name": "es_net60",
-                    "id": "es_net60",
-                    "type": "numeric",
-                    "format": Format(precision=4, scheme=Scheme.fixed),
-                },
-                {"name": "goals", "id": "goals"},
-                {"name": "assists", "id": "assists"},
-                {"name": "points", "id": "points"},
-                {"name": "shots", "id": "shots"},
-                {"name": "hits", "id": "hits"},
-                {"name": "blocked", "id": "blocked"},
-                {"name": "faceoff_wins", "id": "faceoff_wins"},
-                {"name": "faceoff_taken", "id": "faceoff_taken"},
-            ],
-            page_size=20,
-            sort_action="native",
-            style_table={"overflowX": "auto"},
-            style_cell={"fontFamily": "Arial", "fontSize": 12, "padding": "6px"},
-        ),
-    ],
-)
+        )
 
 
 @dash.callback(
