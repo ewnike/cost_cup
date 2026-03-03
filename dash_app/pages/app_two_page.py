@@ -721,6 +721,23 @@ def layout():
 
 
 @dash.callback(
+    Output("tab2-player_id", "value"),
+    Input("tab2-team_code", "value"),
+)
+def clear_player_when_team_changes(team_code):
+    return None
+
+
+@dash.callback(
+    Output("tab2-team_code", "value"),
+    Output("tab2-player_id", "value"),
+    Input("tab2-season", "value"),
+)
+def clear_team_and_player_when_season_changes(season):
+    return None, None
+
+
+@dash.callback(
     Output("tab2-glossary_modal", "style"),
     Input("tab2-open_glossary", "n_clicks"),
     Input("tab2-close_glossary", "n_clicks"),
