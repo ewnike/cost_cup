@@ -8,7 +8,7 @@ from sqlalchemy import text
 
 from db_utils import get_db_engine
 
-dash.register_page(__name__, path="/tab-1", name="Tab 1 — Archetype Lookup")
+dash.register_page(__name__, path="/tab-1", name="Tab 1 — Archetype Lookup", order=1)
 
 # ---------------- SQL ----------------
 SQL_SEASONS = """

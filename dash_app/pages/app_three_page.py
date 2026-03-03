@@ -10,7 +10,7 @@ from sqlalchemy import text
 
 from db_utils import get_db_engine
 
-dash.register_page(__name__, path="/tab-3", name="Tab 3 — Team What-If")
+dash.register_page(__name__, path="/tab-3", name="Tab 3 — Team What-If", order=3)
 
 
 # ---------------- SQL ----------------

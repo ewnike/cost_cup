@@ -3,7 +3,7 @@ from __future__ import annotations
 import dash
 from dash import dcc, html
 
-dash.register_page(__name__, path="/", name="Home")
+dash.register_page(__name__, path="/", name="Home", order=0)
 
 CARD_STYLE = {
     "border": "1px solid #ddd",
