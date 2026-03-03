@@ -1,6 +1,6 @@
 from __future__ import annotations
+
 import os
-import secrets
 
 import dash
 import dash_auth
@@ -11,12 +11,8 @@ VALID_PASSWORD = os.environ.get("APP_PASS", "changeme")
 
 app = dash.Dash(__name__, use_pages=True, suppress_callback_exceptions=True)
 
-# Basic auth
+# auth (optional)
 dash_auth.BasicAuth(app, {VALID_USERNAME: VALID_PASSWORD})
-
-# Flask secret key (needed for sessions)
-server = app.server
-server.secret_key = os.environ.get("FLASK_SECRET_KEY", secrets.token_hex(32))
 
 
 def navbar() -> html.Div:
@@ -47,6 +43,8 @@ app.layout = html.Div(
     style={"maxWidth": "1200px", "margin": "0 auto", "padding": "18px"},
     children=[html.H2("Cost Cup Dash"), navbar(), dash.page_container],
 )
+
+server = app.server  # IMPORTANT for Elastic Beanstalk
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "8050")), debug=True)
