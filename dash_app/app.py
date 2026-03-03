@@ -4,6 +4,16 @@ import os
 import dash
 from dash import html
 
+from flask import Flask
+
+server = app.server
+
+
+@server.get("/health")
+def health():
+    return "ok", 200
+
+
 app = dash.Dash(
     __name__,
     use_pages=True,
@@ -59,8 +69,6 @@ app.layout = html.Div(
         html.Div(dash.page_container, style={"padding": "16px"}),
     ]
 )
-
-server = app.server
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "8050"))

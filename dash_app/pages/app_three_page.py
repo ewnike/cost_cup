@@ -1,3 +1,5 @@
+from functools import lru_cache
+
 import dash
 import numpy as np
 import pandas as pd
@@ -6,9 +8,16 @@ from dash import Input, Output, State, callback_context, ctx, dash_table, dcc, h
 from dash.dash_table.Format import Format, Scheme
 from sqlalchemy import text
 
-from db_utils import get_db_engine  # same import style as your other working pages
+from db_utils import get_db_engine
 
 dash.register_page(__name__, path="/tab-3", name="Tab 3 — Team What-If")
+
+
+@lru_cache(maxsize=1)
+def get_engine():
+    return get_db_engine()
+
+
 # ---------------- SQL ----------------
 SQL_SEASONS = """
 SELECT DISTINCT season
@@ -69,7 +78,7 @@ SELECT from_cluster, to_cluster, prob_mean
 FROM mart.cluster_transitions_modern_d
 ORDER BY from_cluster, to_cluster;
 """
-ENGINE = get_db_engine()
+
 
 SQL_MODEL_PROBS_BY_SEASON = """
 SELECT
@@ -168,6 +177,46 @@ TAB3_GLOSSARY = [
 
 
 # ---------------- helpers ----------------
+@lru_cache(maxsize=1)
+def get_engine():
+    return get_db_engine()
+
+
+def read_df(sql: str, params: dict | None = None) -> pd.DataFrame:
+    eng = get_engine()
+    return pd.read_sql_query(text(sql), eng, params=params or {})
+
+
+def layout():
+    df_seasons = read_df(SQL_SEASONS)
+    season_vals = [int(s) for s in df_seasons["season"].tolist()]
+    season_options = [{"label": season_label(s), "value": s} for s in season_vals]
+    default_season = season_vals[-1] if season_vals else 20242025
+
+    df_teams0 = read_df(SQL_TEAMS_BY_SEASON, {"season": default_season})
+    team_vals = df_teams0["team_code"].tolist()
+    team_options0 = [{"label": t, "value": t} for t in team_vals]
+    default_team = team_vals[0] if team_vals else None
+
+    controls_row = html.Div(
+        ...
+        children=[
+            dcc.Dropdown(id="tab3-season", options=season_options, value=default_season, clearable=False),
+            dcc.Dropdown(id="tab3-team_code", options=team_options0, value=default_team, clearable=False),
+            ...
+        ]
+    )
+
+    return html.Div(
+        style={"maxWidth": "1200px", "margin": "0 auto", "padding": "18px"},
+        children=[
+            html.H2("Team Archetype Composition + What-if (V1)"),
+            controls_row,
+            ...
+        ],
+    )
+
+
 def season_next(season: int) -> int:
     """NHL season encoding: 20182019 -> 20192020 (add 10001)."""
     return int(season) + 10001
@@ -209,10 +258,6 @@ def load_model_maps_for_season(season_t: int):
 
     MODEL_MAP_CACHE[season_t] = (map_f, map_d)
     return map_f, map_d
-
-
-def read_df(sql: str, params: dict | None = None) -> pd.DataFrame:
-    return pd.read_sql_query(text(sql), ENGINE, params=params or {})
 
 
 def load_transition_probs(pos_group: str) -> dict[int, dict[int, float]]:
@@ -493,6 +538,11 @@ def make_comp_fig(df_comp: pd.DataFrame, title: str):
     return fig
 
 
+@lru_cache(maxsize=2)
+def get_center_net60(pos_group: str) -> dict[int, float]:
+    return load_center_net60(pos_group)
+
+
 def load_center_net60(pos_group: str) -> dict[int, float]:
     sql = """
     SELECT cluster, AVG((cf60 - ca60))::float8 AS net60
@@ -506,10 +556,6 @@ def load_center_net60(pos_group: str) -> dict[int, float]:
     for r in dfc.itertuples(index=False):
         out[int(r.cluster)] = float(r.net60)
     return out
-
-
-CENTER_NET60_F = load_center_net60("F")
-CENTER_NET60_D = load_center_net60("D")
 
 
 def compute_expected_net60(df_roster: pd.DataFrame, weighting: str, season: int) -> float:
@@ -536,7 +582,9 @@ def compute_expected_net60(df_roster: pd.DataFrame, weighting: str, season: int)
 
         # expected next-season ES net60 = sum_k p(k|from_c) * center_net60[pos,k]
         # so we need centers per pos/cluster (see below)
-        centers = CENTER_NET60_F if pos == "F" else CENTER_NET60_D
+        center_f = get_center_net60("F")
+        center_d = get_center_net60("D")
+        centers = center_f if pos == "F" else center_d
         exp_net = sum(probs[from_c][k] * centers[k] for k in (0, 1, 2))
 
         exp_vals.append(exp_net)
@@ -637,26 +685,27 @@ def compute_expected_net60_model_map(
     else:
         w = pd.Series(1.0, index=df.index)
 
-    exp_vals = []
-    exp_wts = []
+    exp_vals: list[float] = []
+    exp_wts: list[float] = []
 
     for r, wi in zip(df.itertuples(index=False), w):
         pos = str(r.pos_group).upper()
         if pos not in ("F", "D"):
             continue
 
-        pid = int(r.player_id)
-        from_c = int(r.cluster)
+        try:
+            pid = int(r.player_id)
+            from_c = int(r.cluster)
+        except Exception:
+            continue
+
         wi = float(wi)
 
         probs_matrix = trans_f if pos == "F" else trans_d
         centers = center_net60_f if pos == "F" else center_net60_d
         key = (int(season_t), pid)
 
-        if pos == "F":
-            p = model_map_f.get(key)
-        else:
-            p = model_map_d.get(key)
+        p = model_map_f.get(key) if pos == "F" else model_map_d.get(key)
 
         if p is not None:
             p0, p1, p2 = float(p[0]), float(p[1]), float(p[2])
@@ -667,27 +716,30 @@ def compute_expected_net60_model_map(
                 p = None  # fallback
 
         if p is None:
-            backoff = probs_matrix[from_c]
-            p0, p1, p2 = float(backoff[0]), float(backoff[1]), float(backoff[2])
+            backoff = probs_matrix.get(from_c)
+            if backoff is None:
+                p0 = p1 = p2 = 1.0 / 3.0
+            else:
+                p0, p1, p2 = float(backoff[0]), float(backoff[1]), float(backoff[2])
 
-        exp_net = p0 * centers[0] + p1 * centers[1] + p2 * centers[2]
-        exp_vals.append(exp_net)
+        c0 = float(centers.get(0, 0.0))
+        c1 = float(centers.get(1, 0.0))
+        c2 = float(centers.get(2, 0.0))
+
+        exp_vals.append(p0 * c0 + p1 * c1 + p2 * c2)
         exp_wts.append(wi)
+
+    # ✅ guards MUST be after the loop
+    if not exp_vals:
+        return 0.0
+
+    total_w = float(np.nansum(exp_wts))
+    if total_w <= 0:
+        return float(np.nanmean(exp_vals))
 
     return weighted_mean(pd.Series(exp_vals), pd.Series(exp_wts))
 
-
 # ---------------- app ----------------
-df_seasons = read_df(SQL_SEASONS)
-season_options = [
-    {"label": season_label(s), "value": int(s)} for s in df_seasons["season"].tolist()
-]
-default_season = season_options[-1]["value"] if season_options else 20242025
-
-df_teams0 = read_df(SQL_TEAMS_BY_SEASON, {"season": default_season})
-team_options0 = [{"label": t, "value": t} for t in df_teams0["team_code"].tolist()]
-default_team = team_options0[0]["value"] if team_options0 else None
-
 weight_options = [
     {"label": "TOI-weighted (ES TOI)", "value": "toi"},
     {"label": "Player-seasons (counts)", "value": "player_season"},
@@ -697,103 +749,123 @@ role_mode_options = [
     {"label": "Current roles (this season)", "value": "current"},
     {"label": "Projected roles (next season)", "value": "projected"},
 ]
-# --- controls row (define this ABOVE layout) ---
-controls_row = html.Div(
-    style={
-        "display": "grid",
-        "gridTemplateColumns": "1fr 1.2fr auto",
-        "gap": "12px",
-        "alignItems": "center",
-        "marginTop": "8px",
-    },
-    children=[
-        # left: season + team
-        html.Div(
-            style={"display": "flex", "gap": "12px", "flexWrap": "wrap"},
-            children=[
-                html.Div(
-                    style={"minWidth": "200px"},
-                    children=[
-                        html.Label("Season"),
-                        dcc.Dropdown(
-                            id="tab3-season",
-                            options=season_options,
-                            value=default_season,
-                            clearable=False,
-                        ),
-                    ],
-                ),
-                html.Div(
-                    style={"minWidth": "200px"},
-                    children=[
-                        html.Label("Team"),
-                        dcc.Dropdown(
-                            id="tab3-team_code",
-                            options=team_options0,
-                            value=default_team,
-                            clearable=False,
-                        ),
-                    ],
-                ),
-            ],
-        ),
-        # middle: radios stacked
-        html.Div(
-            style={"display": "flex", "flexDirection": "column", "gap": "8px"},
-            children=[
-                html.Div(
-                    children=[
-                        html.Label("Weighting"),
-                        dcc.RadioItems(
-                            id="weighting",
-                            options=weight_options,
-                            value="toi",
-                            inline=True,
-                        ),
-                    ]
-                ),
-                html.Div(
-                    children=[
-                        html.Label("Role mode"),
-                        dcc.RadioItems(
-                            id="role_mode",
-                            options=role_mode_options,
-                            value="current",
-                            inline=True,
-                        ),
-                    ]
-                ),
-            ],
-        ),
-        # right: glossary button
-        html.Div(
-            style={"display": "flex", "justifyContent": "flex-end"},
-            children=[
-                html.Button(
-                    "Glossary / Definitions",
-                    id="tab3-open_glossary",
-                    n_clicks=0,
-                    style={
-                        "padding": "8px 12px",
-                        "border": "1px solid #bbb",
-                        "borderRadius": "10px",
-                        "background": "#f8f8f8",
-                        "cursor": "pointer",
-                        "whiteSpace": "nowrap",
-                    },
-                )
-            ],
-        ),
-    ],
-)
 
+def layout():
+    # DB work happens here (NOT at import time)
+    df_seasons = read_df(SQL_SEASONS)
+    season_vals = [int(s) for s in df_seasons["season"].tolist()]
+    season_options = [{"label": season_label(s), "value": s} for s in season_vals]
+    default_season = season_vals[-1] if season_vals else 20242025
 
-# --- layout ---
-layout = html.Div(
+    df_teams0 = read_df(SQL_TEAMS_BY_SEASON, {"season": default_season})
+    team_vals = df_teams0["team_code"].tolist()
+    team_options0 = [{"label": t, "value": t} for t in team_vals]
+    default_team = team_vals[0] if team_vals else None
+
+    weight_options = [
+        {"label": "TOI-weighted (ES TOI)", "value": "toi"},
+        {"label": "Player-seasons (counts)", "value": "player_season"},
+    ]
+    role_mode_options = [
+        {"label": "Current roles (this season)", "value": "current"},
+        {"label": "Projected roles (next season)", "value": "projected"},
+    ]
+
+    controls_row = html.Div(
+        style={
+            "display": "grid",
+            "gridTemplateColumns": "1fr 1.2fr auto",
+            "gap": "12px",
+            "alignItems": "center",
+            "marginTop": "8px",
+        },
+        children=[
+            # left: season + team
+            html.Div(
+                style={"display": "flex", "gap": "12px", "flexWrap": "wrap"},
+                children=[
+                    html.Div(
+                        style={"minWidth": "200px"},
+                        children=[
+                            html.Label("Season"),
+                            dcc.Dropdown(
+                                id="tab3-season",
+                                options=season_options,
+                                value=default_season,
+                                clearable=False,
+                            ),
+                        ],
+                    ),
+                    html.Div(
+                        style={"minWidth": "200px"},
+                        children=[
+                            html.Label("Team"),
+                            dcc.Dropdown(
+                                id="tab3-team_code",
+                                options=team_options0,
+                                value=default_team,
+                                clearable=False,
+                            ),
+                        ],
+                    ),
+                ],
+            ),
+            # middle: radios
+            html.Div(
+                style={"display": "flex", "flexDirection": "column", "gap": "8px"},
+                children=[
+                    html.Div(
+                        children=[
+                            html.Label("Weighting"),
+                            dcc.RadioItems(
+                                id="weighting",
+                                options=weight_options,
+                                value="toi",
+                                inline=True,
+                            ),
+                        ]
+                    ),
+                    html.Div(
+                        children=[
+                            html.Label("Role mode"),
+                            dcc.RadioItems(
+                                id="role_mode",
+                                options=role_mode_options,
+                                value="current",
+                                inline=True,
+                            ),
+                        ]
+                    ),
+                ],
+            ),
+            # right: glossary button
+            html.Div(
+                style={"display": "flex", "justifyContent": "flex-end"},
+                children=[
+                    html.Button(
+                        "Glossary / Definitions",
+                        id="tab3-open_glossary",
+                        n_clicks=0,
+                        style={
+                            "padding": "8px 12px",
+                            "border": "1px solid #bbb",
+                            "borderRadius": "10px",
+                            "background": "#f8f8f8",
+                            "cursor": "pointer",
+                            "whiteSpace": "nowrap",
+                        },
+                    )
+                ],
+            ),
+        ],
+    )
+
+return html.Div(
     style={"maxWidth": "1200px", "margin": "0 auto", "padding": "18px"},
     children=[
         html.H2("Team Archetype Composition + What-if (V1)"),
-        controls_row,  # ✅ use it here
+        controls_row,
+
         # --- glossary modal ---
         html.Div(
             id="tab3-glossary_modal",
@@ -858,7 +930,9 @@ layout = html.Div(
                 )
             ],
         ),
+
         html.Hr(),
+
         # BEFORE/AFTER charts (callback updates figures)
         html.Div(
             style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "14px"},
@@ -867,9 +941,11 @@ layout = html.Div(
                 dcc.Graph(id="comp_graph_after"),
             ],
         ),
+
         # KPI row (callback populates children)
         html.Div(id="kpi_row", style={"marginTop": "8px"}),
         html.Div(style={"height": "12px"}),
+
         # tables row
         html.Div(
             style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "14px"},
@@ -899,6 +975,7 @@ layout = html.Div(
                         ),
                     ]
                 ),
+
                 # Right: what-if + delta table
                 html.Div(
                     style={"marginTop": "20px", "paddingLeft": "50px"},
@@ -1003,7 +1080,6 @@ layout = html.Div(
         ),
     ],
 )
-
 
 @dash.callback(
     Output("tab3-glossary_modal", "style"),
@@ -1176,6 +1252,9 @@ def refresh(season, team_code, weighting, role_mode, remove_pid, add_pid):
             df_after, weighting, season_t, TRANS_F, TRANS_D, MODEL_MAP_F, MODEL_MAP_D
         )
 
+        center_f = get_center_net60("F")
+        center_d = get_center_net60("D")
+
         before_net = compute_expected_net60_model_map(
             df,
             weighting,
@@ -1184,8 +1263,8 @@ def refresh(season, team_code, weighting, role_mode, remove_pid, add_pid):
             TRANS_D,
             MODEL_MAP_F,
             MODEL_MAP_D,
-            CENTER_NET60_F,
-            CENTER_NET60_D,
+            center_f,
+            center_d,
         )
         after_net = compute_expected_net60_model_map(
             df_after,
@@ -1195,8 +1274,8 @@ def refresh(season, team_code, weighting, role_mode, remove_pid, add_pid):
             TRANS_D,
             MODEL_MAP_F,
             MODEL_MAP_D,
-            CENTER_NET60_F,
-            CENTER_NET60_D,
+            center_f,
+            center_d,
         )
 
         role_label = f"Projected → next season ({season_label(season_next(season_t))})"
