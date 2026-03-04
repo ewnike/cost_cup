@@ -1,112 +1,159 @@
-## Cost Cup — Project Story (What we built and why)
+# Cost Cup — Player Archetypes + Transitions (Dash + SQL)
 
-### Goal
-Hockey performance metrics are noisy and heavily influenced by **team context**, deployment, and game state.
-Instead of modeling players as a single continuous “skill value,” this project models **player roles (archetypes)** and
-how players **transition between roles** across seasons.
+## What this project does
+Hockey performance metrics are noisy and heavily influenced by **team context**, deployment, and game state.  
+Instead of modeling players as a single “skill number,” this project models:
 
-This enables questions like:
+1) **Player roles (archetypes)** using **KMeans clustering** on **even-strength**, rate-based features  
+2) **Role transitions** across seasons using **smoothed transition probabilities** (Dirichlet shrinkage)  
+3) A **Dash dashboard** to explore team composition, player gamelogs, and what-if swaps  
+
+This supports questions like:
 - What archetype mix does a team have this season?
 - If we swap one player for another, how does the role composition change?
 - Given a player’s current archetype, what is the probability they shift archetypes next season?
 
-### Key idea (Theory)
-**Player “roles” are more stable and more predictive than raw performance**, especially when we focus on
-**even-strength (ES)** play and rate-based measures. We designed features to reduce confounding from:
-- special teams (PP/PK),
-- ice-time inflation (TOI bias),
-- star/salary deployment effects,
-- game score / extreme event environments.
+## Key idea (theory)
+Player “roles” can be more stable and interpretable than raw performance, especially when we focus on:
+- **Even-strength (ES)** only (reduces PP/PK confounding)
+- **Rate-based features** (reduces TOI bias)
+- **Robust / capped metrics** (reduces extreme-event distortion)
 
-### Pipeline overview (end-to-end)
-Raw data is transformed into stable, queryable tables that drive both modeling and the dashboard.
+## Repo guide (minimal disruption)
+- `README.md` → short story + how to run
+- `docs/PROJECT_STORY.md` → long narrative + SQL patterns + edge cases + diagrams
+- `notebooks/00_project_story.ipynb` → walkthrough + required visualizations
+- `sql/sanity/modern/` → sanity queries we actually run
+- `dash_app/` → dashboard code
 
+---
 
-### Modeling approach
-#### Unsupervised learning: Archetype discovery (clustering)
-We cluster player-season feature vectors into **3 archetypes** per position group (F/D).  
-The cluster IDs (0/1/2) are **labels**, not ranks. We optionally map them to readable names:
+## Running the dashboard (local)
+From repo root:
 
-- 0 — Defensive / low-event  
-- 1 — Balanced / two-way  
-- 2 — Offensive / high-event
-
-(Cluster interpretations are validated by comparing feature profiles across clusters.)
-
-#### Supervised/statistical modeling: Transition probabilities
-After each player-season is assigned a cluster, we model how players move between clusters across seasons:
-- input: current-season cluster (and/or features)
-- target: next-season cluster (0/1/2)
-- output: probabilities `p_to0`, `p_to1`, `p_to2`
-
-### Why smoothing (Dirichlet shrinkage) is necessary
-Raw transition counts can produce brittle probabilities:
-- rare transitions appear as 0% (even if plausible),
-- small sample sizes yield overconfident estimates.
-
-We apply Dirichlet/Bayesian smoothing:
-- treat observed counts as evidence,
-- add prior pseudo-counts,
-- shrink extreme probabilities toward a reasonable baseline.
-
-This produces more stable, interpretable transition probabilities suitable for reporting and dashboards.
-
-### Data quality checks
-We validate:
-- key integrity (no nulls in game_id/player_id/team_id),
-- no negative TOI or event counts,
-- consistent team-code mapping (including franchise changes),
-- coverage spot checks vs shift data.
-
-### Deliverables
-- SQL-backed feature tables and archetype assignments
-- smoothed transition probabilities
-- Dash application for team composition, player gamelogs, and what-if analysis
-
-> Note: Database credentials and environment-specific deployment settings are intentionally excluded from this repo.
+```bash
+export APP_ENV=aws   # or local
+python -m dash_app.app
+# open http://127.0.0.1:8050
+```
+md
+> Note: database credentials and environment-specific deployment settings are intentionally excluded from this repo.
 > Access to hosted data is provided separately when required.
 
+⸻
 
-## Data validation and an important edge case (team context matters)
+## Pipelines (high level)
 
-Before final modeling, we ran targeted SQL sanity checks to validate table integrity (keys, joins, nulls, duplicates, and impossible values) and to identify edge cases that could distort interpretation.
+Raw data is transformed into stable, queryable tables that drive both modeling and the dashboard:
 
-### Sanity checks (example: 2024–2025 player-game truth table)
+Raw data
+→ identity resolution / normalization
+→ player-game ES truth features (Postgres)
+→ player-season features (SQL)
+→ clean/cap modeling dataset (SQL)
+→ KMeans archetypes (Python; F/D separately)
+→ transition counts + Dirichlet smoothing
+→ Dash dashboard (tabs 1/2/3)
 
-We verified the core player-game feature table (`mart.player_game_features_20242025_truth`) is structurally sound:
+Full details (including SQL patterns and edge-case tables) live in:
+	-	docs/PROJECT_STORY.md
+	-	notebooks/00_project_story.ipynb
 
-- No duplicate player-games: `rows = distinct(game_id, player_id) = 47224`
-- No null key fields: `game_id_null = 0`, `player_id_null = 0`, `team_id_null = 0`
-- Referential join works: `team_join_miss = 0` when joining to `dim.dim_team_code`
-- No impossible values: `neg_toi = 0`, `neg_events = 0`
+⸻
 
-These checks ensure downstream visualizations and models operate on consistent, joinable data.
+## Pipelines (SQL-first orchestration)
 
-### Edge case: extreme CA is often a “team environment” event (not a single-player signal)
+This project is intentionally SQL-first: most transformations are implemented as SQL scripts and stored procedures in Postgres, and Python is used primarily to orchestrate execution and run the KMeans clustering step.
 
-A recurring modeling risk is misinterpreting extreme values (e.g., very high CA / Corsi Against) as purely individual-player signal. To evaluate whether extreme CA reflects individual performance or team environment, we used a diagnostic query that:
+### Modern archetypes pipeline (end-to-end)
 
-1) ranks team-games by total **team CA** (sum of all skater CA on that team in that game), then  
-2) lists the **top 5 individual CA** contributors within each of those high-pressure games.
+Driver: scripts/run_modern_archetypes_pipeline.py (name may vary)
 
-## Edge case: extreme CA is often team environment (ANA example)
-During validation we found that very high single-game CA values can be driven by “team getting shelled” games (shared across many skaters), not isolated player effects.  
-We ranked ANA games by total team CA and showed top individual CA contributors per game.
+### Stages
 
-- Takeaway: interpret extreme CA in context (team total + teammate distribution), not as a standalone player-quality signal.
-- This supports our use of ES-only, rate-based season summaries and capped features.
+1. **Player-game ES truth features (per season)**
+   - `CALL mart.build_player_game_features_truth(<season>);`
 
-➡️ Full table + query pattern: see `docs/PROJECT_STORY.md` (Edge Case: ANA High-CA Games).
+2. **Player-season aggregation (per season)**
+   - `sql/mart/player_season_features_modern_truth.sql`
 
-# Edge Case: ANA High-CA Games (Why Context Matters)
+3. **Archetype feature table (all seasons)**
+   - `sql/mart/player_season_archetype_features_modern_truth.sql`
 
-**What this table is:** ANA games with the highest total team CA (sum of player CA), showing the top 5 individual player CA values per game.
+4. **Cleaning / stabilization layer (all seasons)**
+   - `sql/mart/player_season_archetype_features_modern_truth_clean.sql`
+   - Validate: `to_regclass('mart.player_season_archetype_features_modern_truth_clean')`
 
-- `team_ca` = sum of all ANA skater CA for that game (team environment / pressure proxy)
-- `player_ca` = individual player CA in the same game
-- Top 5 players shown per game
+5. **KMeans clustering (Python step)**
+   - `python cluster_player_archetypes_modern.py --position F`
+   - `python cluster_player_archetypes_modern.py --position D`
 
-<PASTE THE TABLE HERE>
+6. **Transitions + Dirichlet smoothing (statistical model)**
+   - Transition matrices:
+     - `mart.cluster_transitions_modern_f`
+     - `mart.cluster_transitions_modern_d`
+   - Per-player next-cluster probabilities:
+     - `mart.cluster_transition_model_probs_f`
+     - `mart.cluster_transition_model_probs_d`
 
-### Interpretation
-(Use the longer narrative paragraph you drafted.)
+
+Run it
+bash
+python scripts/run_modern_archetypes_pipeline.py \
+  --dsn "host=... port=5432 dbname=hockey_stats user=... password=... sslmode=require"
+
+⸻
+
+## Data lineage (what tables mean)
+
+We separate tables by purpose:
+
+- **Truth / base tables (game grain)**  
+  - `mart.player_game_features_<season>_truth`  
+  - Grain: one row per `(game_id, player_id, team_id)`  
+  - Foundation for season aggregation + dashboard gamelog queries
+
+- **Modeling dataset (season grain)**  
+  - `mart.player_season_archetype_features_modern_truth_clean`  
+  - Cleaned/capped dataset with standardized modeling rules (audit-friendly)
+
+- **Cluster outputs**  
+  - `mart.player_season_clusters_modern_truth_f` / `_d`  
+  - `mart.player_cluster_centers_modern_truth_f` / `_d`
+
+- **Dash views (presentation)**  
+  - `mart.v_player_season_archetypes_modern_regulars`  
+  - Verified: **regulars is a strict subset of `modern_v2`**, and **cluster assignments match exactly on the overlap**.
+
+## Pipeline map (modern seasons)
+
+```mermaid
+flowchart LR
+  A["Stored proc: mart.build_player_game_features_truth(season)"] --> B["player_game_features_<season>_truth"]
+  B --> C["SQL: player_season_features_modern_truth.sql (per-season)"]
+  C --> D["SQL: player_season_archetype_features_modern_truth.sql (all seasons)"]
+  D --> E["SQL: player_season_archetype_features_modern_truth_clean.sql (clean + caps)"]
+  E --> F["Python: cluster_player_archetypes_modern.py (KMeans K=3 per F/D)"]
+  F --> G["Archetype outputs (views/tables in mart + dashboard)"]
+```
+
+### Execution order (as implemented)
+
+For each season in `SEASONS_MODERN`:
+1. `CALL mart.build_player_game_features_truth(season);` *(optional, can skip)*
+2. `psql -v season=<season> -f sql/mart/player_season_features_modern_truth.sql`
+
+Then (once):
+3. `psql -f sql/mart/player_season_archetype_features_modern_truth.sql`
+4. `psql -f sql/mart/player_season_archetype_features_modern_truth_clean.sql`
+5. `python cluster_player_archetypes_modern.py --position F`
+6. `python cluster_player_archetypes_modern.py --position D`
+
+| Stage | Implementation | Why it matters |
+|---|---|---|
+| Player-game truth (ES features) | Postgres stored procedure | Fast, consistent base table at grain `(game_id, player_id, team_id)` |
+| Player-season aggregation | SQL scripts | Reproducible transformations close to the data (easy to audit) |
+| Cleaning / capping | SQL scripts | Centralized modeling rules (outliers, caps, null handling) |
+| KMeans archetypes (F/D) | Python (scikit-learn) + SQL outputs | Learns roles from standardized features; stores clusters + centers for dashboard/modeling |
+| Transitions + Dirichlet smoothing | SQL (+ optional Python) | Stabilizes sparse transitions into usable probabilities (avoids brittle 0%/100%) |
+
