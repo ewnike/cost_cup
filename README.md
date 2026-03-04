@@ -36,7 +36,7 @@ export APP_ENV=aws   # or local
 python -m dash_app.app
 # open http://127.0.0.1:8050
 ```
-md
+
 > Note: database credentials and environment-specific deployment settings are intentionally excluded from this repo.
 > Access to hosted data is provided separately when required.
 
@@ -157,5 +157,6 @@ Then (once):
 | Cleaning / capping | SQL scripts | Centralized modeling rules (outliers, caps, null handling) |
 | KMeans archetypes (F/D) | Python (scikit-learn) + SQL outputs | Learns roles from standardized features; stores clusters + centers for dashboard/modeling |
 | Transitions + Dirichlet smoothing | SQL (+ optional Python) | Stabilizes sparse transitions into usable probabilities (avoids brittle 0%/100%) |
+
 
 
