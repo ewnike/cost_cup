@@ -196,3 +196,4 @@ archive/notebooks_DEPRECATED/.ipynb_checkpoints/
 .elasticbeanstalk/*
 !.elasticbeanstalk/*.cfg.yml
 !.elasticbeanstalk/*.global.yml
+.ipynb_checkpoints/
