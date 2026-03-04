@@ -46,18 +46,18 @@ md
 
 Raw data is transformed into stable, queryable tables that drive both modeling and the dashboard:
 
-Raw data
-→ identity resolution / normalization
-→ player-game ES truth features (Postgres)
-→ player-season features (SQL)
-→ clean/cap modeling dataset (SQL)
-→ KMeans archetypes (Python; F/D separately)
-→ transition counts + Dirichlet smoothing
-→ Dash dashboard (tabs 1/2/3)
+- Raw data
+- Identity resolution / normalization
+- Player-game ES truth features (Postgres)
+- Player-season features (SQL)
+- Clean/cap modeling dataset (SQL)
+- KMeans archetypes (Python; F/D separately)
+- Transition counts + Dirichlet smoothing
+- Dash dashboard (Tabs 1/2/3)
 
-Full details (including SQL patterns and edge-case tables) live in:
-	-	docs/PROJECT_STORY.md
-	-	notebooks/00_project_story.ipynb
+Full details live in:
+- `docs/PROJECT_STORY.md`
+- `notebooks/00_project_story.ipynb`
 
 ⸻
 
@@ -97,10 +97,11 @@ Driver: scripts/run_modern_archetypes_pipeline.py (name may vary)
      - `mart.cluster_transition_model_probs_d`
 
 
-Run it
-bash
+**Run it**
+```bash
 python scripts/run_modern_archetypes_pipeline.py \
   --dsn "host=... port=5432 dbname=hockey_stats user=... password=... sslmode=require"
+```
 
 ⸻
 
@@ -156,4 +157,5 @@ Then (once):
 | Cleaning / capping | SQL scripts | Centralized modeling rules (outliers, caps, null handling) |
 | KMeans archetypes (F/D) | Python (scikit-learn) + SQL outputs | Learns roles from standardized features; stores clusters + centers for dashboard/modeling |
 | Transitions + Dirichlet smoothing | SQL (+ optional Python) | Stabilizes sparse transitions into usable probabilities (avoids brittle 0%/100%) |
+
 
